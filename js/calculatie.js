@@ -1,7 +1,6 @@
-// calculatie.js - V7.2 Fixes
+// calculatie.js - V7.5 (Dropdowns & Route Fix)
 const calc = {
     init: function() {
-        // Bouw Bussen Grid
         const container = document.getElementById('bus-container');
         container.innerHTML = config.busOpties.map((b, i) => `
             <label class="bus-option">
@@ -31,7 +30,7 @@ const calc = {
         this.rekenUren();
     },
 
-    // MAPS
+    // --- MAPS FUNCTIES ---
     initMaps: function() {
         const opts = { componentRestrictions: {country:'nl'} };
         ['route-start','route-ophaal','route-eind','route-via1','route-via2'].forEach(id => {
@@ -57,13 +56,9 @@ const calc = {
         const e = document.getElementById('route-eind').value;
         if(!s || !o || !e) return;
 
-        const w = [];
-        // Google Maps Route aanvragen
-        // Leg 0: Garage -> Ophaal (Aanrij)
-        // Leg 1: Ophaal -> Bestemming (Rit)
-        const waypoints = [{location: o}]; 
-        
-        new google.maps.DirectionsService().route({origin:s, destination:e, waypoints:waypoints, travelMode:'DRIVING'}, (res, stat) => {
+        // Vraag route aan: Garage -> Ophaal -> Eind
+        const svc = new google.maps.DirectionsService();
+        svc.route({origin:s, destination:e, waypoints:[{location:o}], travelMode:'DRIVING'}, (res, stat) => {
             if(stat === 'OK') {
                 const legs = res.routes[0].legs;
                 
@@ -77,26 +72,18 @@ const calc = {
                 const ritTime = legs[1].duration.value;
                 state.route.ritSec = ritTime;
 
-                // Totaal berekenen
+                // Totaal berekenen op basis van rit type
                 const type = document.getElementById('rit-type').value;
-                
-                // Dagtocht (VV) = (Aanrij + Rit) * 2
-                // BrengHaal = (Aanrij + Rit + Rit + Aanrij) oftewel 2x volledig op en neer
                 let totalMeters = 0;
                 
-                if(type === 'brenghaal') {
-                    // Garage-Klant-Bestemming-Garage EN Garage-Bestemming-Klant-Garage
-                    totalMeters = (aanrijDist + ritDist) * 4; // Ruwe schatting voor 2x retour
-                } else if(type === 'vv') {
-                    totalMeters = (aanrijDist + ritDist) * 2;
-                } else {
-                    totalMeters = aanrijDist + ritDist;
-                }
+                if(type === 'brenghaal') totalMeters = (aanrijDist + ritDist) * 4; // Schatting: 2x volledige retour
+                else if(type === 'vv') totalMeters = (aanrijDist + ritDist) * 2;
+                else totalMeters = aanrijDist + ritDist;
                 
                 state.route.km = Math.round(totalMeters / 1000);
                 state.route.berekend = true;
 
-                // UI Vullen
+                // UI Vullen (DE OUDE GOEDE WEERGAVE)
                 document.getElementById('info-aanrij-km').innerText = Math.round(aanrijDist/1000) + " km";
                 document.getElementById('info-aanrij-tijd').innerText = Math.round(aanrijTime/60) + " min";
                 
@@ -124,7 +111,7 @@ const calc = {
             const h=document.getElementById('h_'+id), m=document.getElementById('m_'+id);
             if(h&&m){ 
                 h.value=d.getHours().toString().padStart(2,'0'); 
-                // Rond af op dichtstbijzijnde kwartier voor weergave in dropdown
+                // Rond af op dichtstbijzijnde kwartier voor dropdown
                 let min = d.getMinutes();
                 if(min < 7) min="00"; else if(min < 22) min="15"; else if(min < 37) min="30"; else min="45";
                 m.value=min;
@@ -135,23 +122,21 @@ const calc = {
             return new Date(2000,0,1,h,m);
         };
 
-        // Bereken Vertrek Garage op basis van Vertrek Klant
+        // Bereken Vertrek Garage
         if(document.getElementById('h_std_3')) {
             const vk = get('std_3');
-            set('std_1', new Date(vk - ams - voorstaan)); // Vertrek Garage = Klant - Aanrij - 15min
+            set('std_1', new Date(vk - ams - voorstaan)); // Garage = Klant - Aanrij - 15min
             set('std_2', new Date(vk - voorstaan));       // Voorstaan = Klant - 15min
         }
 
         if(type === 'vv') {
             const vk = get('std_3');
-            set('std_4', new Date(vk.getTime() + rms)); // Aankomst = Vertrek + Rit
-            
+            set('std_4', new Date(vk.getTime() + rms)); // Aankomst
             const vr = get('std_5');
             const ak = new Date(vr.getTime() + rms);
             set('std_6', ak);
-            set('std_7', new Date(ak.getTime() + ams)); // Garage = Aankomst Klant + Aanrij
+            set('std_7', new Date(ak.getTime() + ams)); // Garage Terug
         }
-        
         this.rekenUren();
     },
 
@@ -159,7 +144,7 @@ const calc = {
         const type = document.getElementById('rit-type').value;
         const c = document.getElementById('tijd-container');
         
-        // Templates met DROPDOWNS
+        // Templates met DROPDOWNS (Werkt altijd!)
         const tpl = {
             vv: [
                 {id:'std_1',l:'Vertrek Garage'},{id:'std_2',l:'Voorstaan'},
@@ -172,26 +157,19 @@ const calc = {
             ],
             brenghaal: [
                 {id:'std_1',l:'V. Garage (Heen)'},{id:'std_3',l:'V. Klant (Heen)',hl:true,h:8,m:'45'},{id:'std_4',l:'A. Best. (Heen)'},
-                {id:'std_x', l:'--- PAUZE ---'}, // Visuele scheiding
+                {id:'std_x', l:'--- PAUZE ---'}, 
                 {id:'std_5',l:'V. Garage (Terug)'},{id:'std_6',l:'V. Best. (Terug)', h:17},{id:'std_7',l:'A. Klant (Terug)'},{id:'std_8',l:'A. Garage (Terug)'}
             ]
         };
         
         const list = tpl[type] || tpl.vv;
         
-        // Bouw de HTML met SELECTS
         c.innerHTML = list.map(t => {
             if(t.id === 'std_x') return `<div style="text-align:center; font-weight:bold; padding:5px; color:#ccc;">----------</div>`;
             
-            // Uren opties (00-23)
-            let uOpts = ''; for(let i=0;i<24;i++) { 
-                let val = i.toString().padStart(2,'0'); 
-                uOpts += `<option value="${val}" ${i==(t.h||8)?'selected':''}>${val}</option>`;
-            }
-            // Minuten opties (00,15,30,45)
-            let mOpts = ''; ['00','15','30','45'].forEach(m => {
-                mOpts += `<option value="${m}" ${m==(t.m||'00')?'selected':''}>${m}</option>`;
-            });
+            // Bouw dropdowns
+            let uOpts = ''; for(let i=0;i<24;i++) { let val=i.toString().padStart(2,'0'); uOpts += `<option value="${val}" ${i==(t.h||8)?'selected':''}>${val}</option>`; }
+            let mOpts = ''; ['00','15','30','45'].forEach(m => { mOpts += `<option value="${m}" ${m==(t.m||'00')?'selected':''}>${m}</option>`; });
 
             const ch = t.hl ? "calc.syncTijden()" : "calc.rekenUren()";
             const sty = t.hl ? 'border-left:3px solid var(--success);background:#f0fdf4;' : '';
@@ -205,24 +183,14 @@ const calc = {
                 </div>
             </div>`;
         }).join('');
-        
         this.rekenUren();
     },
 
     rekenUren: function() {
         const el = document.querySelectorAll('.select-uur'); if(el.length<2)return;
-        
-        // Pak start en eindtijd van de lijst
-        // Bij breng/haal moeten we oppassen, we tellen gewoon totaal verschil
         const s = new Date(2000,0,1,el[0].value,el[0].nextElementSibling.value);
         const e = new Date(2000,0,1,el[el.length-1].value,el[el.length-1].nextElementSibling.value);
-        
-        let d = (e-s)/3600000; 
-        if(d<0) d+=24;
-        
-        // Bij breng/haal (dat zijn er 8) kunnen we grofweg zeggen: de rit is 2x de enkele tijd + pauze? 
-        // Nee, veiligste is gewoon begin tot eind.
-        
+        let d = (e-s)/3600000; if(d<0) d+=24;
         document.getElementById('uren-display').innerText = d.toFixed(2);
         this.rekenPrijs();
     },
@@ -232,23 +200,22 @@ const calc = {
         const uren = parseFloat(document.getElementById('uren-display').innerText)||0;
         const extra = parseFloat(document.getElementById('kosten-extra').value)||0;
         
-        let bp=0, n=0;
-        // Bussen tellen FIX
+        let busPrijs = 0; let n = 0;
         document.querySelectorAll('.bus-check:checked').forEach(c => { 
-            bp+=config.busOpties[c.value].prijs; 
+            busPrijs += config.busOpties[c.value].prijs; 
             n++; 
         });
-        document.getElementById('calc-bus-count').value = n; // Update teller veld
+        document.getElementById('calc-bus-count').value = n; // HIER ZIT DE FIX VOOR DE TELLER
         
         if(n===0){ document.getElementById('prijs-display').innerText="€ 0,00"; return; }
         
-        const kp = (km*bp) + (uren*35*n) + extra;
-        const vp = Math.ceil((kp*1.25)/5)*5; 
-        const vi = vp*1.09;
+        const kostprijs = (km * busPrijs) + (uren * 35 * n) + extra;
+        const verkoop = Math.ceil((kostprijs * 1.25) / 5) * 5; 
+        const verkoopIncl = verkoop * 1.09;
         
-        document.getElementById('prijs-display').innerText = "€ " + vi.toLocaleString('nl-NL',{minimumFractionDigits:2});
-        document.getElementById('btw-display').innerText = "BTW: € " + (vi-vp).toLocaleString('nl-NL',{minimumFractionDigits:2});
-        document.getElementById('live-profit').innerText = "€ " + Math.round(vp-kp);
+        document.getElementById('prijs-display').innerText = "€ " + verkoopIncl.toLocaleString('nl-NL',{minimumFractionDigits:2});
+        document.getElementById('btw-display').innerText = "BTW: € " + (verkoopIncl - verkoop).toLocaleString('nl-NL',{minimumFractionDigits:2});
+        document.getElementById('live-profit').innerText = "€ " + Math.round(verkoop - kostprijs);
     }
 };
 
