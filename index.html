@@ -3,21 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <title>Berkhout Systeem V7.2 (Dropdowns)</title>
+    <title>Berkhout Systeem V7.5 (Dropdowns)</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
-    <link rel="stylesheet" href="style.css?v=7.2">
+    <link rel="stylesheet" href="style.css?v=7.5">
 
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAi1U8gP0dlE87sYaUDI2JbKKFxJW_YjlY&libraries=places&callback=initMaps" async defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAi1U8gP0dlE87sYaUDI2JbKKFxJW_YjlY&libraries=places&callback=initMaps" async defer></script>
 </head>
 <body>
 
 <div class="sidebar">
-    <div class="brand">BERKHOUT <br><span style="font-size:11px; opacity:0.6; font-weight:400;">Versie 7.2</span></div>
+    <div class="brand">BERKHOUT <br><span style="font-size:11px; opacity:0.6; font-weight:400;">Versie 7.5</span></div>
     <div class="nav-item active" onclick="app.nav('dashboard')"><i class="fa-solid fa-layer-group"></i> Dashboard</div>
     <div class="nav-item" onclick="app.nav('calculatie')"><i class="fa-solid fa-calculator"></i> Nieuwe Rit</div>
     <div class="nav-item" onclick="app.nav('klanten')"><i class="fa-solid fa-users"></i> Klantenbestand</div>
@@ -47,6 +46,7 @@
             <h2 id="calc-title">Nieuwe Aanvraag</h2>
             <button onclick="calc.resetForm()" class="btn-link"><i class="fa-solid fa-rotate-left"></i> Reset</button>
         </div>
+
         <div class="grid-2">
             <div>
                 <div class="card">
@@ -58,4 +58,88 @@
                     <label>Zoek Klant</label>
                     <div class="search-wrapper">
                         <input type="text" id="calc-klant-zoek" placeholder="Typ naam..." oninput="crm.filterCalcClients()">
-                        <input type="hidden
+                        <input type="hidden" id="calc-klant-id">
+                        <div class="search-results" id="calc-klant-results"></div>
+                    </div>
+                    <label>Contactpersoon</label><select id="calc-contact"><option value="">-- Kies eerst klant --</option></select>
+                    <div id="klant-details" class="hidden" style="background:#f0f9ff; padding:10px; border:1px solid #bae6fd; border-radius:4px; margin-top:10px; font-size:12px;"></div>
+                    
+                    <div style="display:flex; gap:10px; margin-top:10px;">
+                        <div style="flex:1;"><label>Pax</label><input type="number" id="calc-pax" value="50"></div>
+                        <div style="flex:1;"><label>Bussen</label><input type="number" id="calc-bus-count" value="0" readonly style="background:#eee;"></div>
+                    </div>
+                    <label>Voertuigen</label><div class="bus-grid" id="bus-container"></div>
+                </div>
+
+                <div class="card">
+                    <h3>2. Route</h3>
+                    <label>Start Garage</label><input type="text" id="route-start" value="Industrieweg 95A, Zutphen">
+                    <label>Ophaaladres</label><input type="text" id="route-ophaal" placeholder="Zoek adres...">
+                    <div id="via-container" class="hidden" style="margin-left:10px; border-left:2px solid #eee; padding-left:10px;">
+                         <label>Via 1</label><input type="text" id="route-via1">
+                         <label>Via 2</label><input type="text" id="route-via2">
+                    </div>
+                    <button class="btn-link" onclick="document.getElementById('via-container').classList.remove('hidden')">+ Via toevoegen</button>
+                    <label>Bestemming</label><input type="text" id="route-eind" placeholder="Zoek bestemming...">
+                    
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:10px; border-radius:6px; margin-top:15px; font-size:12px;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                            <span style="color:#666;">Garage &#8594; Klant (Aanrij):</span>
+                            <span><strong id="info-aanrij-km">0 km</strong> / <strong id="info-aanrij-tijd">0 min</strong></span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; border-bottom:1px solid #ddd; padding-bottom:5px; margin-bottom:5px;">
+                            <span style="color:#666;">Klant &#8594; Bestemming:</span>
+                            <span><strong id="info-rit-km">0 km</strong> / <strong id="info-rit-tijd">0 min</strong></span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; font-size:14px;">
+                            <span>Totaal Rit:</span>
+                            <strong id="info-totaal" style="color:var(--primary);">0 km</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <div class="card">
+                    <h3>3. Tijden</h3>
+                    <select id="rit-type" onchange="calc.wisselTijdLijst()" style="font-weight:bold; border:2px solid var(--primary); margin-bottom:10px;">
+                        <option value="vv" selected>Dagtocht (Volledig)</option>
+                        <option value="enkel">Enkele Rit</option>
+                        <option value="brenghaal">Breng & Haal</option>
+                        <option value="meerdaagse">Meerdaagse</option>
+                    </select>
+                    <div id="tijd-container"></div>
+                    <div style="text-align:right; margin-top:15px;">
+                        <span style="color:#666; font-size:12px;">Totaal Uren:</span><br><span id="uren-display" style="font-size:24px; font-weight:800; color:var(--primary);">0.00</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>4. Financieel</h3>
+                    <label>Extra Kosten</label><input type="number" id="kosten-extra" value="0" oninput="calc.rekenPrijs()">
+                    <div class="total-box">
+                        <div style="font-size:13px;">Totaal incl. 9% BTW</div>
+                        <div class="total-price" id="prijs-display">€ 0,00</div>
+                        <div style="font-size:12px;" id="btw-display">BTW: € 0,00</div>
+                    </div>
+                    <div class="profit-box"><div style="font-size:10px; font-weight:bold; color:#047857;">LIVE WINST</div><div class="profit-amount" id="live-profit">€ 0</div></div>
+                    <button class="btn btn-green" onclick="app.opslaan()"><i class="fa-solid fa-check"></i> Opslaan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="klanten" class="page-section">
+        <div id="crm-list-view">
+             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h2>Klantenbestand</h2>
+                <button class="btn btn-blue" style="width:auto; padding:10px 20px;" onclick="crm.nieuwKlantScherm()">+ Nieuwe Klant</button>
+            </div>
+            <div class="card">
+                <input type="text" id="crm-search" placeholder="Zoeken..." onkeyup="crm.renderClientList()" style="margin-bottom:10px;">
+                <table class="rit-table"><thead><tr><th>Naam</th><th>Plaats</th><th>Email</th><th style="width:60px;"></th></tr></thead><tbody id="crm-table-body"></tbody></table>
+            </div>
+        </div>
+        
+        <div id="crm-detail-view" class="hidden">
+            <div class="card">
