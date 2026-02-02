@@ -1,10 +1,10 @@
-:root { --primary: #004a99; --bg: #f3f4f6; --text: #1f2937; --border: #e5e7eb; --success: #10b981; --warning: #f59e0b; --danger: #ef4444; }
+:root { --primary: #004a99; --bg: #f3f4f6; --text: #1f2937; --border: #e5e7eb; --success: #10b981; }
 * { box-sizing: border-box; }
 body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
 
 /* Layout */
 .sidebar { width: 240px; background: var(--primary); color: white; padding: 25px; display: flex; flex-direction: column; z-index: 10; }
-.brand { font-size: 20px; font-weight: 800; margin-bottom: 40px; letter-spacing: 1px; }
+.brand { font-size: 20px; font-weight: 800; margin-bottom: 40px; }
 .nav-item { padding: 12px; cursor: pointer; border-radius: 6px; margin-bottom: 5px; display: flex; align-items: center; gap: 10px; transition: 0.2s; font-size: 14px; }
 .nav-item:hover { background: rgba(255,255,255,0.1); }
 .nav-item.active { background: white; color: var(--primary); font-weight: 700; }
@@ -13,43 +13,30 @@ body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg); color
 .page-section { display: none; max-width: 1400px; margin: 0 auto; }
 .page-section.active { display: block; animation: fadeIn 0.3s ease; }
 
-/* Cards */
+/* Cards & UI */
 .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid var(--border); }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-h2 { color: var(--primary); border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; margin-bottom: 20px; }
 h3 { font-size: 14px; color: var(--primary); margin: 0 0 10px 0; font-weight: 700; text-transform: uppercase; border-bottom:1px solid #eee; padding-bottom:5px; }
 
-/* Forms */
 label { display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 4px; margin-top: 10px; }
 input, select { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; font-family: inherit; }
-input:focus { outline: 2px solid var(--primary); border-color: transparent; }
 
-/* FIX: Tijd invoervelden (Mac Specifiek) */
-/* Dit verbergt de pijltjes agressief op alle browsers */
-input[type=number]::-webkit-inner-spin-button, 
-input[type=number]::-webkit-outer-spin-button { 
-    -webkit-appearance: none; 
-    margin: 0; 
+/* DROPDOWNS (SELECTS) voor Tijden */
+.time-row { display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; background: #fff; border: 1px solid #eee; margin-bottom: 4px; border-radius: 4px; }
+.time-select-group { display: flex; gap: 3px; align-items: center; }
+.select-uur, .select-min { 
+    width: auto; padding: 5px 2px; text-align: center; 
+    font-size: 13px; font-weight: 600; 
+    border: 1px solid #ccc; border-radius: 4px; 
+    background-color: #fff; cursor: pointer;
+    -webkit-appearance: menulist; /* Zorgt voor pijltje op Mac */
 }
-input[type=number] {
-    -moz-appearance: textfield; /* Firefox */
-}
 
-.time-row { display: flex; align-items: center; justify-content: space-between; padding: 2px 5px; background: #fff; border: 1px solid #eee; margin-bottom: 4px; border-radius: 4px; }
-.time-select-group { display: flex; gap: 4px; align-items: center; }
-/* Iets breder gemaakt (42px) zodat de cijfers passen */
-.select-uur, .select-min { width: 42px !important; padding: 2px 0; text-align: center; font-size: 13px; height: 28px; font-weight: 600; border: 1px solid #ccc; border-radius: 4px; background-color: #fff; }
-
-/* FIX: Super Compacte Bussen Grid */
+/* BUSSEN GRID */
 .bus-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 5px; }
-.bus-option { 
-    display: flex; flex-direction: column; align-items: center; text-align: center; justify-content: center;
-    padding: 5px; border: 1px solid #eee; border-radius: 4px; cursor: pointer; 
-    font-size: 11px; 
-    /* Geen min-height meer, dus zo klein als de tekst */
-}
+.bus-option { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 5px; border: 1px solid #eee; border-radius: 4px; cursor: pointer; font-size: 11px; min-height: 50px; justify-content: center; }
 .bus-option:hover { background: #f0f9ff; border-color: var(--primary); }
-.bus-option input { margin-bottom: 2px; margin-top: 0; transform: scale(0.8); cursor: pointer; }
+.bus-option input { margin-bottom: 3px; transform: scale(0.9); }
 
 /* Search & Tables */
 .search-wrapper { position: relative; }
@@ -61,16 +48,14 @@ input[type=number] {
 .rit-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .rit-table th { text-align: left; padding: 10px; background: #f8fafc; border-bottom: 2px solid #e2e8f0; color: #64748b; font-weight: 700; font-size: 11px; }
 .rit-table td { padding: 10px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
-.rit-table tr:hover { background: #f8fafc; }
 .status-cell { text-align: center; cursor: pointer; }
-.status-icon { color: #e2e8f0; font-size: 16px; transition: 0.2s; }
-.status-icon:hover { transform: scale(1.2); }
+.status-icon { color: #e2e8f0; font-size: 16px; }
 .status-icon.done { color: var(--success); }
 
 /* Buttons & UI */
-.btn { width: 100%; padding: 12px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; margin-top: 15px; color: white; transition: 0.2s; }
-.btn-green { background: var(--success); } .btn-green:hover { background: #059669; }
-.btn-blue { background: var(--primary); color: #ffffff !important; } .btn-blue:hover { background: #003d80; }
+.btn { width: 100%; padding: 12px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; margin-top: 15px; color: white; }
+.btn-green { background: var(--success); }
+.btn-blue { background: var(--primary); color: #ffffff !important; }
 .btn-grey { background: #9ca3af; }
 .btn-link { background: none; border: none; color: var(--primary); cursor: pointer; font-size: 12px; text-decoration: underline; padding:0; }
 .btn-icon { width: 30px; height: 30px; background: white; border: 1px solid #e2e8f0; cursor: pointer; border-radius: 4px; display:inline-flex; align-items:center; justify-content:center; color: #64748b; }
@@ -79,15 +64,13 @@ input[type=number] {
 .total-price { font-size: 24px; font-weight: 800; margin: 5px 0; }
 .profit-box { margin-top:10px; padding:8px; background:#ecfdf5; border:1px solid #10b981; text-align:center; border-radius: 4px; }
 .profit-amount { font-size: 18px; font-weight: 800; color: #047857; }
-#empty-state { padding: 40px; text-align: center; color: #999; font-style: italic; }
-
-/* PDF */
-.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+/* PDF Modal */
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; display: flex; align-items: center; justify-content: center; }
 .modal-box { background: #525659; width: 900px; max-height: 95vh; display: flex; flex-direction: column; border-radius: 8px; overflow: hidden; }
 .modal-header { background: #1e293b; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
 .modal-body { padding: 30px; overflow-y: auto; background: #525659; display: flex; justify-content: center; }
 .modal-footer { padding: 15px 20px; background: white; display: flex; justify-content: flex-end; gap: 10px; }
-.pdf-container { width: 210mm; min-height: 297mm; padding: 20mm; background: white; color: #000; font-family: Arial, sans-serif; font-size: 10pt; line-height: 1.4; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+.pdf-container { width: 210mm; min-height: 297mm; padding: 20mm; background: white; color: #000; font-family: Arial, sans-serif; font-size: 10pt; line-height: 1.4; }
 .pdf-logo { color: var(--primary); font-size: 24px; font-weight: bold; margin-bottom: 5px; }
 .pdf-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
 .pdf-table td { vertical-align: top; padding: 2px 0; }
