@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Berkhout Systeem V6.1</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <title>Berkhout Systeem V7.2 (Dropdowns)</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
-    <link rel="stylesheet" href="style.css?v=6.1">
+    <link rel="stylesheet" href="style.css?v=7.2">
 
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAi1U8gP0dlE87sYaUDI2JbKKFxJW_YjlY&libraries=places&callback=initMaps" async defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -16,11 +17,7 @@
 <body>
 
 <div class="sidebar">
-    <div class="brand">
-        BERKHOUT <br>
-        <span style="font-size:11px; opacity:0.6; font-weight:400;">Versie 6.1 (Mac Fix)</span>
-    </div>
-    
+    <div class="brand">BERKHOUT <br><span style="font-size:11px; opacity:0.6; font-weight:400;">Versie 7.2</span></div>
     <div class="nav-item active" onclick="app.nav('dashboard')"><i class="fa-solid fa-layer-group"></i> Dashboard</div>
     <div class="nav-item" onclick="app.nav('calculatie')"><i class="fa-solid fa-calculator"></i> Nieuwe Rit</div>
     <div class="nav-item" onclick="app.nav('klanten')"><i class="fa-solid fa-users"></i> Klantenbestand</div>
@@ -61,104 +58,4 @@
                     <label>Zoek Klant</label>
                     <div class="search-wrapper">
                         <input type="text" id="calc-klant-zoek" placeholder="Typ naam..." oninput="crm.filterCalcClients()">
-                        <input type="hidden" id="calc-klant-id">
-                        <div class="search-results" id="calc-klant-results"></div>
-                    </div>
-                    <label>Contactpersoon</label><select id="calc-contact"><option value="">-- Kies eerst klant --</option></select>
-                    <div id="klant-details" class="hidden" style="background:#f0f9ff; padding:10px; border:1px solid #bae6fd; border-radius:4px; margin-top:10px; font-size:12px;"></div>
-                    <div style="display:flex; gap:10px; margin-top:10px;">
-                        <div style="flex:1;"><label>Pax</label><input type="number" id="calc-pax" value="50"></div>
-                        <div style="flex:1;"><label>Bussen</label><input type="number" id="calc-bus-count" value="0" readonly style="background:#eee;"></div>
-                    </div>
-                    <label>Voertuigen</label><div class="bus-grid" id="bus-container"></div>
-                </div>
-                <div class="card">
-                    <h3>2. Route</h3>
-                    <label>Start Garage</label><input type="text" id="route-start" value="Industrieweg 95A, Zutphen">
-                    <label>Ophaaladres</label><input type="text" id="route-ophaal" placeholder="Zoek adres...">
-                    <div id="via-container" class="hidden" style="margin-left:10px; border-left:2px solid #eee; padding-left:10px;">
-                         <label>Via 1</label><input type="text" id="route-via1">
-                         <label>Via 2</label><input type="text" id="route-via2">
-                    </div>
-                    <button class="btn-link" onclick="document.getElementById('via-container').classList.remove('hidden')">+ Via toevoegen</button>
-                    <label>Bestemming</label><input type="text" id="route-eind" placeholder="Zoek bestemming...">
-                    <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:10px; border-radius:6px; margin-top:15px; font-size:13px;">
-                        <div style="display:flex; justify-content:space-between;"><span>Enkele reis:</span><strong id="info-rit">- min</strong></div>
-                        <div style="display:flex; justify-content:space-between;"><span>Aanrijtijd:</span><strong id="info-aanrij">- min</strong></div>
-                        <div style="display:flex; justify-content:space-between; margin-top:5px; padding-top:5px; border-top:1px dashed #ccc;"><span>Totaal KM:</span><strong id="info-totaal" style="color:var(--primary);">0 km</strong></div>
-                    </div>
-                </div>
-            </div>
-            <div>
-                <div class="card">
-                    <h3>3. Tijden</h3>
-                    <select id="rit-type" onchange="calc.wisselTijdLijst()" style="font-weight:bold; border:2px solid var(--primary); margin-bottom:10px;">
-                        <option value="vv" selected>Dagtocht (Volledig)</option>
-                        <option value="enkel">Enkele Rit</option>
-                        <option value="brenghaal">Breng & Haal</option>
-                        <option value="meerdaagse">Meerdaagse</option>
-                    </select>
-                    <div id="tijd-container"></div>
-                    <div style="text-align:right; margin-top:15px;">
-                        <span style="color:#666; font-size:12px;">Totaal Uren:</span><br><span id="uren-display" style="font-size:24px; font-weight:800; color:var(--primary);">0.00</span>
-                    </div>
-                </div>
-                <div class="card">
-                    <h3>4. Financieel</h3>
-                    <label>Extra Kosten</label><input type="number" id="kosten-extra" value="0" oninput="calc.rekenPrijs()">
-                    <div class="total-box">
-                        <div style="font-size:13px;">Totaal incl. 9% BTW</div>
-                        <div class="total-price" id="prijs-display">€ 0,00</div>
-                        <div style="font-size:12px;" id="btw-display">BTW: € 0,00</div>
-                    </div>
-                    <div class="profit-box"><div style="font-size:10px; font-weight:bold; color:#047857;">LIVE WINST</div><div class="profit-amount" id="live-profit">€ 0</div></div>
-                    <button class="btn btn-green" onclick="app.opslaan()"><i class="fa-solid fa-check"></i> Opslaan</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="klanten" class="page-section">
-        <div id="crm-list-view">
-             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                <h2>Klantenbestand</h2>
-                <button class="btn btn-blue" style="width:auto; padding:10px 20px;" onclick="crm.nieuwKlantScherm()">+ Nieuwe Klant</button>
-            </div>
-            <div class="card">
-                <input type="text" id="crm-search" placeholder="Zoeken..." onkeyup="crm.renderClientList()" style="margin-bottom:10px;">
-                <table class="rit-table"><thead><tr><th>Naam</th><th>Plaats</th><th>Email</th><th style="width:60px;"></th></tr></thead><tbody id="crm-table-body"></tbody></table>
-            </div>
-        </div>
-        <div id="crm-detail-view" class="hidden">
-            <div class="card">
-                <h3>Klant Kaart</h3>
-                <div class="grid-2"><div><label>Naam</label><input type="text" id="crm-naam"></div><div><label>Plaats</label><input type="text" id="crm-plaats"></div></div>
-                <label>Adres</label><input type="text" id="crm-adres">
-                <h3 style="margin-top:20px;">Contactpersonen</h3>
-                <div id="crm-contacts-container"></div>
-                <button class="btn-link" onclick="crm.addContactRow()">+ Contactpersoon</button>
-                <div style="margin-top:20px; display:flex; gap:10px;">
-                    <button class="btn btn-green" onclick="crm.saveClient()">Opslaan</button>
-                    <button class="btn btn-grey" onclick="crm.terugNaarLijst()">Annuleren</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div id="offerte-modal" class="hidden modal-overlay">
-    <div class="modal-box">
-        <div class="modal-header"><span>Offerte Voorbeeld</span><span onclick="document.getElementById('offerte-modal').classList.add('hidden')" style="cursor:pointer;"><i class="fa-solid fa-times"></i></span></div>
-        <div class="modal-body"><div id="pdf-content" class="pdf-container"></div></div>
-        <div class="modal-footer"><button class="btn-grey" style="width:auto;" onclick="document.getElementById('offerte-modal').classList.add('hidden')">Sluiten</button><button class="btn-green" style="width:auto;" onclick="pdf.generateAndMail()"><i class="fa-solid fa-paper-plane"></i> Download & Mail</button></div>
-    </div>
-</div>
-
-<script src="js/state.js?v=6.1"></script>
-<script src="js/crm.js?v=6.1"></script>
-<script src="js/calculatie.js?v=6.1"></script>
-<script src="js/pdf.js?v=6.1"></script>
-<script src="js/app.js?v=6.1"></script>
-
-</body>
-</html>
+                        <input type="hidden
