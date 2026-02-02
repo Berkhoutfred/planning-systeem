@@ -23,6 +23,14 @@ label { display: block; font-size: 12px; font-weight: 600; color: #374151; margi
 input, select { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; box-sizing: border-box; }
 input:focus { outline: 2px solid var(--primary); border-color: transparent; }
 
+/* FIX: Tijd invoervelden */
+/* Verberg de pijltjes in nummer velden zodat de tekst zichtbaar blijft */
+input[type=number]::-webkit-inner-spin-button, 
+input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.time-row { display: flex; align-items: center; justify-content: space-between; padding: 4px; background: #fff; border: 1px solid #eee; margin-bottom: 4px; border-radius: 4px; }
+.time-select-group { display: flex; gap: 2px; }
+.select-uur, .select-min { width: 35px !important; padding: 2px; text-align: center; font-size: 12px; height: 28px; -moz-appearance: textfield; }
+
 /* Search & Results */
 .search-wrapper { position: relative; }
 .search-results { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid var(--primary); border-radius: 0 0 4px 4px; max-height: 200px; overflow-y: auto; z-index: 100; display: none; }
@@ -38,24 +46,19 @@ input:focus { outline: 2px solid var(--primary); border-color: transparent; }
 .status-icon { color: #e2e8f0; font-size: 14px; }
 .status-icon.done { color: var(--success); }
 
-/* Bussen Grid (FIXED: Compact) */
-.bus-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 5px; }
-.bus-option { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 5px; border: 1px solid #eee; border-radius: 4px; cursor: pointer; font-size: 11px; }
+/* FIX: Bussen Grid (Veel kleiner) */
+.bus-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 5px; }
+.bus-option { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 4px; border: 1px solid #eee; border-radius: 4px; cursor: pointer; font-size: 10px; min-height: 45px; justify-content: center; }
 .bus-option:hover { background: #f0f9ff; border-color: var(--primary); }
-.bus-option input { margin-bottom: 3px; }
-
-/* Tijden (FIXED: Zichtbaarheid) */
-.time-row { display: flex; align-items: center; justify-content: space-between; padding: 5px; background: #fff; border: 1px solid #eee; margin-bottom: 4px; border-radius: 4px; }
-.time-select-group { display: flex; gap: 2px; }
-.select-uur, .select-min { width: 42px !important; padding: 2px; text-align: center; font-size: 12px; }
+.bus-option input { margin-bottom: 2px; transform: scale(0.9); }
 
 /* Buttons & Utils */
-.btn { width: 100%; padding: 12px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; margin-top: 15px; color: white; }
+.btn { width: 100%; padding: 12px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; margin-top: 15px; color: white; transition: 0.2s; }
 .btn-green { background: var(--success); }
-.btn-blue { background: var(--primary); }
+.btn-blue { background: var(--primary); color: #ffffff !important; } /* Geforceerd wit */
 .btn-grey { background: #9ca3af; }
 .btn-link { background: none; border: none; color: var(--primary); cursor: pointer; font-size: 12px; text-decoration: underline; padding:0; }
-.btn-icon { width: 30px; height: 30px; background: white; border: 1px solid #ccc; cursor: pointer; border-radius: 4px; }
+.btn-icon { width: 30px; height: 30px; background: white; border: 1px solid #ccc; cursor: pointer; border-radius: 4px; display:inline-flex; align-items:center; justify-content:center; }
 .hidden { display: none !important; }
 .total-box { background: var(--primary); color: white; padding: 15px; border-radius: 6px; text-align: center; margin-top: 15px; }
 .total-price { font-size: 24px; font-weight: 800; }
@@ -63,18 +66,15 @@ input:focus { outline: 2px solid var(--primary); border-color: transparent; }
 .profit-amount { font-size:18px; font-weight:800; color:#047857; }
 #empty-state { padding: 40px; text-align: center; color: #999; }
 
-/* PDF Modal & Paper */
+/* PDF Modal */
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; display: flex; align-items: center; justify-content: center; }
 .modal-box { background: #525659; width: 900px; max-height: 95vh; display: flex; flex-direction: column; border-radius: 8px; overflow: hidden; }
 .modal-header { background: #222; color: white; padding: 15px; display: flex; justify-content: space-between; }
 .modal-body { padding: 20px; overflow-y: auto; background: #525659; display: flex; justify-content: center; }
 .modal-footer { padding: 15px; background: white; display: flex; justify-content: flex-end; gap: 10px; }
 
-/* A4 Papier CSS (FIXED) */
-.pdf-container {
-    width: 210mm; min-height: 297mm; padding: 20mm;
-    background: white; color: #000; font-family: Arial, sans-serif; font-size: 10pt; line-height: 1.4;
-}
+/* A4 Papier CSS */
+.pdf-container { width: 210mm; min-height: 297mm; padding: 20mm; background: white; color: #000; font-family: Arial, sans-serif; font-size: 10pt; line-height: 1.4; }
 .pdf-logo { color: var(--primary); font-size: 24px; font-weight: bold; margin-bottom: 5px; }
 .pdf-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
 .pdf-table td { vertical-align: top; padding: 2px 0; }
