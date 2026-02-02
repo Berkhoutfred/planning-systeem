@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Berkhout Systeem V6.0 (Modulair)</title>
+    <title>Berkhout Systeem V6.1</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
-    <link rel="stylesheet" href="style.css?v=6.0">
+    <link rel="stylesheet" href="style.css?v=6.1">
 
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAi1U8gP0dlE87sYaUDI2JbKKFxJW_YjlY&libraries=places&callback=initMaps" async defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -16,14 +16,17 @@
 <body>
 
 <div class="sidebar">
-    <div class="brand"><i class="fa-solid fa-bus"></i> BERKHOUT</div>
+    <div class="brand">
+        BERKHOUT <br>
+        <span style="font-size:11px; opacity:0.6; font-weight:400;">Versie 6.1 (Mac Fix)</span>
+    </div>
+    
     <div class="nav-item active" onclick="app.nav('dashboard')"><i class="fa-solid fa-layer-group"></i> Dashboard</div>
     <div class="nav-item" onclick="app.nav('calculatie')"><i class="fa-solid fa-calculator"></i> Nieuwe Rit</div>
     <div class="nav-item" onclick="app.nav('klanten')"><i class="fa-solid fa-users"></i> Klantenbestand</div>
 </div>
 
 <div class="main">
-
     <div id="dashboard" class="page-section active">
         <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
              <div class="year-selector">
@@ -33,7 +36,6 @@
             </div>
             <div id="month-buttons"></div>
         </div>
-
         <div class="card" style="padding:0; overflow:hidden;">
             <table class="rit-table">
                 <thead><tr><th style="width:50px;"></th><th style="width:100px;">Datum</th><th>Klant & Rit</th><th style="text-align:right;">Prijs</th><th class="status-header">OFF</th><th class="status-header">BEV</th><th class="status-header">RIT</th><th class="status-header">FAC</th></tr></thead>
@@ -48,7 +50,6 @@
             <h2 id="calc-title">Nieuwe Aanvraag</h2>
             <button onclick="calc.resetForm()" class="btn-link"><i class="fa-solid fa-rotate-left"></i> Reset</button>
         </div>
-
         <div class="grid-2">
             <div>
                 <div class="card">
@@ -65,14 +66,12 @@
                     </div>
                     <label>Contactpersoon</label><select id="calc-contact"><option value="">-- Kies eerst klant --</option></select>
                     <div id="klant-details" class="hidden" style="background:#f0f9ff; padding:10px; border:1px solid #bae6fd; border-radius:4px; margin-top:10px; font-size:12px;"></div>
-                    
                     <div style="display:flex; gap:10px; margin-top:10px;">
                         <div style="flex:1;"><label>Pax</label><input type="number" id="calc-pax" value="50"></div>
                         <div style="flex:1;"><label>Bussen</label><input type="number" id="calc-bus-count" value="0" readonly style="background:#eee;"></div>
                     </div>
                     <label>Voertuigen</label><div class="bus-grid" id="bus-container"></div>
                 </div>
-
                 <div class="card">
                     <h3>2. Route</h3>
                     <label>Start Garage</label><input type="text" id="route-start" value="Industrieweg 95A, Zutphen">
@@ -90,7 +89,6 @@
                     </div>
                 </div>
             </div>
-
             <div>
                 <div class="card">
                     <h3>3. Tijden</h3>
@@ -105,7 +103,6 @@
                         <span style="color:#666; font-size:12px;">Totaal Uren:</span><br><span id="uren-display" style="font-size:24px; font-weight:800; color:var(--primary);">0.00</span>
                     </div>
                 </div>
-
                 <div class="card">
                     <h3>4. Financieel</h3>
                     <label>Extra Kosten</label><input type="number" id="kosten-extra" value="0" oninput="calc.rekenPrijs()">
@@ -132,7 +129,6 @@
                 <table class="rit-table"><thead><tr><th>Naam</th><th>Plaats</th><th>Email</th><th style="width:60px;"></th></tr></thead><tbody id="crm-table-body"></tbody></table>
             </div>
         </div>
-        
         <div id="crm-detail-view" class="hidden">
             <div class="card">
                 <h3>Klant Kaart</h3>
@@ -158,11 +154,11 @@
     </div>
 </div>
 
-<script src="js/state.js?v=6.0"></script>
-<script src="js/crm.js?v=6.0"></script>
-<script src="js/calculatie.js?v=6.0"></script>
-<script src="js/pdf.js?v=6.0"></script>
-<script src="js/app.js?v=6.0"></script>
+<script src="js/state.js?v=6.1"></script>
+<script src="js/crm.js?v=6.1"></script>
+<script src="js/calculatie.js?v=6.1"></script>
+<script src="js/pdf.js?v=6.1"></script>
+<script src="js/app.js?v=6.1"></script>
 
 </body>
 </html>
