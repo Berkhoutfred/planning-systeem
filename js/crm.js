@@ -1,4 +1,4 @@
-// crm.js - Klantenbeheer
+// crm.js - V7.6 Klanten
 const crm = {
     nieuwKlantScherm: function() {
         state.app.activeClientId = null;
@@ -14,7 +14,6 @@ const crm = {
         document.getElementById('crm-detail-view').classList.add('hidden');
     },
 
-    // FIX: Telefoonnummer veld toegevoegd aan contactpersonen
     addContactRow: function(d = {}) {
         const div = document.createElement('div');
         div.style.cssText = "display:grid; grid-template-columns:1fr 1fr 1fr 30px; gap:5px; margin-bottom:5px;";
@@ -35,7 +34,6 @@ const crm = {
         document.querySelectorAll('#crm-contacts-container div').forEach(row => {
             const inputs = row.querySelectorAll('input');
             if(inputs[0].value) {
-                // Nu ook telefoonnummer (index 2) opslaan
                 contacts.push({naam: inputs[0].value, email: inputs[1].value, tel: inputs[2].value});
             }
         });
