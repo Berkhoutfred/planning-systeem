@@ -21,7 +21,7 @@ h3 { font-size: 14px; color: var(--primary); margin: 0 0 10px 0; font-weight: 70
 label { display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 4px; margin-top: 10px; }
 input, select { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; font-family: inherit; }
 
-/* DROPDOWNS (SELECTS) voor Tijden */
+/* DROPDOWNS VOOR TIJDEN (Werkt overal!) */
 .time-row { display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; background: #fff; border: 1px solid #eee; margin-bottom: 4px; border-radius: 4px; }
 .time-select-group { display: flex; gap: 3px; align-items: center; }
 .select-uur, .select-min { 
@@ -29,10 +29,10 @@ input, select { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-rad
     font-size: 13px; font-weight: 600; 
     border: 1px solid #ccc; border-radius: 4px; 
     background-color: #fff; cursor: pointer;
-    -webkit-appearance: menulist; /* Zorgt voor pijltje op Mac */
+    -webkit-appearance: menulist; /* Forceer Mac pijltje */
 }
 
-/* BUSSEN GRID */
+/* BUSSEN GRID (3 op een rij) */
 .bus-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 5px; }
 .bus-option { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 5px; border: 1px solid #eee; border-radius: 4px; cursor: pointer; font-size: 11px; min-height: 50px; justify-content: center; }
 .bus-option:hover { background: #f0f9ff; border-color: var(--primary); }
