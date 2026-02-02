@@ -3,20 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Berkhout Systeem V7.5 (Dropdowns)</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
+    <title>Berkhout Systeem V8.0</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
-    <link rel="stylesheet" href="style.css?v=7.5">
+    <link rel="stylesheet" href="style.css?v=8.0">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAi1U8gP0dlE87sYaUDI2JbKKFxJW_YjlY&libraries=places&callback=initMaps" async defer></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=HIER_JOUW_API_KEY_PLAKKEN&libraries=places&callback=initMaps" async defer></script>
 </head>
 <body>
 
 <div class="sidebar">
-    <div class="brand">BERKHOUT <br><span style="font-size:11px; opacity:0.6; font-weight:400;">Versie 7.5</span></div>
+    <div class="brand">BERKHOUT <br><span style="font-size:11px; opacity:0.6; font-weight:400;">Versie 8.0 (Live)</span></div>
     <div class="nav-item active" onclick="app.nav('dashboard')"><i class="fa-solid fa-layer-group"></i> Dashboard</div>
     <div class="nav-item" onclick="app.nav('calculatie')"><i class="fa-solid fa-calculator"></i> Nieuwe Rit</div>
     <div class="nav-item" onclick="app.nav('klanten')"><i class="fa-solid fa-users"></i> Klantenbestand</div>
@@ -84,7 +88,7 @@
                     
                     <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:10px; border-radius:6px; margin-top:15px; font-size:12px;">
                         <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-                            <span style="color:#666;">Garage &#8594; Klant (Aanrij):</span>
+                            <span style="color:#666;">Garage &#8594; Klant:</span>
                             <span><strong id="info-aanrij-km">0 km</strong> / <strong id="info-aanrij-tijd">0 min</strong></span>
                         </div>
                         <div style="display:flex; justify-content:space-between; border-bottom:1px solid #ddd; padding-bottom:5px; margin-bottom:5px;">
@@ -92,7 +96,7 @@
                             <span><strong id="info-rit-km">0 km</strong> / <strong id="info-rit-tijd">0 min</strong></span>
                         </div>
                         <div style="display:flex; justify-content:space-between; font-size:14px;">
-                            <span>Totaal Rit:</span>
+                            <span>Totaal:</span>
                             <strong id="info-totaal" style="color:var(--primary);">0 km</strong>
                         </div>
                     </div>
@@ -143,3 +147,34 @@
         
         <div id="crm-detail-view" class="hidden">
             <div class="card">
+                <h3>Klant Kaart</h3>
+                <div class="grid-2"><div><label>Naam</label><input type="text" id="crm-naam"></div><div><label>Plaats</label><input type="text" id="crm-plaats"></div></div>
+                <label>Adres</label><input type="text" id="crm-adres">
+                <h3 style="margin-top:20px;">Contactpersonen</h3>
+                <div id="crm-contacts-container"></div>
+                <button class="btn-link" onclick="crm.addContactRow()">+ Contactpersoon</button>
+                <div style="margin-top:20px; display:flex; gap:10px;">
+                    <button class="btn btn-green" onclick="crm.saveClient()">Opslaan</button>
+                    <button class="btn btn-grey" onclick="crm.terugNaarLijst()">Annuleren</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="offerte-modal" class="hidden modal-overlay">
+    <div class="modal-box">
+        <div class="modal-header"><span>Offerte Voorbeeld</span><span onclick="document.getElementById('offerte-modal').classList.add('hidden')" style="cursor:pointer;"><i class="fa-solid fa-times"></i></span></div>
+        <div class="modal-body"><div id="pdf-content" class="pdf-container"></div></div>
+        <div class="modal-footer"><button class="btn-grey" style="width:auto;" onclick="document.getElementById('offerte-modal').classList.add('hidden')">Sluiten</button><button class="btn-green" style="width:auto;" onclick="pdf.generateAndMail()"><i class="fa-solid fa-paper-plane"></i> Download & Mail</button></div>
+    </div>
+</div>
+
+<script src="js/state.js?v=8.0"></script>
+<script src="js/crm.js?v=8.0"></script>
+<script src="js/calculatie.js?v=8.0"></script>
+<script src="js/pdf.js?v=8.0"></script>
+<script src="js/app.js?v=8.0"></script>
+
+</body>
+</html>
