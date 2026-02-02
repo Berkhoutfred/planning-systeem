@@ -1,20 +1,27 @@
-// app.js - Versie 7.8 (Motor)
+// app.js - Versie 8.1 (De Fix)
 const app = {
     init: function() {
-        // Fix voor eventuele missende arrays in oude data
+        // Controleer of de database bestaat, zo niet, maak leeg aan
         if(!state.db.klanten) state.db.klanten = [];
         if(!state.db.ritten) state.db.ritten = [];
+        
+        // Data integriteit fix
         state.db.klanten.forEach(k => { if(!k.contactpersonen) k.contactpersonen = []; });
         
         this.renderDashboard();
         this.renderMonthButtons();
         
-        // Zet datum van vandaag in de velden als die bestaan
+        // Datum van vandaag invullen
         const t = new Date().toISOString().split('T')[0];
         const datumVeld = document.getElementById('rit_datum');
         if(datumVeld) {
             datumVeld.value = t;
             document.getElementById('rit_datum_eind').value = t;
+        }
+
+        // --- HIER ZAT DE FOUT: De rekenmachine moet ook gestart worden ---
+        if(typeof calc !== 'undefined') {
+            calc.init(); 
         }
     },
 
@@ -38,9 +45,9 @@ const app = {
         const c = document.getElementById('month-buttons');
         if(!c) return;
         
-        c.innerHTML = `<button onclick="state.app.currentMonth=-1;app.renderDashboard();" style="padding:2px 5px; margin:1px; cursor:pointer; font-weight:bold;">Alle</button>`;
+        c.innerHTML = `<button onclick="state.app.currentMonth=-1;app.renderDashboard();" style="padding:2px 5px; margin:1px; cursor:pointer; font-weight:bold; border:1px solid #ccc;">Alle</button>`;
         m.forEach((naam, i) => {
-            c.innerHTML += `<button onclick="state.app.currentMonth=${i};app.renderDashboard();" style="padding:2px 5px; margin:1px; cursor:pointer;">${naam}</button>`;
+            c.innerHTML += `<button onclick="state.app.currentMonth=${i};app.renderDashboard();" style="padding:2px 5px; margin:1px; cursor:pointer; border:1px solid #ccc;">${naam}</button>`;
         });
     },
 
@@ -96,16 +103,16 @@ const app = {
     opslaan: function() {
         if(!document.getElementById('calc-klant-id').value) return alert("Selecteer een klant!");
         
-        // Tijden ophalen uit de nieuwe Dropdowns
+        // Tijden ophalen
         const tijden = {};
         document.querySelectorAll('.select-uur').forEach(el => {
             const id = el.id.replace('h_','');
-            // Check of het element bestaat voordat we value lezen
             if(el && el.nextElementSibling) {
                 tijden[id] = el.value + ':' + el.nextElementSibling.value;
             }
         });
 
+        // Bussen ophalen
         const busLijst = [];
         document.querySelectorAll('.bus-check:checked').forEach(c => busLijst.push(c.value));
 
@@ -145,8 +152,11 @@ const app = {
     }
 };
 
-// Starten
+// INITIALISATIE (Start alles op)
 window.onload = function() {
+    // 1. Start de App (Motor)
     app.init();
+    
+    // 2. Start Google Maps (als geladen)
     if(window.initMaps) window.initMaps();
 };
