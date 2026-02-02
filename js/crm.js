@@ -1,14 +1,10 @@
-
 // crm.js - Klantenbeheer
 const crm = {
     nieuwKlantScherm: function() {
         state.app.activeClientId = null;
-        // Velden leegmaken
         ['crm-naam','crm-adres','crm-plaats'].forEach(id => document.getElementById(id).value = '');
         document.getElementById('crm-contacts-container').innerHTML = '';
-        this.addContactRow(); // Altijd 1 lege regel
-        
-        // Wissel van lijst naar detail
+        this.addContactRow(); 
         document.getElementById('crm-list-view').classList.add('hidden');
         document.getElementById('crm-detail-view').classList.remove('hidden');
     },
@@ -18,12 +14,14 @@ const crm = {
         document.getElementById('crm-detail-view').classList.add('hidden');
     },
 
+    // FIX: Telefoonnummer veld toegevoegd aan contactpersonen
     addContactRow: function(d = {}) {
         const div = document.createElement('div');
-        div.style.cssText = "display:grid; grid-template-columns:1fr 1fr 30px; gap:5px; margin-bottom:5px;";
+        div.style.cssText = "display:grid; grid-template-columns:1fr 1fr 1fr 30px; gap:5px; margin-bottom:5px;";
         div.innerHTML = `
             <input placeholder="Naam" value="${d.naam||''}">
             <input placeholder="Email" value="${d.email||''}">
+            <input placeholder="Tel" value="${d.tel||''}">
             <button onclick="this.parentElement.remove()" style="background:#eee;border:1px solid #ccc;cursor:pointer;">x</button>
         `;
         document.getElementById('crm-contacts-container').appendChild(div);
@@ -36,7 +34,10 @@ const crm = {
         const contacts = [];
         document.querySelectorAll('#crm-contacts-container div').forEach(row => {
             const inputs = row.querySelectorAll('input');
-            if(inputs[0].value) contacts.push({naam: inputs[0].value, email: inputs[1].value});
+            if(inputs[0].value) {
+                // Nu ook telefoonnummer (index 2) opslaan
+                contacts.push({naam: inputs[0].value, email: inputs[1].value, tel: inputs[2].value});
+            }
         });
 
         const client = {
@@ -48,11 +49,9 @@ const crm = {
         };
 
         if(state.app.activeClientId) {
-            // Bestaande updaten
             const idx = state.db.klanten.findIndex(x => x.id == state.app.activeClientId);
             state.db.klanten[idx] = client;
         } else {
-            // Nieuwe toevoegen
             state.db.klanten.push(client);
         }
 
@@ -78,14 +77,12 @@ const crm = {
         });
     },
 
-    // Vanuit CRM direct een offerte starten
     selectForOffer: function(id) {
         calc.resetForm();
         app.nav('calculatie');
         this.fillCalcClient(state.db.klanten.find(k => k.id == id));
     },
 
-    // Zoekbalk functionaliteit in Calculatie scherm
     filterCalcClients: function() {
         const q = document.getElementById('calc-klant-zoek').value.toLowerCase();
         const res = document.getElementById('calc-klant-results');
@@ -110,16 +107,13 @@ const crm = {
         document.getElementById('calc-klant-id').value = k.id;
         document.getElementById('route-ophaal').value = k.adres + ', ' + k.plaats;
         
-        // Detail blokje tonen
         const det = document.getElementById('klant-details');
         det.classList.remove('hidden');
         det.innerHTML = `<b>${k.naam}</b><br>${k.adres}, ${k.plaats}`;
 
-        // Contact dropdown vullen
         const sel = document.getElementById('calc-contact');
         sel.innerHTML = k.contactpersonen.map((c,i) => `<option value="${i}">${c.naam}</option>`).join('');
         
-        // Als er een route is ingevuld, herberekenen met nieuw startadres
         if(document.getElementById('route-eind').value) calc.berekenRoute(); 
     }
 };
