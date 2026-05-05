@@ -1,0 +1,51 @@
+Systeem Context: Berkhout Reizen ERP (Update: 23 Maart 2026)
+
+Het systeem is een maatwerk ERP voor een touringcar/reisbedrijf ("Berkhout Reizen"). Het is gebouwd in PHP (PDO) met een MySQL database. De architectuur is recent omgebouwd naar een strakke "3-Trapsraket":
+- Trap 1: Sales & Offertes (calculaties)
+- Trap 2: Operatie & Planning (Live Planbord / Rittenagenda)
+- Trap 3: Kassa & Afhandeling (Facturatiestation)
+
+--- DATABASE RELATIES & LOGICA ---
+
+1. Klanten & Contacten
+- Tabel `klanten` is de hoofdtabel (bedrijfsnaam, naam, email, is_gecontroleerd, email_factuur, naam_factuur).
+- Tabel `klant_contactpersonen` (1-op-N) gekoppeld via klant_id.
+- Tabel `klant_afdelingen` (1-op-N met ON DELETE CASCADE) gekoppeld via klant_id (voor bijv. FC Zutphen Elftal 1).
+
+2. Calculaties (Trap 1: Het Offerteproces / Sales Hub)
+- Tabel `calculaties` is het hart van de offertes. 
+- RECENTE DATABASE UPDATES (23 mrt):
+  - Kolom `afwijzings_reden` (TEXT) toegevoegd voor als offertes niet doorgaan.
+  - Kolom `extra_voertuigen` (VARCHAR) toegevoegd voor het "Paraplu-principe" (zie uitleg hieronder).
+- Het Paraplu-Principe: 1 offerte kan meerdere bussen bevatten. De hoofdbus staat in `voertuig_id`, extra bussen staan als komma-gescheiden ID's in `extra_voertuigen`. De rekenmachine telt in de achtergrond de km-prijs van álle bussen + de uren van de chauffeur(s) op tot één verkoopprijs.
+- Tabel `calculatie_regels` bevat de tussenstops/etappes per calculatie.
+- Tabel `calculatie_voertuigen` wordt in deze fase PUUR gebruikt voor prijscategorieën (bijv. 50-persoons voor €1,20/km), niet voor fysieke bussen.
+
+3. Planning & Uitvoering (Trap 2: Ritten / Het Live Planbord)
+- DOEL VAN DEZE FASE: Zodra een offerte uit Trap 1 op 'Bevestigd' gaat, rolt deze door naar Trap 2.
+- Magie vereist: Een Paraplu-calculatie (1 rit met 2 bussen) moet op het planbord VISUEEL SPLITSEN in 2 losse blokken, zodat er aan elke bus een eigen chauffeur en fysiek voertuig gekoppeld kan worden.
+- Het Fysieke Wagenpark (Voor toewijzing via radio-buttons/bolletjes):
+  - 2x 19-persoons bus
+  - 1x 50-persoons bus
+  - 1x 53-persoons bus
+  - 1x 60-persoons bus
+  - 1x 62-persoons bus
+  - 2x Rolstoeltaxi (max 8 pers)
+  - Interne busnummers: 17, 18, 19, 23, 50, 55, 60, 62.
+- Strikte regel: Een fysiek voertuig of chauffeur kan NOOIT dubbel gepland worden op dezelfde datum/tijd. Het planbord moet waarschuwen/blokkeren.
+
+4. Personeel & Wagenpark
+- Tabel `chauffeurs`: naam, contact, contracturen, rijbewijsverloop, bestuurderskaart, code95.
+- Tabel `voertuigen`: Het fysieke wagenpark (kenteken, zitplaatsen, apk, tacho).
+- Tabel `loon_uren`: urenregistratie en toeslagen.
+
+--- LAATSTE UPDATES & OPTIMALISATIES (23 Maart 2026) ---
+
+- Calculatie Overzicht (calculaties.php):
+  Omgebouwd tot pure Sales Hub. Irrelevante kolommen (KLAAR/FAC/BET) verwijderd. Uitgebreide zoekfilters (Datum, Klant, Type) toegevoegd. 'Niet Geaccepteerd' knop met pop-up voor afwijzingsreden gebouwd (verplaatst de rit naar archief). Automatische capaciteitswaarschuwing toegevoegd als er op 1 dag veel bussen in optie staan.
+
+- Calculatie Maken & Bewerken (maken.php v4.2 / bewerken.php v5.3 / update.php v4.0):
+  Volledig "Paraplu-proof" gemaakt. Via een knop "+ Extra bus" kunnen oneindig veel extra voertuigen aan 1 offerte worden toegevoegd. Rekenmachine in JS herschreven om per bus de kosten + uren op te tellen. Opslaan-scripts (update.php) gerepareerd zodat `voertuig_id`, `afdeling_id` en `extra_voertuigen` feilloos worden weggeschreven en weer ingeladen.
+
+--- OPDRACHT VOOR DEZE CHAT ---
+We gaan nu Trap 2 bouwen: Het Live Planbord. Lees bovenstaande architectuur goed door. Geef een korte bevestiging dat je het snapt, en stel voor hoe we stap voor stap het planbord gaan opbouwen (waarbij Paraplu-ritten gesplitst worden en dubbele boekingen onmogelijk zijn).

@@ -1,0 +1,12 @@
+RewriteEngine On
+
+# 1. Forceer altijd HTTPS (Beveiligde verbinding)
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# 2. Forceer altijd WWW. voor de domeinnaam
+RewriteCond %{HTTP_HOST} ^berkhoutreizen\.nl [NC]
+RewriteRule ^(.*)$ https://www.berkhoutreizen.nl/$1 [L,R=301]
+<IfModule mod_rewrite.c>
+RewriteEngine Off
+</IfModule>

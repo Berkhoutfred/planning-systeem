@@ -1,0 +1,16 @@
+{
+  "name": "busai-brand-tools",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Brand asset optimization scripts for BusAI.",
+  "scripts": {
+    "brand:svg:min": "svgo -f assets/brand/svg -o assets/brand/svg",
+    "brand:png:opt": "imagemin \"assets/brand/png/**/*.{png,PNG}\" --plugin=pngquant --out-dir=assets/brand/png",
+    "brand:opt": "npm run brand:svg:min && npm run brand:png:opt"
+  },
+  "devDependencies": {
+    "imagemin-cli": "^8.0.0",
+    "imagemin-pngquant": "^10.0.0",
+    "svgo": "^3.3.2"
+  }
+}
