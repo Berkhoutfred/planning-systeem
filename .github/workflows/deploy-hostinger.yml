@@ -1,0 +1,37 @@
+# Deploy naar Hostinger bij push naar main.
+# Vereist GitHub repository secrets (Settings → Secrets and variables → Actions):
+#   FTP_SERVER   — uit hPanel (bijv. ftp.hostinger.com)
+#   FTP_USERNAME — FTP-gebruiker voor deze site
+#   FTP_PASSWORD — FTP-wachtwoord
+# (geen FTP_REMOTE_DIR-secret meer: server-dir staat in dit bestand)
+# Als bestanden op de verkeerde plek komen: pas server-dir hieronder aan
+# (sommige FTP-accounts starten al in public_html → gebruik dan / ).
+
+name: Deploy to Hostinger (FTP)
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  ftp-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: FTP deploy
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.6
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          server-dir: /public_html/
+          protocol: ftps
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            *.sql
+            **/.DS_Store
