@@ -72,8 +72,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $passwordHash = password_hash($password, PASSWORD_DEFAULT);
                 $stmt = $pdo->prepare('
-                    INSERT INTO users (tenant_id, email, wachtwoord_hash, volledige_naam, rol, actief)
-                    VALUES (?, ?, ?, ?, ?, ?)
+                    INSERT INTO users (tenant_id, email, wachtwoord_hash, volledige_naam, rol, actief, email_otp_enabled)
+                    VALUES (?, ?, ?, ?, ?, ?, 0)
                 ');
                 $stmt->execute([$tenantId, $email, $passwordHash, $volledigeNaam, 'tenant_admin', $actief]);
 

@@ -64,8 +64,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $hash = password_hash($password, PASSWORD_DEFAULT);
                 $stmt = $pdo->prepare("
-                    INSERT INTO users (tenant_id, email, wachtwoord_hash, volledige_naam, rol, actief)
-                    VALUES (?, ?, ?, ?, ?, ?)
+                    INSERT INTO users (tenant_id, email, wachtwoord_hash, volledige_naam, rol, actief, email_otp_enabled)
+                    VALUES (?, ?, ?, ?, ?, ?, 0)
                 ");
                 $stmt->execute([$tenantId, $email, $hash, $volledigeNaam, $rol, $actief]);
 
@@ -124,6 +124,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmtUpd->execute([$hash, $userId, $tenantId]);
                 $success = 'Wachtwoord succesvol gereset.';
             }
+
+            if ($action === 'toggle_email_otp') {
+                $userId = (int) ($_POST['user_id'] ?? 0);
+                if ($userId <= 0) {
+                    throw new RuntimeException('Ongeldige gebruiker.');
+                }
+
+                $stmtGet = $pdo->prepare('SELECT id, rol, email_otp_enabled FROM users WHERE id = ? AND tenant_id = ? LIMIT 1');
+                $stmtGet->execute([$userId, $tenantId]);
+                $target = $stmtGet->fetch(PDO::FETCH_ASSOC);
+                if (!$target) {
+                    throw new RuntimeException('Gebruiker niet gevonden binnen tenant.');
+                }
+                if (!g_can_manage_role($isPlatformOwner, (string) $target['rol'])) {
+                    throw new RuntimeException('Je mag deze gebruiker niet wijzigen.');
+                }
+
+                $nieuw = ((int) ($target['email_otp_enabled'] ?? 0) === 1) ? 0 : 1;
+                $stmtUpd = $pdo->prepare('UPDATE users SET email_otp_enabled = ? WHERE id = ? AND tenant_id = ?');
+                $stmtUpd->execute([$nieuw, $userId, $tenantId]);
+                $success = $nieuw === 1
+                    ? 'Extra inlogcode per e-mail staat nu aan voor deze gebruiker.'
+                    : 'Extra inlogcode per e-mail staat nu uit voor deze gebruiker.';
+            }
         } catch (PDOException $e) {
             if ($e->getCode() === '23000') {
                 $error = 'Dit e-mailadres bestaat al.';
@@ -141,7 +165,7 @@ $placeholders = implode(',', array_fill(0, count($allowedRoles), '?'));
 $params = array_merge([$tenantId], $allowedRoles);
 
 $stmtUsers = $pdo->prepare("
-    SELECT id, volledige_naam, email, rol, actief, laatste_login_at, created_at
+    SELECT id, volledige_naam, email, rol, actief, email_otp_enabled, laatste_login_at, created_at
     FROM users
     WHERE tenant_id = ? AND rol IN ($placeholders)
     ORDER BY rol ASC, volledige_naam ASC
@@ -246,12 +270,13 @@ $csrfToken = auth_get_csrf_token();
                         <th>Rol</th>
                         <th>Status</th>
                         <th>Laatste login</th>
+                        <th>Code na wachtwoord</th>
                         <th>Acties</th>
                     </tr>
                 </thead>
                 <tbody>
                 <?php if (!$users): ?>
-                    <tr><td colspan="6" style="text-align:center; color:#666;">Nog geen gebruikers gevonden.</td></tr>
+                    <tr><td colspan="7" style="text-align:center; color:#666;">Nog geen gebruikers gevonden.</td></tr>
                 <?php endif; ?>
                 <?php foreach ($users as $u): ?>
                     <tr>
@@ -265,7 +290,20 @@ $csrfToken = auth_get_csrf_token();
                         </td>
                         <td><?php echo $u['laatste_login_at'] ? g_h($u['laatste_login_at']) : '-'; ?></td>
                         <td>
+                            <span class="badge <?php echo ((int) ($u['email_otp_enabled'] ?? 0) === 1) ? 'active' : 'inactive'; ?>">
+                                <?php echo ((int) ($u['email_otp_enabled'] ?? 0) === 1) ? 'aan' : 'uit'; ?>
+                            </span>
+                        </td>
+                        <td>
                             <div class="tools">
+                                <form method="POST" onsubmit="return confirm('Extra 6-cijferige code na wachtwoord aan/uit zetten?');">
+                                    <input type="hidden" name="auth_csrf_token" value="<?php echo g_h($csrfToken); ?>">
+                                    <input type="hidden" name="action" value="toggle_email_otp">
+                                    <input type="hidden" name="user_id" value="<?php echo (int) $u['id']; ?>">
+                                    <button type="submit" class="btn-gray">
+                                        <?php echo ((int) ($u['email_otp_enabled'] ?? 0) === 1) ? 'Code-2FA uit' : 'Code-2FA aan'; ?>
+                                    </button>
+                                </form>
                                 <form method="POST">
                                     <input type="hidden" name="auth_csrf_token" value="<?php echo g_h($csrfToken); ?>">
                                     <input type="hidden" name="action" value="toggle_active">

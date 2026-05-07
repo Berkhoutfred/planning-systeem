@@ -343,16 +343,16 @@ if (!function_exists('attempt_legacy_login')) {
 }
 
 /**
- * Kantoor-login: e-mail + wachtwoord strikt gekoppeld aan een gekozen actieve tenant (slug).
- * Platform-eigenaar mag inloggen in elke actieve tenant; overige rollen alleen op eigen tenant_id.
+ * Kantoor-login: controleer e-mail + wachtwoord zonder sessie te starten.
+ * Retourneert gebruikersrij (incl. email_otp_enabled) of null.
  */
-if (!function_exists('attempt_office_login')) {
-    function attempt_office_login(PDO $pdo, string $email, string $password, string $tenantSlug): bool
+if (!function_exists('office_password_check_office_login')) {
+    function office_password_check_office_login(PDO $pdo, string $email, string $password, string $tenantSlug): ?array
     {
         $email = strtolower(trim($email));
         $tenantSlug = trim($tenantSlug);
         if ($email === '' || $tenantSlug === '') {
-            return false;
+            return null;
         }
 
         $sql = "
@@ -364,6 +364,7 @@ if (!function_exists('attempt_office_login')) {
                 u.volledige_naam,
                 u.rol,
                 u.actief,
+                u.email_otp_enabled,
                 t_ctx.id AS session_tenant_id,
                 t_ctx.slug AS session_tenant_slug
             FROM users u
@@ -384,9 +385,19 @@ if (!function_exists('attempt_office_login')) {
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$user || !password_verify($password, (string) $user['wachtwoord_hash'])) {
-            return false;
+            return null;
         }
 
+        return $user;
+    }
+}
+
+if (!function_exists('office_perform_login_from_office_row')) {
+    /**
+     * @param array<string,mixed> $user
+     */
+    function office_perform_login_from_office_row(PDO $pdo, array $user): void
+    {
         $upd = $pdo->prepare('UPDATE users SET laatste_login_at = NOW() WHERE id = ?');
         $upd->execute([(int) $user['id']]);
 
@@ -398,6 +409,26 @@ if (!function_exists('attempt_office_login')) {
             'tenant_id' => (int) $user['session_tenant_id'],
             'tenant_slug' => (string) $user['session_tenant_slug'],
         ]);
+    }
+}
+
+/**
+ * Kantoor-login: e-mail + wachtwoord strikt gekoppeld aan een gekozen actieve tenant (slug).
+ * Platform-eigenaar mag inloggen in elke actieve tenant; overige rollen alleen op eigen tenant_id.
+ */
+if (!function_exists('attempt_office_login')) {
+    function attempt_office_login(PDO $pdo, string $email, string $password, string $tenantSlug): bool
+    {
+        $user = office_password_check_office_login($pdo, $email, $password, $tenantSlug);
+        if ($user === null) {
+            return false;
+        }
+
+        if ((int) ($user['email_otp_enabled'] ?? 0) === 1) {
+            return false;
+        }
+
+        office_perform_login_from_office_row($pdo, $user);
 
         return true;
     }
