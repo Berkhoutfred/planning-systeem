@@ -41,6 +41,7 @@ try {
         'brenghaal',
         'trein',
         'meerdaags',
+        'buitenland',
     ];
     $rittypeRaw = (string) ($_POST['rittype'] ?? 'dagtocht');
     $rittype = in_array($rittypeRaw, $allowedRittypes, true) ? $rittypeRaw : 'dagtocht';

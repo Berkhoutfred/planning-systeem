@@ -132,7 +132,13 @@ function val($data, $rij, $veld, $default = '') {
     .c-grey { color: #ccc; }
 </style> 
 
-<div class="container"> 
+<div class="container">
+    <?php if (($rit['offerte_module'] ?? 'standaard') === 'buitenland'): ?>
+        <div style="background:#e6fffa;border:1px solid #38b2ac;color:#234e52;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:14px;">
+            <strong>Buitenland-module:</strong> dit dossier is gestart via Optie D. Km NL/DE en overnachting staan in kantoorinstructie en in metadata;
+            PDF/planbord werken zoals bij andere offertes. CAO-/BTW-automatisering volgt in een volgende stap.
+        </div>
+    <?php endif; ?> 
     <form action="calculaties_update.php" method="POST" id="mainForm"> 
         <input type="hidden" name="id" value="<?= $rit['id'] ?>"> 
         <input type="hidden" name="naar_dashboard" value="1"> 
@@ -239,6 +245,7 @@ function val($data, $rij, $veld, $default = '') {
                             <option value="brenghaal" <?= $rit['rittype'] == 'brenghaal' ? 'selected' : '' ?>>Breng & Haal (Split)</option>
                             <option value="trein" <?= $rit['rittype'] == 'trein' ? 'selected' : '' ?>>Treinstremming</option>
                             <option value="meerdaags" <?= $rit['rittype'] == 'meerdaags' ? 'selected' : '' ?>>Meerdaagse Rit</option>
+                            <option value="buitenland" <?= $rit['rittype'] == 'buitenland' ? 'selected' : '' ?>>Buitenland (module)</option>
                         </select>
                     </div> 
                     <div><label>Vertrekdatum</label><input type="date" name="rit_datum" id="rit_datum" class="form-control" value="<?= htmlspecialchars($rit['rit_datum']) ?>"></div> 

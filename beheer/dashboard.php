@@ -965,6 +965,10 @@ include 'includes/header.php';
                     <i class="fas fa-train" style="color:#805ad5;width:28px;text-align:center;"></i>
                     <div><strong>Optie C — Treinstremming</strong><span>Vaste prijs, direct naar planbord</span></div>
                 </button>
+                <a href="buitenland/index.php" class="dash-opt" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;background:#fff;cursor:pointer;">
+                    <i class="fas fa-globe-europe" style="color:#0d9488;width:28px;text-align:center;"></i>
+                    <div><strong>Optie D — Buitenland</strong><span>Offerte met km NL/DE, overnachting; zelfde doorstroom als offerte</span></div>
+                </a>
                 <div class="dash-actions">
                     <button type="button" class="dash-btn dash-btn-sec" data-actie="annuleer">Annuleren</button>
                 </div>
