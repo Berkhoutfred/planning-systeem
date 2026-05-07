@@ -1,17 +1,8 @@
 <?php
-/**
- * Front to the WordPress application. This file doesn't do anything, but loads
- * wp-blog-header.php which does and tells WordPress to load the theme.
- *
- * @package WordPress
- */
+declare(strict_types=1);
 
 /**
- * Tells WordPress to load the WordPress theme and output it.
- *
- * @var bool
+ * Root: stuur bezoekers naar het kantoor-inlogscherm.
  */
-define( 'WP_USE_THEMES', true );
-
-/** Loads the WordPress Environment and Template */
-require __DIR__ . '/wp-blog-header.php';
+header('Location: /login.php', true, 302);
+exit;
