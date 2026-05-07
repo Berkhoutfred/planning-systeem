@@ -515,7 +515,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && ($_GET['ajax'] ?? '') === '
             $labels = [
                 't_garage' => 'Vertrek Garage',
                 't_voorstaan' => 'Voorstaan',
-                't_vertrek_klant' => 'Vertrek Klant',
+                't_vertrek_klant' => 'Vertrekadres',
                 't_aankomst_best' => 'Bestemming',
                 't_retour_garage_heen' => 'Retour garage (heen)',
             ];

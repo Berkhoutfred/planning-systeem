@@ -232,7 +232,7 @@ function updateVisibility() {
 function calculateRoute() {
     const type = document.getElementById('rittype_select').value;
 
-    // HEEN: garage → vertrek land → 1e grens → [optioneel 2e grens] → bestemming
+    // HEEN: garage → vertrekadres → 1e grens → [optioneel 2e grens] → bestemming
     const s1 = document.getElementById('addr_t_garage').value;
     const sVl = document.getElementById('addr_t_vertrek_klant').value;
     const sGrens = document.getElementById('addr_t_voorstaan').value;

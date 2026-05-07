@@ -209,7 +209,7 @@ function val($data, $rij, $veld, $default = '') {
                     </div>
                     <div class="rit-row" id="row_vertrek_klant">
                         <div class="col-tijd"><label>Vertrek</label><input type="text" name="time[t_vertrek_klant]" id="time_t_vertrek_klant" class="form-control custom-time-input reken-trigger" placeholder="--:--" readonly></div>
-                        <div class="col-adres"><label>Vertrek land</label><input type="text" name="addr[t_vertrek_klant]" id="addr_t_vertrek_klant" class="form-control google-autocomplete" placeholder="Vertrek land..."></div>
+                        <div class="col-adres"><label>Vertrekadres</label><input type="text" name="addr[t_vertrek_klant]" id="addr_t_vertrek_klant" class="form-control google-autocomplete" placeholder="Typ of zoek adres (Google Maps)…"></div>
                         <div class="col-km"><label>Km</label><input type="number" name="km[t_vertrek_klant]" class="form-control km-calc reken-trigger" value="0"></div>
                         <div class="col-zone"><label>Zone</label><select class="form-control km-zone-select reken-trigger" title="Fiscale zone"><option value="nl">NL</option><option value="de">DE</option><option value="ch">CH</option><option value="ov">0%</option></select></div>
                     </div>

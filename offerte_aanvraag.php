@@ -307,7 +307,7 @@ if ($tenant !== null && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     $regelLabels = [
                         't_garage' => 'Vertrek Garage',
                         't_voorstaan' => 'Voorstaan',
-                        't_vertrek_klant' => 'Vertrek Klant',
+                        't_vertrek_klant' => 'Vertrekadres',
                         't_aankomst_best' => 'Bestemming',
                         't_retour_garage_heen' => 'Retour garage (heen)',
                         't_garage_rit2' => 'Garage rit 2',
