@@ -297,6 +297,7 @@ try {
     .archief-row { opacity: 0.7; background-color: #fcfcfc; }
     .warning-row { background-color: #fff3cd !important; border-left: 4px solid #ffc107; }
     .sales-rit-row { border-left: 4px solid #dd6b20; background: linear-gradient(90deg, rgba(221,107,32,0.06) 0%, #fff 12px); }
+    .buitenland-row { border-left: 4px solid #0d9488; background: linear-gradient(90deg, rgba(13,148,136,0.07) 0%, #fff 12px); }
 
     .status-col { text-align: center; cursor: pointer; width: 45px; border-left: 1px solid #f5f5f5; }
     .status-icon { font-size: 18px; color: #e0e0e0; }
@@ -306,6 +307,7 @@ try {
     .badge-optie { background: #e2e3e5; color: #383d41; border: 1px dashed #adb5bd; }
     .badge-definitief { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
     .badge-afgewezen { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    .badge-buitenland { background: #ccfbf1; color: #0f766e; border: 1px solid #5eead4; font-weight: 700; }
 
     .action-icons a { margin-right: 8px; font-size: 16px; cursor: pointer; text-decoration:none; }
     .btn-edit { color: #003366; }
@@ -364,6 +366,7 @@ try {
             <option value="schoolreis" <?= $search_type == 'schoolreis' ? 'selected' : '' ?>>Schoolreis</option>
             <option value="brenghaal" <?= $search_type == 'brenghaal' ? 'selected' : '' ?>>Breng & Haal</option>
             <option value="trein" <?= $search_type == 'trein' ? 'selected' : '' ?>>Treinstremming</option>
+            <option value="buitenland" <?= $search_type == 'buitenland' ? 'selected' : '' ?>>Buitenland</option>
         </select>
         
         <button type="submit" class="btn-blue" style="margin:0;"><i class="fas fa-search"></i> Zoek</button>
@@ -460,6 +463,15 @@ try {
                         $row_class = trim($row_class . ' sales-rit-row');
                     }
 
+                    $isBuitenlandCalc = !$isSales
+                        && (
+                            (($r['offerte_module'] ?? '') === 'buitenland')
+                            || (($r['rittype'] ?? '') === 'buitenland')
+                        );
+                    if ($isBuitenlandCalc) {
+                        $row_class = trim($row_class . ' buitenland-row');
+                    }
+
                     if (!$isSales && $view !== 'archief') {
                         $aantal_die_dag = $druktePerDag[$r['rit_datum']][$bus_naam] ?? 0;
                         $max_bussen_van_dit_type = 2;
@@ -487,6 +499,9 @@ try {
                     <td>
                         <div style="font-weight:bold; color:#003366; font-size: 15px;"><?= ucfirst(datumNL((string) $r['rit_datum'])) ?></div>
                         <span style="font-size:11px; color:#888; text-transform:uppercase; font-weight:bold;"><?= htmlspecialchars((string) ($r['rittype'] ?? ''), ENT_QUOTES, 'UTF-8') ?></span>
+                        <?php if (!empty($isBuitenlandCalc)): ?>
+                            <div style="margin-top:6px;"><span class="badge badge-buitenland"><i class="fas fa-globe-europe"></i> Buitenland</span></div>
+                        <?php endif; ?>
                     </td>
                     <td>
                         <strong style="color:#333;"><?= htmlspecialchars($klantNaam, ENT_QUOTES, 'UTF-8') ?></strong><br>
