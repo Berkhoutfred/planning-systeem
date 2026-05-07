@@ -723,6 +723,7 @@ include 'includes/header.php';
     .card-nieuw { border-left-color: #2b6cb0; } .card-nieuw i { color: #2b6cb0; }
     .card-planbord { border-left-color: #38a169; } .card-planbord i { color: #38a169; }
     .card-sales { border-left-color: #805ad5; } .card-sales i { color: #805ad5; }
+    .card-buitenland { border-left-color: #0d9488; } .card-buitenland i { color: #0d9488; }
 
     .action-card i { font-size: 26px; width: 52px; text-align: center; }
     .action-text { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
@@ -792,6 +793,9 @@ include 'includes/header.php';
     }
     .dash-opt:hover { border-left-color: #2b6cb0; background: #f7fafc; }
     .dash-opt.is-selected { border-left-color: #2b6cb0; background: #ebf4ff; }
+    a.dash-opt.dash-opt-buitenland { text-decoration: none; color: inherit; box-sizing: border-box; }
+    .dash-opt.dash-opt-buitenland { border-left-color: #99f6e4; }
+    .dash-opt.dash-opt-buitenland:hover { border-left-color: #0d9488; background: #f0fdfa; }
     .dash-opt strong { display: block; font-size: 14px; color: #1a202c; }
     .dash-opt span { font-size: 12px; color: #718096; }
     .dash-row { margin-bottom: 12px; }
@@ -911,6 +915,14 @@ include 'includes/header.php';
                     <p>Beheer lopende offertes en wachtende klanten.</p>
                 </div>
             </a>
+
+            <a href="buitenland/index.php" class="action-card card-buitenland">
+                <i class="fas fa-globe-europe"></i>
+                <div class="action-text">
+                    <h3>Buitenland-offerte</h3>
+                    <p>Nieuwe offerte met km NL/DE en overnachting; zelfde doorstroom als een gewone offerte.</p>
+                </div>
+            </a>
         </div>
 
         <div class="info-kolom">
@@ -965,7 +977,7 @@ include 'includes/header.php';
                     <i class="fas fa-train" style="color:#805ad5;width:28px;text-align:center;"></i>
                     <div><strong>Optie C — Treinstremming</strong><span>Vaste prijs, direct naar planbord</span></div>
                 </button>
-                <a href="buitenland/index.php" class="dash-opt" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;background:#fff;cursor:pointer;">
+                <a href="buitenland/index.php" class="dash-opt dash-opt-buitenland">
                     <i class="fas fa-globe-europe" style="color:#0d9488;width:28px;text-align:center;"></i>
                     <div><strong>Optie D — Buitenland</strong><span>Offerte met km NL/DE, overnachting; zelfde doorstroom als offerte</span></div>
                 </a>
