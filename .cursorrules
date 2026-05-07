@@ -10,4 +10,6 @@ Geheimen: Plaats NOOIT wachtwoorden of API-sleutels in de code. Gebruik altijd h
 
 Werkwijze: Werk altijd stapje voor stapje. Doe geen gigantische aanpassingen in één keer. Leg eerst kort uit wat je van plan bent en vraag om goedkeuring.
 
+Git: Na een afgeronde codewijziging in deze repo uitvoeren: `git add`, `git commit` (duidelijke message) en `git push` naar origin, tenzij de gebruiker expliciet vraagt om nog niet te pushen of alleen lokaal te laten.
+
 Codekwaliteit: Houd functies kort en overzichtelijk. Voorzie complexe logica van korte, heldere commentaren.
