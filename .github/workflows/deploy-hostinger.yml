@@ -6,6 +6,15 @@
 # (geen FTP_REMOTE_DIR-secret meer: server-dir staat in dit bestand)
 # Als bestanden op de verkeerde plek komen: pas server-dir hieronder aan
 # (sommige FTP-accounts starten al in public_html → gebruik dan / ).
+#
+# Bij "Timeout (control socket)" / "Failed to connect":
+#   — Controleer FTP_SERVER in hPanel → Websites → jouw site → Bestanden → FTP-accounts
+#     (hostname kan per account verschillen; geen typfout of oude waarde).
+#   — Test lokaal: ftp -p hostname 21 (of FileZilla) vanaf je eigen netwerk.
+#   — FTPS-handshake kan soms hangen: probeer tijdelijk protocol: ftp (alleen om te testen)
+#     of protocol: ftps-legacy als Hostinger dat vereist.
+#   — SFTP is een ander protocol; deze Action ondersteunt géén SFTP (alleen FTP/FTPS).
+#   — Zeldzaam: firewall blokkeert datacenter-IP's; dan Hostinger-support of deploy via andere route.
 
 name: Deploy to Hostinger (FTP)
 
@@ -29,6 +38,9 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           server-dir: /public_html/
           protocol: ftps
+          port: 21
+          timeout: 120000
+          log-level: standard
           exclude: |
             **/.git*
             **/.git*/**
