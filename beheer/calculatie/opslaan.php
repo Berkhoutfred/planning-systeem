@@ -109,6 +109,11 @@ try {
         : 0.0;
     $instructie = (string) ($_POST['instructie_kantoor'] ?? '');
 
+    require_once __DIR__ . '/includes/calculatie_meta.php';
+    $metaPack = calculatie_parse_meta_from_post($_POST, $rittype);
+    $instructie = calculatie_append_buitenland_dagprogramma($instructie, $rittype, $_POST);
+    $instructie = calculatie_append_tussendagen_to_instructie($instructie, $metaPack['tussendagen_json']);
+
     $labels = $_POST['label'] ?? [];
     $times = $_POST['time'] ?? [];
     $addrs = $_POST['addr'] ?? [];
@@ -211,7 +216,12 @@ try {
     foreach ($extraBussenArray as $extraBusId) {
         $alleVoertuigIds[] = $extraBusId;
     }
-    $alleVoertuigIds = array_values(array_unique($alleVoertuigIds));
+    foreach ($metaPack['tussendagen_bus_ids'] as $tid) {
+        if ($tid > 0) {
+            $alleVoertuigIds[] = $tid;
+        }
+    }
+    $alleVoertuigIds = array_values(array_unique(array_filter($alleVoertuigIds, static fn ($v) => (int) $v > 0)));
 
     if ($alleVoertuigIds !== []) {
         $placeholders = implode(',', array_fill(0, count($alleVoertuigIds), '?'));
@@ -302,6 +312,8 @@ try {
             $stmtRegel->execute([$tenantId, $calculatieId, $type, $label, $tijd, $adres, $km]);
         }
     }
+
+    calculatie_persist_meta_columns($pdo, $tenantId, $calculatieId, $metaPack);
 
     $pdo->commit();
 

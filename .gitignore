@@ -4,3 +4,6 @@
 
 # macOS
 .DS_Store
+
+# Lokaal: productie-checklist (niet op GitHub)
+docs/TODO-productie-en-beveiliging.md

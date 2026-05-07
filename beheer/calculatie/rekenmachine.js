@@ -72,9 +72,20 @@ function init() {
     });
     document.getElementById('closeModalBtn').addEventListener('click', closeTimeModal);
 
+    document.addEventListener('change', function (e) {
+        const row = e.target.closest && e.target.closest('.tz-row');
+        if (!row) return;
+        if (e.target.matches('[name="tussendagen_van[]"], [name="tussendagen_naar[]"]')) {
+            calculateTussendagenKm(row);
+        }
+    });
+
     updateVisibility(); 
     rekenen();
     tryInitialRouteIfNoKm();
+    if (typeof window.calculatieExtrasAfterInit === 'function') {
+        window.calculatieExtrasAfterInit();
+    }
 }
 
 /** Eénmalig na laden: als alle zichtbare km-regels nog 0 zijn en kernadressen staan, routes laten berekenen (o.a. wizard-import). */
@@ -183,7 +194,7 @@ function updateVisibility() {
         blockTerug.style.display = 'none'; 
         if(rowRetourGarageHeen) rowRetourGarageHeen.style.display = 'flex'; 
     }
-    if (type === 'meerdaags') {
+    if (type === 'meerdaags' || type === 'buitenland') {
         blockMeerdaags.style.display = 'block';
     }
     if (type === 'brenghaal') {
@@ -264,7 +275,46 @@ function calculateRoute() {
              if(stopsTerug.length >= 2) runGoogleRoute(stopsTerug);
         }
     }
+
+    setTimeout(function () {
+        calculateTussendagenKmAll();
+    }, 350);
 }
+
+/** Tussenrit-rijen: km via Google Directions (van → naar). */
+function calculateTussendagenKmAll() {
+    if (typeof directionsService === 'undefined' || !directionsService) return;
+    document.querySelectorAll('.tz-row').forEach(function (row) {
+        calculateTussendagenKm(row);
+    });
+}
+
+function calculateTussendagenKm(rowEl) {
+    if (!directionsService || !rowEl) return;
+    const van = rowEl.querySelector('[name="tussendagen_van[]"]');
+    const naar = rowEl.querySelector('[name="tussendagen_naar[]"]');
+    const kmInput = rowEl.querySelector('.km-calc');
+    if (!van || !naar || !kmInput) return;
+    const a = van.value.trim();
+    const b = naar.value.trim();
+    if (a.length < 4 || b.length < 4) return;
+
+    directionsService.route({
+        origin: a,
+        destination: b,
+        travelMode: 'DRIVING',
+        unitSystem: google.maps.UnitSystem.METRIC
+    }, function (response, status) {
+        if (status !== 'OK' || !response.routes || !response.routes[0]) return;
+        const leg = response.routes[0].legs[0];
+        if (!leg) return;
+        kmInput.value = Math.ceil(leg.distance.value / 1000);
+        if (typeof rekenen === 'function') rekenen();
+    });
+}
+
+window.calculateTussendagenKm = calculateTussendagenKm;
+window.calculateTussendagenKmAll = calculateTussendagenKmAll;
 
 function runGoogleRoute(stopMap) {
     const origin = stopMap[0].loc;
@@ -295,6 +345,7 @@ function runGoogleRoute(stopMap) {
             }
             updatePlanning();
             rekenen();
+            calculateTussendagenKmAll();
         }
     });
 }
@@ -343,7 +394,7 @@ function updatePlanning() {
             document.getElementById('time_t_retour_garage').value = formatTime(dGarageEind);
         }
     } 
-    else if (type === 'dagtocht' || type === 'schoolreis' || type === 'meerdaags' || type === 'trein') {
+    else if (type === 'dagtocht' || type === 'schoolreis' || type === 'meerdaags' || type === 'buitenland' || type === 'trein') {
         const tVertrekTerug = document.getElementById('time_t_vertrek_best').value;
         if(tVertrekTerug) {
             const dTerug = parseTime(tVertrekTerug);
@@ -367,7 +418,7 @@ function rekenen() {
         if(i.offsetParent !== null) totaalKm += parseFloat(i.value) || 0;
     });
 
-    if(type === 'meerdaags') {
+    if(type === 'meerdaags' || type === 'buitenland') {
         const tussenKm = parseFloat(document.getElementById('km_tussen').value) || 0;
         totaalKm += tussenKm;
         const nl = parseFloat(document.getElementById('km_nl').value) || 0;
@@ -395,23 +446,32 @@ function rekenen() {
         let uren2 = (tStart2 && tEnd2) ? calcDiff(tStart2, tEnd2) : 0;
         uren = uren1 + uren2;
     }
-    else if (type === 'meerdaags') {
-        const t2 = document.getElementById('time_t_aankomst_best').value; 
-        let urenHeen = (t1 && t2) ? calcDiff(t1, t2) + 0.5 : 0;
-        const t3 = document.getElementById('time_t_vertrek_best').value; 
+    else if (type === 'meerdaags' || type === 'buitenland') {
+        const t2 = document.getElementById('time_t_aankomst_best').value;
+        const t3 = document.getElementById('time_t_vertrek_best').value;
         const t4 = document.getElementById('time_t_retour_garage').value;
+
+        let urenHeen = (t1 && t2) ? calcDiff(t1, t2) + 0.5 : 0;
         let urenTerug = (t3 && t4) ? calcDiff(t3, t4) : 0;
-        uren = urenHeen + urenTerug;
 
         const datumStart = document.getElementById('rit_datum').value;
         const datumEind = document.getElementById('rit_datum_eind').value;
-        if(datumStart && datumEind && datumStart !== datumEind) {
-             const d1 = new Date(datumStart);
-             const d2 = new Date(datumEind);
-             const diffTime = Math.abs(d2 - d1);
-             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-             const tussenDagen = diffDays - 1; 
-             if(tussenDagen > 0) uren += (tussenDagen * 8); 
+
+        const kalenderdagen = countKalenderdagenInclusive(datumStart, datumEind);
+        const MIN_NETTO_PER_AANLOOPDAG = 8;
+
+        /*
+         * Meerdaagse reizen (kalender): CAO — 1e en laatste kalenderdag 6/6 diensttijd (hier: uit tijdenvelden),
+         * met minimaal 8 uur netto per die dagen; tussenliggende kalenderdagen telden als 8 uur netto (loonberekening).
+         * Pauze/staffel art. 16 lid 1 sub d: niet apart gemodelleerd; alleen netto‑minimum afgedwongen.
+         */
+        if (kalenderdagen <= 1) {
+            uren = urenHeen + urenTerug;
+        } else {
+            const eersteDag = Math.max(urenHeen, MIN_NETTO_PER_AANLOOPDAG);
+            const tussenliggendeDagen = Math.max(0, kalenderdagen - 2);
+            const laatsteDag = Math.max(urenTerug, MIN_NETTO_PER_AANLOOPDAG);
+            uren = eersteDag + tussenliggendeDagen * 8 + laatsteDag;
         }
     }
     document.getElementById('total_uren').value = uren.toFixed(2);
@@ -432,7 +492,7 @@ function rekenen() {
     
     let prijsIn = parseFloat(prijsInVeld.value) || 0;
     if(!userManuallyChangedPrice && kostTotaal > 0) {
-        let marge = (type === 'meerdaags') ? 1.35 : 1.25;
+        let marge = (type === 'meerdaags' || type === 'buitenland') ? 1.35 : 1.25;
         let prijsEx = kostTotaal * marge;
         prijsIn = prijsEx * 1.09; 
         prijsIn = Math.ceil(prijsIn / 5) * 5; 
@@ -455,6 +515,16 @@ function rekenen() {
 }
 
 // Helpers
+/** Kalenderdagen tussen vertrek- en einddatum (beide inclusief). */
+function countKalenderdagenInclusive(startStr, endStr) {
+    if (!startStr || !endStr) return 1;
+    const d1 = new Date(startStr + 'T12:00:00');
+    const d2 = new Date(endStr + 'T12:00:00');
+    if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return 1;
+    const diffDays = Math.round((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
+    return diffDays >= 0 ? diffDays + 1 : 1;
+}
+
 function calcDiff(tStart, tEnd) {
     let d1 = parseTime(tStart);
     let d2 = parseTime(tEnd);

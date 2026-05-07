@@ -35,6 +35,13 @@ $rit = [
 ]; 
 $data = []; 
 
+$tussendagenEnabledBoot = false;
+$tussendagenItemsBoot = [];
+$buitenlandMetaDp = [];
+$blOvernSelect = 'klant';
+$blOvernBedrag = '';
+$busOptiesTussendagHTML = '';
+
 try {
     $instellingen = tenant_calculatie_instellingen_merged($pdo, $tenantId);
     $chauffeur_uurloon = $instellingen['uurloon_basis'];
@@ -72,6 +79,55 @@ try {
         $bestaande_extra_bussen = explode(',', $rit['extra_voertuigen']);
     }
 
+    $busOptiesTussendagHTML = "<option value=''>— Zelfde als hoofdbus —</option>";
+    foreach ($bussen as $b) {
+        $busOptiesTussendagHTML .= "<option value='" . (int) $b['id'] . "' data-km='" . htmlspecialchars((string) $b['km_kostprijs'], ENT_QUOTES, 'UTF-8') . "'>" . htmlspecialchars($b['naam']) . " (€" . number_format((float) $b['km_kostprijs'], 2, ',', '.') . "/km)</option>";
+    }
+
+    $tussendagenEnabledBoot = false;
+    $tussendagenItemsBoot = [];
+    $buitenlandMetaDp = [];
+    $blOvernSelect = 'klant';
+    $blOvernBedrag = '';
+
+    if (!empty($rit['tussendagen_meta'])) {
+        $tj = json_decode((string) $rit['tussendagen_meta'], true);
+        if (is_array($tj)) {
+            $tussendagenEnabledBoot = !empty($tj['enabled']);
+            foreach ($tj['items'] ?? [] as $it) {
+                if (!is_array($it)) {
+                    continue;
+                }
+                $tussendagenItemsBoot[] = [
+                    'datum' => (string) ($it['datum'] ?? ''),
+                    'van' => (string) ($it['van'] ?? ''),
+                    'naar' => (string) ($it['naar'] ?? ''),
+                    'km' => $it['km'] ?? null,
+                    'pax' => $it['passagiers'] ?? null,
+                    'bus' => $it['voertuig_id'] ?? null,
+                ];
+            }
+        }
+    }
+
+    if (!empty($rit['buitenland_meta'])) {
+        $bm = json_decode((string) $rit['buitenland_meta'], true);
+        if (is_array($bm)) {
+            $door = (string) ($bm['overnachting_door'] ?? 'klant');
+            $blOvernSelect = ($door === 'eigen') ? 'eigen' : 'klant';
+            if (isset($bm['overnachting_bedrag_eur']) && $bm['overnachting_bedrag_eur'] !== null && $bm['overnachting_bedrag_eur'] !== '') {
+                $eb = $bm['overnachting_bedrag_eur'];
+                $blOvernBedrag = is_numeric($eb) ? number_format((float) $eb, 2, '.', '') : '';
+            }
+            foreach ($bm['dagprogramma'] ?? [] as $dp) {
+                if (!is_array($dp) || empty($dp['datum'])) {
+                    continue;
+                }
+                $buitenlandMetaDp[(string) $dp['datum']] = (string) ($dp['tekst'] ?? '');
+            }
+        }
+    }
+
 } catch (PDOException $e) {
     die("<div style='padding:20px; background:#f8d7da; color:#721c24; border:1px solid #f5c6cb; border-radius:5px;'><strong>Database Fout in basisgegevens:</strong> " . $e->getMessage() . "</div>");
 }
@@ -100,6 +156,32 @@ function val($data, $rij, $veld, $default = '') {
     .rit-row { display: flex; gap: 15px; margin-bottom: 8px; align-items: flex-end; padding-bottom: 8px; border-bottom: 1px dashed #f0f0f0; }
     .rit-row:last-child { border-bottom: none; }
     .col-tijd { width: 85px; } .col-adres { flex: 1; } .col-km { width: 75px; }
+    .route-compact .rit-row { margin-bottom: 4px; padding-bottom: 4px; align-items: center; flex-wrap: nowrap; }
+    .route-compact label { font-size: 11px; margin-bottom: 2px; white-space: nowrap; }
+    .route-compact .col-adres {
+        flex: 1 1 260px;
+        min-width: 0;
+        max-width: min(100%, 380px);
+    }
+    .route-compact .col-adres input.form-control,
+    .route-compact .col-adres input.google-autocomplete {
+        height: 32px !important;
+        min-height: 32px !important;
+        max-height: 32px !important;
+        line-height: 1.25 !important;
+        padding: 4px 10px !important;
+        font-size: 13px !important;
+        box-sizing: border-box !important;
+    }
+    .route-compact .col-tijd { width: 74px; flex-shrink: 0; }
+    .route-compact .col-tijd .form-control.custom-time-input {
+        height: 32px !important;
+        min-height: 32px !important;
+        padding: 4px 4px !important;
+        font-size: 12px !important;
+    }
+    .route-compact .col-km { width: 62px; flex-shrink: 0; }
+    .route-compact .col-km .form-control { height: 32px !important; min-height: 32px !important; padding: 4px 6px !important; font-size: 13px !important; }
     .custom-time-input { background-color: #fff !important; cursor: pointer; text-align: center; font-weight: bold; color: #003366; border: 1px solid #003366; }
     
     /* MODALS */
@@ -130,6 +212,24 @@ function val($data, $rij, $veld, $default = '') {
     .status-icon { font-size: 16px; margin-right: 5px; }
     .c-green { color: #28a745; }
     .c-grey { color: #ccc; }
+    .tz-wrap { font-size: 12px; margin-top: 8px; }
+    .tz-row.tz-compact { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 6px; margin-bottom: 8px; }
+    .tz-row.tz-compact .tz-datum { width: 118px; flex-shrink: 0; }
+    .tz-row.tz-compact .tz-van, .tz-row.tz-compact .tz-naar { flex: 1 1 140px; max-width: 260px; min-width: 120px; }
+    .tz-row.tz-compact input.form-control,
+    .tz-row.tz-compact select.form-control {
+        height: 32px !important;
+        min-height: 32px !important;
+        font-size: 13px !important;
+        padding: 4px 8px !important;
+    }
+    .tz-row.tz-compact .tz-km { width: 68px; flex-shrink: 0; }
+    .tz-row.tz-compact .tz-pax { width: 52px; flex-shrink: 0; }
+    .tz-row.tz-compact select.tz-bus { min-width: 115px; max-width: 220px; }
+    .tz-row.tz-compact .btn-remove-bus { flex-shrink: 0; height: 34px; padding: 0 10px; line-height: 1; }
+    #block_buitenland_extra { display: none; margin-top: 12px; padding: 12px 14px; background: #f0fdfa; border: 1px solid #99f6e4; border-radius: 6px; font-size: 13px; }
+    #block_tussendagen_extra { margin-top: 12px; padding: 12px 14px; border: 2px solid #0f766e; border-radius: 8px; background: #f0fdfa; }
+    #block_tussendagen_inner { padding-top: 6px; }
 </style> 
 
 <div class="container">
@@ -259,7 +359,7 @@ function val($data, $rij, $veld, $default = '') {
             <div class="box-body">
 
                 <div class="header-rit">HEENREIS / RIT 1</div>
-                <div style="background: #fdfdfd; padding: 15px; border: 1px solid #eee; border-top:none;">
+                <div class="route-compact" style="background: #fdfdfd; padding: 8px 10px; border: 1px solid #eee; border-top:none;">
                     
                     <div class="rit-row" id="row_garage">
                         <div class="col-tijd"><label>Vertrek</label><input type="text" name="time[t_garage]" id="time_t_garage" class="form-control custom-time-input reken-trigger" value="<?= val($data, 't_garage', 'tijd') ?>" placeholder="--:--" readonly></div>
@@ -288,8 +388,9 @@ function val($data, $rij, $veld, $default = '') {
                     </div>
                 </div>
 
-                <div id="block_meerdaags" style="display:none; margin: 15px 0; background: #e3f2fd; padding:15px; border-radius:4px; border:1px solid #90caf9;">
-                    <div style="font-weight:bold; color:#0d47a1; margin-bottom:10px;"><i class="fas fa-hotel"></i> TUSSENLIGGENDE DAGEN</div>
+                <div id="block_meerdaags" style="display:none; margin: 15px 0; background: #e3f2fd; padding:12px; border-radius:4px; border:1px solid #90caf9;">
+                    <div style="font-weight:bold; color:#0d47a1; margin-bottom:6px;"><i class="fas fa-hotel"></i> TUSSENLIGGENDE DAGEN (km / fiscaal)</div>
+                    <p style="font-size:11px;color:#1565c0;margin:0 0 10px;">Uren (CAO meerdaags): 1e en laatste kalenderdag = berekende diensttijd, minimaal 8 uur netto per die dag; volle kalenderdagen ertussen = 8 uur netto. Pauze/staffel niet automatisch.</p>
                     <div class="form-grid-4">
                         <div><label>KM ter plaatse</label><input type="number" name="km_tussen" id="km_tussen" class="form-control fiscal-calc reken-trigger" placeholder="Totaal KM" value="<?= isset($rit['km_tussen']) ? $rit['km_tussen'] : 0 ?>"></div>
                         <div><label>NL (9%)</label><input type="number" name="km_nl" id="km_nl" class="form-control fiscal-calc" value="<?= isset($rit['km_nl']) ? $rit['km_nl'] : 0 ?>"></div>
@@ -298,9 +399,40 @@ function val($data, $rij, $veld, $default = '') {
                     </div>
                 </div>
 
+                <div id="block_tussendagen_extra" class="tz-wrap">
+                    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:700;color:#0f766e;margin-bottom:8px;font-size:13px;">
+                        <input type="checkbox" name="tussendagen_enabled" id="tussendagen_enabled" value="1" <?= !empty($tussendagenEnabledBoot) ? 'checked' : '' ?>>
+                        Extra tussenritten meenemen (opslaan / prijs)
+                    </label>
+                    <p style="font-size:11px;color:#115e59;margin:0 0 10px;">Hieronder: extra datum + Van / Naar (Google). Km vult zich automatisch. Vink hierboven aan als dit onderdeel van de offerte moet zijn.</p>
+                    <div id="block_tussendagen_inner">
+                        <div id="tussendagen_rows"></div>
+                        <button type="button" class="btn-add-bus" id="btn_tz_add">+ Rij toevoegen (datum · van · naar · km)</button>
+                    </div>
+                </div>
+
+                <div id="block_buitenland_extra">
+                    <strong style="color:#0f766e;">Buitenland — extra</strong>
+                    <div class="form-grid-4" style="margin-top:10px;">
+                        <div style="grid-column: span 2;">
+                            <label>Overnachting</label>
+                            <select name="buitenland_overnachting" id="buitenland_overnachting" class="form-control">
+                                <option value="klant" <?= ($blOvernSelect ?? 'klant') === 'klant' ? 'selected' : '' ?>>Door klant</option>
+                                <option value="eigen" <?= ($blOvernSelect ?? 'klant') === 'eigen' ? 'selected' : '' ?>>Door ons</option>
+                            </select>
+                        </div>
+                        <div style="grid-column: span 2;">
+                            <label>€ indicatie (alleen „door ons”)</label>
+                            <input type="text" name="buitenland_overnachting_bedrag" id="buitenland_overnachting_bedrag" class="form-control" placeholder="—" value="<?= htmlspecialchars($blOvernBedrag ?? '') ?>">
+                        </div>
+                    </div>
+                    <p style="margin:10px 0 6px;font-size:12px;color:#444;">Dagprogramma per kalenderdag (tussen vertrek- en einddatum):</p>
+                    <div id="dagprogramma_container"></div>
+                </div>
+
                 <div id="block_terug">
                     <div class="header-rit-2" id="header_terug">TERUGREIS / RIT 2</div>
-                    <div style="background: #fdfdfd; padding: 15px; border: 1px solid #eee; border-top:none;">
+                    <div class="route-compact" style="background: #fdfdfd; padding: 8px 10px; border: 1px solid #eee; border-top:none;">
                         
                         <div class="rit-row" id="row_garage_rit2" style="display:none; background:#f9f9f9; padding:5px; margin-bottom:10px; border-radius:4px;">
                             <div class="col-tijd"><label>Start Rit 2</label><input type="text" name="time[t_garage_rit2]" id="time_t_garage_rit2" class="form-control custom-time-input reken-trigger" value="<?= val($data, 't_garage_rit2', 'tijd') ?>" placeholder="--:--" readonly></div>
@@ -630,7 +762,8 @@ function val($data, $rij, $veld, $default = '') {
         const form = document.getElementById('mainForm'); 
         const klantIdHidden = document.getElementById('klant_id_hidden');
 
-        // DATUM SYNC LOGICA
+        // DATUM SYNC (alleen nieuwe calculatie — bij bewerken einddatum niet overschrijven)
+        <?php if (!empty($is_nieuw)): ?>
         const vertrekDatumVeld = document.getElementById('rit_datum');
         const eindDatumVeld = document.getElementById('rit_datum_eind');
         if (vertrekDatumVeld && eindDatumVeld) {
@@ -638,6 +771,7 @@ function val($data, $rij, $veld, $default = '') {
                 eindDatumVeld.value = this.value;
             });
         }
+        <?php endif; ?>
 
         if(form) {
             form.addEventListener('submit', function(e) {
@@ -795,6 +929,176 @@ function val($data, $rij, $veld, $default = '') {
     });
 </script>
 
+<script>
+window.CALC_BUITENLAND_DP = <?= json_encode($buitenlandMetaDp ?? [], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
+window.CALC_TUSSENDAGEN_BOOT = <?= json_encode(['enabled' => $tussendagenEnabledBoot ?? false, 'items' => $tussendagenItemsBoot ?? []], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
+window.HTML_BUS_TUSSENDAG = <?= json_encode($busOptiesTussendagHTML ?? '', JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
+(function () {
+    function bindPlaces(el) {
+        if (!window.google || !google.maps || !google.maps.places) return;
+        try {
+            const ac = new google.maps.places.Autocomplete(el, { componentRestrictions: { country: ['nl', 'de', 'be', 'at', 'fr'] } });
+            ac.addListener('place_changed', function () {
+                const row = el.closest && el.closest('.tz-row');
+                if (row && typeof window.calculateTussendagenKm === 'function') {
+                    window.calculateTussendagenKm(row);
+                }
+                if (typeof window.calculateRoute === 'function') window.calculateRoute();
+            });
+        } catch (e) {}
+    }
+    function wireRow(div) {
+        div.querySelectorAll('.google-autocomplete').forEach(bindPlaces);
+        div.querySelectorAll('.reken-trigger').forEach(function (el) {
+            el.addEventListener('input', function () {
+                if (typeof window.userManuallyChangedPrice !== 'undefined') userManuallyChangedPrice = false;
+                if (typeof window.rekenen === 'function') window.rekenen();
+            });
+        });
+        const rm = div.querySelector('.btn-remove-bus');
+        if (rm) rm.addEventListener('click', function () {
+            div.remove();
+            if (typeof window.rekenen === 'function') window.rekenen();
+        });
+    }
+    function addTzRow(prefill) {
+        const rows = document.getElementById('tussendagen_rows');
+        if (!rows) return;
+        const p = prefill || {};
+        if (p.bus == null && p.voertuig_id != null) {
+            p.bus = p.voertuig_id;
+        }
+        const div = document.createElement('div');
+        div.className = 'tz-row tz-compact';
+        div.innerHTML =
+            '<input type="date" name="tussendagen_datum[]" class="form-control tz-datum" title="Tussen vertrek- en einddatum">' +
+            '<input type="text" name="tussendagen_van[]" class="form-control google-autocomplete tz-van" placeholder="Van">' +
+            '<input type="text" name="tussendagen_naar[]" class="form-control google-autocomplete tz-naar" placeholder="Naar">' +
+            '<input type="number" name="tussendagen_km[]" class="form-control km-calc reken-trigger tz-km" step="0.1" min="0" title="Automatisch">' +
+            '<input type="number" name="tussendagen_pax[]" class="form-control reken-trigger tz-pax" min="0" placeholder="Pax">' +
+            '<select name="tussendagen_bus[]" class="form-control tz-bus">' + (window.HTML_BUS_TUSSENDAG || '') + '</select>' +
+            '<button type="button" class="btn-remove-bus" title="Verwijder">&times;</button>';
+        const dt = div.querySelector('input[type="date"]');
+        if (dt && p.datum) dt.value = p.datum;
+        const ins = div.querySelectorAll('input');
+        if (p.km != null && ins[3]) ins[3].value = String(p.km);
+        if (p.pax != null && ins[4]) ins[4].value = String(p.pax);
+        const vans = div.querySelectorAll('.google-autocomplete');
+        if (vans[0] && p.van) vans[0].value = p.van;
+        if (vans[1] && p.naar) vans[1].value = p.naar;
+        const sel = div.querySelector('select.tz-bus');
+        if (sel && p.bus) sel.value = String(p.bus);
+        wireRow(div);
+        rows.appendChild(div);
+        setTimeout(function () {
+            if (typeof window.calculateTussendagenKm === 'function') window.calculateTussendagenKm(div);
+        }, 300);
+        if (typeof window.rekenen === 'function') window.rekenen();
+    }
+
+    function rebuildDagprogrammaBL() {
+        const rt = document.getElementById('rittype_select');
+        const box = document.getElementById('dagprogramma_container');
+        if (!rt || !box || rt.value !== 'buitenland') return;
+        const startEl = document.getElementById('rit_datum');
+        const endEl = document.getElementById('rit_datum_eind');
+        if (!startEl || !endEl) return;
+        const start = startEl.value;
+        const end = endEl.value;
+        const oldVal = {};
+        box.querySelectorAll('[data-dag-datum]').forEach(function (ta) {
+            oldVal[ta.getAttribute('data-dag-datum')] = ta.value;
+        });
+        const bootDp = (typeof window.CALC_BUITENLAND_DP === 'object' && window.CALC_BUITENLAND_DP) ? window.CALC_BUITENLAND_DP : {};
+        Object.keys(bootDp).forEach(function (dk) {
+            if (oldVal[dk] === undefined) {
+                oldVal[dk] = bootDp[dk];
+            }
+        });
+        box.innerHTML = '';
+        if (!start || !end || end < start) return;
+        let cur = start;
+        let guard = 0;
+        while (cur <= end && guard < 400) {
+            const wrap = document.createElement('div');
+            wrap.style.marginBottom = '10px';
+            const lbl = document.createElement('div');
+            lbl.style.fontSize = '11px';
+            lbl.style.fontWeight = '700';
+            lbl.style.color = '#0f766e';
+            lbl.textContent = cur;
+            const ta = document.createElement('textarea');
+            ta.name = 'dagprogramma[' + cur + ']';
+            ta.className = 'form-control';
+            ta.rows = 2;
+            ta.setAttribute('data-dag-datum', cur);
+            ta.placeholder = 'Programma (optioneel)';
+            if (oldVal[cur]) ta.value = oldVal[cur];
+            wrap.appendChild(lbl);
+            wrap.appendChild(ta);
+            box.appendChild(wrap);
+            const d = new Date(cur + 'T12:00:00');
+            d.setDate(d.getDate() + 1);
+            cur = d.toISOString().slice(0, 10);
+            guard++;
+        }
+    }
+    window.rebuildDagprogrammaBL = rebuildDagprogrammaBL;
+
+    window.calculatieExtrasAfterInit = function () {
+        const cb = document.getElementById('tussendagen_enabled');
+        const inner = document.getElementById('block_tussendagen_inner');
+        function syncTz() {
+            if (!inner) return;
+            inner.style.display = 'block';
+            inner.style.opacity = cb && cb.checked ? '1' : '0.85';
+            inner.setAttribute('aria-disabled', cb && cb.checked ? 'false' : 'true');
+        }
+        if (cb) {
+            cb.addEventListener('change', syncTz);
+            syncTz();
+        }
+        const bootTz = window.CALC_TUSSENDAGEN_BOOT || { enabled: false, items: [] };
+        if (cb && cb.checked && bootTz.items && bootTz.items.length) {
+            bootTz.items.forEach(function (row) {
+                addTzRow(row);
+            });
+            setTimeout(function () {
+                if (typeof window.calculateTussendagenKmAll === 'function') {
+                    window.calculateTussendagenKmAll();
+                }
+            }, 600);
+        }
+
+        const btnAdd = document.getElementById('btn_tz_add');
+        if (btnAdd) btnAdd.addEventListener('click', function () { addTzRow({}); });
+
+        const rt = document.getElementById('rittype_select');
+        function syncBuiten() {
+            const bl = document.getElementById('block_buitenland_extra');
+            if (!bl || !rt) return;
+            bl.style.display = rt.value === 'buitenland' ? 'block' : 'none';
+            rebuildDagprogrammaBL();
+        }
+        if (rt) {
+            rt.addEventListener('change', syncBuiten);
+            syncBuiten();
+        }
+        document.getElementById('rit_datum')?.addEventListener('change', function () {
+            const e = document.getElementById('rit_datum_eind');
+            if (e && e.value < this.value) e.value = this.value;
+            rebuildDagprogrammaBL();
+        });
+        document.getElementById('rit_datum_eind')?.addEventListener('change', rebuildDagprogrammaBL);
+
+        var tzRowsEl = document.getElementById('tussendagen_rows');
+        if (tzRowsEl && tzRowsEl.children.length === 0) {
+            addTzRow({});
+        }
+    };
+})();
+</script>
+
 <script src="rekenmachine.js?v=<?= time() ?>"></script> 
 
 <script>
@@ -850,7 +1154,7 @@ function customFinancieleBerekening() {
     let prijsIn = parseFloat(prijsInVeld.value) || 0;
     
     if(!userManuallyChangedPrice && totaleKostprijs > 0) {
-        let marge = (type === 'meerdaags') ? 1.35 : 1.25;
+        let marge = (type === 'meerdaags' || type === 'buitenland') ? 1.35 : 1.25;
         let prijsEx = totaleKostprijs * marge;
         prijsIn = prijsEx * 1.09; 
         prijsIn = Math.ceil(prijsIn / 5) * 5; 
