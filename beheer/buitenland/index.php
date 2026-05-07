@@ -6,7 +6,7 @@ declare(strict_types=1);
  * Door naar calculaties_bewerken.php — PDF/bevestiging/planbord ongewijzigd.
  */
 
-require_once __DIR__ . '/../beveiliging.php';
+require_once __DIR__ . '/../../beveiliging.php';
 require_role(['tenant_admin', 'planner_user']);
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/header.php';
