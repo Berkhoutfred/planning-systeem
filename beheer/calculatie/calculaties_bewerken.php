@@ -100,6 +100,7 @@ try {
                 }
                 $tussendagenItemsBoot[] = [
                     'datum' => (string) ($it['datum'] ?? ''),
+                    'tijd' => (string) ($it['tijd'] ?? ''),
                     'van' => (string) ($it['van'] ?? ''),
                     'naar' => (string) ($it['naar'] ?? ''),
                     'km' => $it['km'] ?? null,
@@ -225,6 +226,8 @@ function val($data, $rij, $veld, $default = '') {
     #block_tussendagen_inner .rit-row.tz-row { margin-bottom: 4px; padding-bottom: 4px; }
     #block_tussendagen_inner .tz-col-datum { width: 118px; flex-shrink: 0; }
     #block_tussendagen_inner .tz-col-datum .form-control { height: 32px !important; font-size: 12px !important; padding: 4px 6px !important; }
+    #block_tussendagen_inner .tz-col-tijd { width: 74px; flex-shrink: 0; }
+    #block_tussendagen_inner .tz-col-tijd .form-control { height: 32px !important; font-size: 12px !important; padding: 4px 4px !important; }
     #btn_tz_add { font-size: 11px; padding: 4px 10px; margin-top: 4px; background: #003366; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
     .rit-row-check-only { align-items: center; min-height: 28px; }
     .rit-row-check-only input[type="checkbox"] { width: 14px; height: 14px; flex-shrink: 0; }
@@ -997,6 +1000,7 @@ window.HTML_BUS_TUSSENDAG = <?= json_encode($busOptiesTussendagHTML ?? '', JSON_
         div.className = 'rit-row tz-row';
         div.innerHTML =
             '<div class="tz-col-datum"><label style="font-size:11px;">Datum</label><input type="date" name="tussendagen_datum[]" class="form-control reken-trigger" title="Datum"></div>' +
+            '<div class="tz-col-tijd"><label style="font-size:11px;">Tijd</label><input type="time" name="tussendagen_tijd[]" class="form-control reken-trigger" title="Vertrek"></div>' +
             '<div class="col-adres"><label style="font-size:11px;">Van</label><input type="text" name="tussendagen_van[]" class="form-control google-autocomplete" placeholder="Van"></div>' +
             '<div class="col-adres"><label style="font-size:11px;">Naar</label><input type="text" name="tussendagen_naar[]" class="form-control google-autocomplete" placeholder="Naar"></div>' +
             '<div class="col-km"><label style="font-size:11px;">Km</label><input type="number" name="tussendagen_km[]" class="form-control km-calc reken-trigger tz-km" step="0.1" min="0" title="Km"></div>' +
@@ -1006,6 +1010,14 @@ window.HTML_BUS_TUSSENDAG = <?= json_encode($busOptiesTussendagHTML ?? '', JSON_
             '<button type="button" class="btn-remove-bus" title="Verwijder">&times;</button>';
         const dt = div.querySelector('input[type="date"]');
         if (dt && p.datum) dt.value = p.datum;
+        const tm = div.querySelector('input[type="time"]');
+        if (tm && p.tijd) {
+            let t = String(p.tijd).trim();
+            if (/^\d{2}:\d{2}:\d{2}$/.test(t)) {
+                t = t.slice(0, 5);
+            }
+            tm.value = t;
+        }
         const kmEl = div.querySelector('.tz-km');
         if (p.km != null && kmEl) kmEl.value = String(p.km);
         const vans = div.querySelectorAll('.google-autocomplete');
