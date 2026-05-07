@@ -218,24 +218,18 @@ function val($data, $rij, $veld, $default = '') {
     .c-green { color: #28a745; }
     .c-grey { color: #ccc; }
     .tz-wrap { font-size: 12px; margin-top: 8px; }
-    .tz-row.tz-compact { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 6px; margin-bottom: 8px; }
-    .tz-row.tz-compact .tz-datum { width: 118px; flex-shrink: 0; }
-    .tz-row.tz-compact .tz-van, .tz-row.tz-compact .tz-naar { flex: 1 1 140px; max-width: 260px; min-width: 120px; }
-    .tz-row.tz-compact input.form-control,
-    .tz-row.tz-compact select.form-control {
-        height: 32px !important;
-        min-height: 32px !important;
-        font-size: 13px !important;
-        padding: 4px 8px !important;
-    }
-    .tz-row.tz-compact .tz-km { width: 68px; flex-shrink: 0; }
-    .tz-row.tz-compact .tz-zone { width: 52px; flex-shrink: 0; }
-    .tz-row.tz-compact .tz-pax { width: 52px; flex-shrink: 0; }
-    .tz-row.tz-compact select.tz-bus { min-width: 115px; max-width: 220px; }
-    .tz-row.tz-compact .btn-remove-bus { flex-shrink: 0; height: 34px; padding: 0 10px; line-height: 1; }
+    /* Extra rijdag: zelfde smalle rit-regels als heen/terug */
+    #wrap_extra_rijdag { max-width: 100%; }
+    #wrap_extra_rijdag .tz-toggle-row { margin-bottom: 0; padding-bottom: 4px; border-bottom: none; align-items: center; }
+    #block_tussendagen_inner { margin-top: 6px; padding-top: 6px; border-top: 1px dashed #e0e0e0; }
+    #block_tussendagen_inner .rit-row.tz-row { margin-bottom: 4px; padding-bottom: 4px; }
+    #block_tussendagen_inner .tz-col-datum { width: 118px; flex-shrink: 0; }
+    #block_tussendagen_inner .tz-col-datum .form-control { height: 32px !important; font-size: 12px !important; padding: 4px 6px !important; }
+    #btn_tz_add { font-size: 11px; padding: 4px 10px; margin-top: 4px; background: #003366; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+    .rit-row-check-only { align-items: center; min-height: 28px; }
+    .rit-row-check-only input[type="checkbox"] { width: 14px; height: 14px; flex-shrink: 0; }
+    .rit-row-check-only label { margin: 0; font-size: 11px; font-weight: 700; color: #003366; cursor: pointer; white-space: nowrap; }
     #block_buitenland_extra { display: none; margin-top: 12px; padding: 12px 14px; background: #f0fdfa; border: 1px solid #99f6e4; border-radius: 6px; font-size: 13px; }
-    #block_tussendagen_extra { margin-top: 12px; padding: 12px 14px; border: 2px solid #0f766e; border-radius: 8px; background: #f0fdfa; }
-    #block_tussendagen_inner { padding-top: 6px; }
 </style> 
 
 <div class="container">
@@ -384,6 +378,17 @@ function val($data, $rij, $veld, $default = '') {
                         <div class="col-km"><label>Km</label><input type="number" name="km[t_voorstaan]" class="form-control km-calc reken-trigger" value="<?= val($data, 't_voorstaan', 'km', 0) ?>"></div>
                         <div class="col-zone"><label>Zone</label><select class="form-control km-zone-select reken-trigger" title="Fiscale zone"><option value="nl">NL</option><option value="de">DE</option><option value="ch">CH</option><option value="ov">0%</option></select></div>
                     </div>
+                    <div class="rit-row rit-row-check-only" id="row_chk_grens2_wrap">
+                        <input type="checkbox" id="chk_grens2" value="1" <?= trim((string) val($data, 't_grens2', 'adres')) !== '' ? 'checked' : '' ?>>
+                        <label for="chk_grens2">Tweede grens</label>
+                    </div>
+                    <div class="rit-row" id="row_grens2" style="<?= trim((string) val($data, 't_grens2', 'adres')) !== '' ? '' : 'display:none;' ?>">
+                        <input type="hidden" name="time[t_grens2]" id="time_t_grens2" value="<?= htmlspecialchars((string) val($data, 't_grens2', 'tijd')) ?>">
+                        <div class="col-tijd col-tijd-muted"><label>—</label><span class="tijd-hint">route</span></div>
+                        <div class="col-adres"><label>2e grens</label><input type="text" name="addr[t_grens2]" id="addr_t_grens2" class="form-control google-autocomplete" value="<?= val($data, 't_grens2', 'adres') ?>" placeholder="Tweede grens (bijv. AT)..."></div>
+                        <div class="col-km"><label>Km</label><input type="number" name="km[t_grens2]" class="form-control km-calc reken-trigger" value="<?= val($data, 't_grens2', 'km', 0) ?>"></div>
+                        <div class="col-zone"><label>Zone</label><select class="form-control km-zone-select reken-trigger" title="Fiscale zone"><option value="nl">NL</option><option value="de">DE</option><option value="ch">CH</option><option value="ov">0%</option></select></div>
+                    </div>
                     <div class="rit-row" id="row_aankomst_best">
                         <div class="col-tijd"><label>Aankomst</label><input type="text" name="time[t_aankomst_best]" id="time_t_aankomst_best" class="form-control custom-time-input reken-trigger" value="<?= val($data, 't_aankomst_best', 'tijd') ?>" placeholder="--:--" readonly></div>
                         <div class="col-adres"><label>Bestemming</label><input type="text" name="addr[t_aankomst_best]" id="addr_t_aankomst_best" class="form-control google-autocomplete" value="<?= val($data, 't_aankomst_best', 'adres') ?>" placeholder="Bestemming..."></div>
@@ -399,15 +404,16 @@ function val($data, $rij, $veld, $default = '') {
                     </div>
                 </div>
 
-                <div id="block_tussendagen_extra" class="tz-wrap" style="margin-top:14px;">
-                    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:700;color:#0f766e;margin-bottom:8px;font-size:13px;">
-                        <input type="checkbox" name="tussendagen_enabled" id="tussendagen_enabled" value="1" <?= !empty($tussendagenEnabledBoot) ? 'checked' : '' ?>>
-                        Extra rijdag (tussen heen en terug)
-                    </label>
-                    <p style="font-size:11px;color:#115e59;margin:0 0 10px;">Datum · van · naar · km · zone. Meerdere rijen via de knop.</p>
-                    <div id="block_tussendagen_inner">
+                <div id="wrap_extra_rijdag" class="route-compact tz-wrap" style="margin-top:10px;padding:6px 10px;border:1px solid #eee;background:#fdfdfd;border-radius:4px;">
+                    <div class="rit-row tz-toggle-row">
+                        <label class="rit-row-check-only" style="display:flex;align-items:center;gap:8px;width:100%;margin:0;">
+                            <input type="checkbox" name="tussendagen_enabled" id="tussendagen_enabled" value="1" <?= !empty($tussendagenEnabledBoot) ? 'checked' : '' ?>>
+                            <span style="font-size:11px;font-weight:700;color:#003366;">Extra rijdag</span>
+                        </label>
+                    </div>
+                    <div id="block_tussendagen_inner" style="<?= !empty($tussendagenEnabledBoot) ? '' : 'display:none;' ?>">
                         <div id="tussendagen_rows"></div>
-                        <button type="button" class="btn-add-bus" id="btn_tz_add">+ Extra rijdag</button>
+                        <button type="button" id="btn_tz_add">+ regel</button>
                     </div>
                 </div>
 
@@ -988,13 +994,13 @@ window.HTML_BUS_TUSSENDAG = <?= json_encode($busOptiesTussendagHTML ?? '', JSON_
             p.bus = p.voertuig_id;
         }
         const div = document.createElement('div');
-        div.className = 'tz-row tz-compact';
+        div.className = 'rit-row tz-row';
         div.innerHTML =
-            '<input type="date" name="tussendagen_datum[]" class="form-control tz-datum" title="Datum">' +
-            '<input type="text" name="tussendagen_van[]" class="form-control google-autocomplete tz-van" placeholder="Van">' +
-            '<input type="text" name="tussendagen_naar[]" class="form-control google-autocomplete tz-naar" placeholder="Naar">' +
-            '<input type="number" name="tussendagen_km[]" class="form-control km-calc reken-trigger tz-km" step="0.1" min="0" title="Km">' +
-            '<select name="tussendagen_zone[]" class="form-control km-zone-select reken-trigger tz-zone" title="Zone"><option value="nl">NL</option><option value="de">DE</option><option value="ch">CH</option><option value="ov">0%</option></select>' +
+            '<div class="tz-col-datum"><label style="font-size:11px;">Datum</label><input type="date" name="tussendagen_datum[]" class="form-control reken-trigger" title="Datum"></div>' +
+            '<div class="col-adres"><label style="font-size:11px;">Van</label><input type="text" name="tussendagen_van[]" class="form-control google-autocomplete" placeholder="Van"></div>' +
+            '<div class="col-adres"><label style="font-size:11px;">Naar</label><input type="text" name="tussendagen_naar[]" class="form-control google-autocomplete" placeholder="Naar"></div>' +
+            '<div class="col-km"><label style="font-size:11px;">Km</label><input type="number" name="tussendagen_km[]" class="form-control km-calc reken-trigger tz-km" step="0.1" min="0" title="Km"></div>' +
+            '<div class="col-zone"><label style="font-size:11px;">Zone</label><select name="tussendagen_zone[]" class="form-control km-zone-select reken-trigger" title="Zone"><option value="nl">NL</option><option value="de">DE</option><option value="ch">CH</option><option value="ov">0%</option></select></div>' +
             '<input type="hidden" name="tussendagen_pax[]" value="0">' +
             '<input type="hidden" name="tussendagen_bus[]" value="">' +
             '<button type="button" class="btn-remove-bus" title="Verwijder">&times;</button>';
@@ -1005,7 +1011,7 @@ window.HTML_BUS_TUSSENDAG = <?= json_encode($busOptiesTussendagHTML ?? '', JSON_
         const vans = div.querySelectorAll('.google-autocomplete');
         if (vans[0] && p.van) vans[0].value = p.van;
         if (vans[1] && p.naar) vans[1].value = p.naar;
-        const zSel = div.querySelector('.tz-zone');
+        const zSel = div.querySelector('.km-zone-select');
         if (zSel && p.zone) zSel.value = String(p.zone);
         wireRow(div);
         rows.appendChild(div);
@@ -1067,15 +1073,14 @@ window.HTML_BUS_TUSSENDAG = <?= json_encode($busOptiesTussendagHTML ?? '', JSON_
     window.calculatieExtrasAfterInit = function () {
         const cb = document.getElementById('tussendagen_enabled');
         const inner = document.getElementById('block_tussendagen_inner');
+        const tzRows = document.getElementById('tussendagen_rows');
         function syncTz() {
             if (!inner) return;
-            inner.style.display = 'block';
-            inner.style.opacity = cb && cb.checked ? '1' : '0.85';
-            inner.setAttribute('aria-disabled', cb && cb.checked ? 'false' : 'true');
-        }
-        if (cb) {
-            cb.addEventListener('change', syncTz);
-            syncTz();
+            const on = cb && cb.checked;
+            inner.style.display = on ? 'block' : 'none';
+            if (on && tzRows && tzRows.children.length === 0) {
+                addTzRow({});
+            }
         }
         const bootTz = window.CALC_TUSSENDAGEN_BOOT || { enabled: false, items: [] };
         if (cb && cb.checked && bootTz.items && bootTz.items.length) {
@@ -1088,6 +1093,10 @@ window.HTML_BUS_TUSSENDAG = <?= json_encode($busOptiesTussendagHTML ?? '', JSON_
                 }
             }, 600);
         }
+        if (cb) {
+            cb.addEventListener('change', syncTz);
+        }
+        syncTz();
 
         const btnAdd = document.getElementById('btn_tz_add');
         if (btnAdd) btnAdd.addEventListener('click', function () { addTzRow({}); });
@@ -1109,11 +1118,6 @@ window.HTML_BUS_TUSSENDAG = <?= json_encode($busOptiesTussendagHTML ?? '', JSON_
             rebuildDagprogrammaBL();
         });
         document.getElementById('rit_datum_eind')?.addEventListener('change', rebuildDagprogrammaBL);
-
-        var tzRowsEl = document.getElementById('tussendagen_rows');
-        if (tzRowsEl && tzRowsEl.children.length === 0) {
-            addTzRow({});
-        }
     };
 })();
 </script>

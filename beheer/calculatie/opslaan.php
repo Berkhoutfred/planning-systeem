@@ -32,6 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $defaultRegelLabels = [
     't_garage' => 'Vertrek Garage',
     't_voorstaan' => 'Naar grens',
+    't_grens2' => 'Tweede grens',
     't_vertrek_klant' => 'Vertrek land',
     't_aankomst_best' => 'Bestemming',
     't_retour_garage_heen' => 'Retour garage (heen)',
@@ -329,8 +330,9 @@ try {
 
     $mogelijkeRegels = [
         't_garage',
-        't_voorstaan',
         't_vertrek_klant',
+        't_voorstaan',
+        't_grens2',
         't_aankomst_best',
         't_retour_garage_heen',
         't_garage_rit2',

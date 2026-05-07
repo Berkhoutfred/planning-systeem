@@ -81,6 +81,21 @@ function init() {
         }
     });
 
+    document.getElementById('chk_grens2')?.addEventListener('change', function () {
+        const row = document.getElementById('row_grens2');
+        if (row) row.style.display = this.checked ? 'flex' : 'none';
+        calculateRoute();
+        rekenen();
+    });
+    (function bootGrens2Ui() {
+        const chk = document.getElementById('chk_grens2');
+        const row = document.getElementById('row_grens2');
+        const addr = document.getElementById('addr_t_grens2');
+        if (!chk || !row) return;
+        if (addr && addr.value.trim() !== '') chk.checked = true;
+        row.style.display = chk.checked ? 'flex' : 'none';
+    })();
+
     updateVisibility(); 
     rekenen();
     tryInitialRouteIfNoKm();
@@ -217,16 +232,20 @@ function updateVisibility() {
 function calculateRoute() {
     const type = document.getElementById('rittype_select').value;
 
-    // HEEN: garage → vertrek land → grens → bestemming
+    // HEEN: garage → vertrek land → 1e grens → [optioneel 2e grens] → bestemming
     const s1 = document.getElementById('addr_t_garage').value;
     const sVl = document.getElementById('addr_t_vertrek_klant').value;
     const sGrens = document.getElementById('addr_t_voorstaan').value;
+    const chkG2 = document.getElementById('chk_grens2');
+    const sGrens2 = document.getElementById('addr_t_grens2') ? document.getElementById('addr_t_grens2').value.trim() : '';
+    const useGrens2 = chkG2 && chkG2.checked && sGrens2 !== '';
     const s4 = document.getElementById('addr_t_aankomst_best').value;
 
     let stopsHeen = [];
     if(s1) stopsHeen.push({loc: s1, id: 'addr_t_garage'});
     if(sVl) stopsHeen.push({loc: sVl, id: 'addr_t_vertrek_klant'});
     if(sGrens) stopsHeen.push({loc: sGrens, id: 'addr_t_voorstaan'});
+    if(useGrens2) stopsHeen.push({loc: sGrens2, id: 'addr_t_grens2'});
     if(s4) stopsHeen.push({loc: s4, id: 'addr_t_aankomst_best'});
 
     if(type === 'brenghaal' || type === 'enkel') {
@@ -354,13 +373,24 @@ function updatePlanning() {
         document.getElementById('time_t_garage').value = formatTime(dGarage);
 
         const ritVlNaarGrens = reisTijden['addr_t_voorstaan'] || 0;
-        const ritGrensNaarBest = reisTijden['addr_t_aankomst_best'] || 0;
-        const dAankomst = addMinutes(dVertrek, ritVlNaarGrens + ritGrensNaarBest);
+        const chkG2El = document.getElementById('chk_grens2');
+        const useG2 = chkG2El && chkG2El.checked;
+        const ritG1NaarG2 = useG2 ? (reisTijden['addr_t_grens2'] || 0) : 0;
+        const ritLastNaarBest = reisTijden['addr_t_aankomst_best'] || 0;
+        const dAankomst = addMinutes(dVertrek, ritVlNaarGrens + ritG1NaarG2 + ritLastNaarBest);
         document.getElementById('time_t_aankomst_best').value = formatTime(dAankomst);
 
         const elHiddenVs = document.getElementById('time_t_voorstaan');
         if (elHiddenVs) {
             elHiddenVs.value = formatTime(addMinutes(dVertrek, ritVlNaarGrens));
+        }
+        const elHiddenG2 = document.getElementById('time_t_grens2');
+        if (elHiddenG2) {
+            if (useG2) {
+                elHiddenG2.value = formatTime(addMinutes(dVertrek, ritVlNaarGrens + ritG1NaarG2));
+            } else {
+                elHiddenG2.value = '';
+            }
         }
 
         const ritNaarGarageHeen = reisTijden['addr_t_retour_garage_heen'] || 30;

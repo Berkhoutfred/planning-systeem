@@ -258,8 +258,9 @@ try {
 
     $volgorde = [
         't_garage',
-        't_voorstaan',
         't_vertrek_klant',
+        't_voorstaan',
+        't_grens2',
         't_aankomst_best',
         't_retour_garage_heen',
         't_garage_rit2',
