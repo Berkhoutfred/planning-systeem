@@ -3,14 +3,17 @@ require_once __DIR__ . '/tenant_instellingen_db.php';
 if (!isset($pdo) && file_exists(__DIR__ . '/db.php')) {
     require_once __DIR__ . '/db.php';
 }
-// --- DE "BESTANDEN-CHECK" METHODE ---
-// Bepalen van het relatieve pad op basis van waar we zijn
-if (file_exists('klanten.php')) {
-    // We zitten in de hoofdmap (/beheer/)
-    $path = ''; 
-} else {
-    // We zitten in een submap (zoals /calculatie/ of /wagenpark/)
-    $path = '../'; 
+// --- Relatief pad naar /beheer/ voor CSS en assets ---
+// Oude file_exists('klanten.php') faalt als PHP's cwd niet de scriptmap is (typisch op hosting).
+$path = '';
+$scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? ''));
+$parts = array_values(array_filter(explode('/', $scriptDir), static function ($p) {
+    return $p !== '';
+}));
+$idx = array_search('beheer', $parts, true);
+if ($idx !== false) {
+    $depthBelowBeheer = count($parts) - ($idx + 1);
+    $path = str_repeat('../', max(0, $depthBelowBeheer));
 }
 
 // --- SLIMME MENU HIGHLIGHT LOGICA ---

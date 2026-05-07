@@ -249,8 +249,16 @@ $csrf = auth_get_csrf_token();
         <div class="bl-bd">
             <?php if (!$buitenlandDbReady): ?>
                 <div class="bl-warn">
-                    <strong>Database nog niet bijgewerkt.</strong> Voer uit:
-                    <code style="background:#fff;padding:2px 6px;border-radius:4px;">migrations/20260508_buitenland_module.sql</code>
+                    <strong>Database nog niet bijgewerkt.</strong> Log in op phpMyAdmin (Hostinger → Database),
+                    kies je BusAI-database en plak onderstaande SQL (eenmalig). Daarna vernieuw je deze pagina.
+                    <pre style="margin:10px 0 0;font-size:11px;overflow:auto;background:#fff;border:1px solid #e2e8f0;padding:10px;border-radius:4px;">ALTER TABLE calculaties
+    ADD COLUMN offerte_module VARCHAR(32) NOT NULL DEFAULT 'standaard'
+        COMMENT 'standaard|buitenland';
+
+ALTER TABLE calculaties
+    ADD COLUMN buitenland_meta LONGTEXT NULL
+        COMMENT 'JSON metadata module buitenland';</pre>
+                    <span style="font-size:12px;">Bestand in repo: <code>migrations/20260508_buitenland_module.sql</code></span>
                 </div>
             <?php endif; ?>
 
@@ -300,11 +308,11 @@ $csrf = auth_get_csrf_token();
                     </div>
                     <div style="grid-column: 1 / -1;">
                         <label for="vertrek_adres">Vertrekadres *</label>
-                        <textarea name="vertrek_adres" id="vertrek_adres" required></textarea>
+                        <textarea name="vertrek_adres" id="vertrek_adres" required <?php echo !$buitenlandDbReady ? 'disabled' : ''; ?>></textarea>
                     </div>
                     <div style="grid-column: 1 / -1;">
                         <label for="bestemming">Bestemming *</label>
-                        <textarea name="bestemming" id="bestemming" required></textarea>
+                        <textarea name="bestemming" id="bestemming" required <?php echo !$buitenlandDbReady ? 'disabled' : ''; ?>></textarea>
                     </div>
                     <div>
                         <label for="km_nl">Km Nederland *</label>
@@ -335,7 +343,7 @@ $csrf = auth_get_csrf_token();
                     </div>
                     <div style="grid-column: 1 / -1;">
                         <label for="toeslagen_notities">Toeslagen / chauffeur (tekst)</label>
-                        <textarea name="toeslagen_notities" id="toeslagen_notities"></textarea>
+                        <textarea name="toeslagen_notities" id="toeslagen_notities" <?php echo !$buitenlandDbReady ? 'disabled' : ''; ?>></textarea>
                     </div>
                 </div>
 
