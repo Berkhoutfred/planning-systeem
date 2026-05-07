@@ -723,7 +723,6 @@ include 'includes/header.php';
     .card-nieuw { border-left-color: #2b6cb0; } .card-nieuw i { color: #2b6cb0; }
     .card-planbord { border-left-color: #38a169; } .card-planbord i { color: #38a169; }
     .card-sales { border-left-color: #805ad5; } .card-sales i { color: #805ad5; }
-    .card-buitenland { border-left-color: #0d9488; } .card-buitenland i { color: #0d9488; }
 
     .action-card i { font-size: 26px; width: 52px; text-align: center; }
     .action-text { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
@@ -913,14 +912,6 @@ include 'includes/header.php';
                 <div class="action-text">
                     <h3>Offertes &amp; Sales</h3>
                     <p>Beheer lopende offertes en wachtende klanten.</p>
-                </div>
-            </a>
-
-            <a href="buitenland/index.php" class="action-card card-buitenland">
-                <i class="fas fa-globe-europe"></i>
-                <div class="action-text">
-                    <h3>Buitenland-offerte</h3>
-                    <p>Nieuwe offerte met km NL/DE en overnachting; zelfde doorstroom als een gewone offerte.</p>
                 </div>
             </a>
         </div>
