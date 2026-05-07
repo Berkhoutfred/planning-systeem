@@ -91,6 +91,12 @@ try {
     $kmDe = isset($_POST['km_de']) && $_POST['km_de'] !== ''
         ? (float) str_replace(',', '.', (string) $_POST['km_de'])
         : 0.0;
+    $kmCh = isset($_POST['km_ch']) && $_POST['km_ch'] !== ''
+        ? (float) str_replace(',', '.', (string) $_POST['km_ch'])
+        : 0.0;
+    $kmOv = isset($_POST['km_ov']) && $_POST['km_ov'] !== ''
+        ? (float) str_replace(',', '.', (string) $_POST['km_ov'])
+        : 0.0;
     $instructie = (string) ($_POST['instructie_kantoor'] ?? '');
 
     require_once __DIR__ . '/includes/calculatie_meta.php';
@@ -182,34 +188,70 @@ try {
         }
     }
 
-    $sql = 'UPDATE calculaties SET
-            klant_id = ?, contact_id = ?, afdeling_id = ?, rittype = ?, passagiers = ?,
-            rit_datum = ?, rit_datum_eind = ?, voertuig_id = ?, extra_voertuigen = ?,
-            totaal_km = ?, totaal_uren = ?, prijs = ?, km_tussen = ?, km_nl = ?, km_de = ?,
-            instructie_kantoor = ?
-            WHERE id = ? AND tenant_id = ?';
+    $hasKmCh = calculatie_db_has_column($pdo, 'calculaties', 'km_ch');
+    $hasKmOv = calculatie_db_has_column($pdo, 'calculaties', 'km_ov');
 
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute([
-        $klantId,
-        $contactId,
-        $afdelingId,
-        $rittype,
-        $passagiers,
-        $rit_datum,
-        $rit_datum_eind,
-        $hoofdbusId,
-        $extraVoertuigenString,
-        $totaalKm,
-        $totaalUren,
-        $prijsExcl,
-        $kmTussen,
-        $kmNl,
-        $kmDe,
-        $instructie,
-        $id,
-        $tenantId,
-    ]);
+    if ($hasKmCh && $hasKmOv) {
+        $sql = 'UPDATE calculaties SET
+                klant_id = ?, contact_id = ?, afdeling_id = ?, rittype = ?, passagiers = ?,
+                rit_datum = ?, rit_datum_eind = ?, voertuig_id = ?, extra_voertuigen = ?,
+                totaal_km = ?, totaal_uren = ?, prijs = ?, km_tussen = ?, km_nl = ?, km_de = ?, km_ch = ?, km_ov = ?,
+                instructie_kantoor = ?
+                WHERE id = ? AND tenant_id = ?';
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([
+            $klantId,
+            $contactId,
+            $afdelingId,
+            $rittype,
+            $passagiers,
+            $rit_datum,
+            $rit_datum_eind,
+            $hoofdbusId,
+            $extraVoertuigenString,
+            $totaalKm,
+            $totaalUren,
+            $prijsExcl,
+            $kmTussen,
+            $kmNl,
+            $kmDe,
+            $kmCh,
+            $kmOv,
+            $instructie,
+            $id,
+            $tenantId,
+        ]);
+    } else {
+        $sql = 'UPDATE calculaties SET
+                klant_id = ?, contact_id = ?, afdeling_id = ?, rittype = ?, passagiers = ?,
+                rit_datum = ?, rit_datum_eind = ?, voertuig_id = ?, extra_voertuigen = ?,
+                totaal_km = ?, totaal_uren = ?, prijs = ?, km_tussen = ?, km_nl = ?, km_de = ?,
+                instructie_kantoor = ?
+                WHERE id = ? AND tenant_id = ?';
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([
+            $klantId,
+            $contactId,
+            $afdelingId,
+            $rittype,
+            $passagiers,
+            $rit_datum,
+            $rit_datum_eind,
+            $hoofdbusId,
+            $extraVoertuigenString,
+            $totaalKm,
+            $totaalUren,
+            $prijsExcl,
+            $kmTussen,
+            $kmNl,
+            $kmDe,
+            $instructie,
+            $id,
+            $tenantId,
+        ]);
+    }
 
     $stmtDel = $pdo->prepare('DELETE FROM calculatie_regels WHERE calculatie_id = ? AND tenant_id = ?');
     $stmtDel->execute([$id, $tenantId]);

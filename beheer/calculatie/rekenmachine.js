@@ -57,6 +57,7 @@ function init() {
 
     document.querySelectorAll('.reken-trigger').forEach(el => {
         el.addEventListener('input', () => { userManuallyChangedPrice = false; rekenen(); });
+        el.addEventListener('change', () => { userManuallyChangedPrice = false; rekenen(); });
         if(el.classList.contains('google-autocomplete')) el.addEventListener('change', calculateRoute);
     });
     
@@ -124,7 +125,7 @@ function fillKlantCard(s) {
     // We vullen deze velden standaard met het adres van de klant
     // Maar alleen als er daadwerkelijk een adres beschikbaar is
     if((o.dataset.adres || '').length > 2) {
-        ['addr_t_voorstaan', 'addr_t_vertrek_klant', 'addr_t_retour_klant'].forEach(id => {
+        ['addr_t_vertrek_klant', 'addr_t_retour_klant'].forEach(id => {
             const el = document.getElementById(id);
             if(el) {
                 el.value = fullAdres;
@@ -216,23 +217,16 @@ function updateVisibility() {
 function calculateRoute() {
     const type = document.getElementById('rittype_select').value;
 
-    // Voorrijden leeg maar wel ophaaladres: zelfde default als fillKlantCard (anders gaat km naar alleen "Vertrek klant")
-    const elVoor = document.getElementById('addr_t_voorstaan');
-    const elVkHeen = document.getElementById('addr_t_vertrek_klant');
-    if (elVoor && elVkHeen && !elVoor.value.trim() && elVkHeen.value.trim()) {
-        elVoor.value = elVkHeen.value.trim();
-    }
-    
-    // HEEN
+    // HEEN: garage → vertrek land → grens → bestemming
     const s1 = document.getElementById('addr_t_garage').value;
-    const s2 = document.getElementById('addr_t_voorstaan').value;
-    const s3 = document.getElementById('addr_t_vertrek_klant').value;
+    const sVl = document.getElementById('addr_t_vertrek_klant').value;
+    const sGrens = document.getElementById('addr_t_voorstaan').value;
     const s4 = document.getElementById('addr_t_aankomst_best').value;
 
     let stopsHeen = [];
     if(s1) stopsHeen.push({loc: s1, id: 'addr_t_garage'});
-    if(s2) stopsHeen.push({loc: s2, id: 'addr_t_voorstaan'});
-    if(s3) stopsHeen.push({loc: s3, id: 'addr_t_vertrek_klant'});
+    if(sVl) stopsHeen.push({loc: sVl, id: 'addr_t_vertrek_klant'});
+    if(sGrens) stopsHeen.push({loc: sGrens, id: 'addr_t_voorstaan'});
     if(s4) stopsHeen.push({loc: s4, id: 'addr_t_aankomst_best'});
 
     if(type === 'brenghaal' || type === 'enkel') {
@@ -355,16 +349,19 @@ function updatePlanning() {
     const tVertrek = document.getElementById('time_t_vertrek_klant').value;
     if(tVertrek) {
         const dVertrek = parseTime(tVertrek);
-        const dVoorstaan = addMinutes(dVertrek, -BUFFER_VOORSTAAN);
-        document.getElementById('time_t_voorstaan').value = formatTime(dVoorstaan);
-        
-        const ritNaarKlant = reisTijden['addr_t_vertrek_klant'] || reisTijden['addr_t_voorstaan'] || 30;
-        const dGarage = addMinutes(dVoorstaan, -ritNaarKlant);
+        const ritGarageNaarVl = reisTijden['addr_t_vertrek_klant'] || 30;
+        const dGarage = addMinutes(dVertrek, -ritGarageNaarVl);
         document.getElementById('time_t_garage').value = formatTime(dGarage);
-        
-        const ritNaarBest = reisTijden['addr_t_aankomst_best'] || 60;
-        const dAankomst = addMinutes(dVertrek, ritNaarBest);
+
+        const ritVlNaarGrens = reisTijden['addr_t_voorstaan'] || 0;
+        const ritGrensNaarBest = reisTijden['addr_t_aankomst_best'] || 0;
+        const dAankomst = addMinutes(dVertrek, ritVlNaarGrens + ritGrensNaarBest);
         document.getElementById('time_t_aankomst_best').value = formatTime(dAankomst);
+
+        const elHiddenVs = document.getElementById('time_t_voorstaan');
+        if (elHiddenVs) {
+            elHiddenVs.value = formatTime(addMinutes(dVertrek, ritVlNaarGrens));
+        }
 
         const ritNaarGarageHeen = reisTijden['addr_t_retour_garage_heen'] || 30;
         const dGarageHeenEnd = addMinutes(dAankomst, ritNaarGarageHeen + 15); 
@@ -409,22 +406,66 @@ function updatePlanning() {
     }
 }
 
+/** Zone-tags → km_nl / km_de / km_ch / km_ov + km_tussen = som extra-rijdag-km */
+function syncFiscalFromZones() {
+    const typeEl = document.getElementById('rittype_select');
+    const type = typeEl ? typeEl.value : '';
+    if (type !== 'meerdaags' && type !== 'buitenland') {
+        return;
+    }
+    let nl = 0, de = 0, ch = 0, ov = 0;
+    let tzSum = 0;
+
+    document.querySelectorAll('.km-zone-select').forEach(function (sel) {
+        const row = sel.closest('.rit-row') || sel.closest('.tz-row');
+        if (!row) return;
+        const kmEl = row.querySelector('.km-calc');
+        if (!kmEl) return;
+        if (kmEl.offsetParent === null) return;
+        const km = parseFloat(kmEl.value) || 0;
+        const z = sel.value;
+        if (z === 'nl') nl += km;
+        else if (z === 'de') de += km;
+        else if (z === 'ch') ch += km;
+        else ov += km;
+        if (row.classList.contains('tz-row')) {
+            tzSum += km;
+        }
+    });
+
+    const round1 = function (x) { return Math.round(x * 10) / 10; };
+    const setVal = function (id, v) {
+        const el = document.getElementById(id);
+        if (el) el.value = String(round1(v));
+    };
+    setVal('km_nl', nl);
+    setVal('km_de', de);
+    setVal('km_ch', ch);
+    setVal('km_ov', ov);
+    setVal('km_tussen', tzSum);
+
+    const fiscalSum = nl + de + ch + ov;
+    let routeKm = 0;
+    document.querySelectorAll('.km-calc').forEach(function (i) {
+        if (i.offsetParent !== null) routeKm += parseFloat(i.value) || 0;
+    });
+    const fc = document.getElementById('fiscal_check');
+    if (fc) {
+        const delta = round1(routeKm - fiscalSum);
+        fc.value = 'route ' + round1(routeKm) + ' · zones ' + round1(fiscalSum) + ' · Δ ' + delta;
+    }
+}
+
 // --- REKENEN ---
 function rekenen() {
     const type = document.getElementById('rittype_select').value;
+    syncFiscalFromZones();
+
     let totaalKm = 0;
-    
     document.querySelectorAll('.km-calc').forEach(i => {
         if(i.offsetParent !== null) totaalKm += parseFloat(i.value) || 0;
     });
 
-    if(type === 'meerdaags' || type === 'buitenland') {
-        const tussenKm = parseFloat(document.getElementById('km_tussen').value) || 0;
-        totaalKm += tussenKm;
-        const nl = parseFloat(document.getElementById('km_nl').value) || 0;
-        const de = parseFloat(document.getElementById('km_de').value) || 0;
-        document.getElementById('fiscal_check').value = "Totaal: " + totaalKm;
-    }
     document.getElementById('total_km').value = totaalKm;
 
     let uren = 0;

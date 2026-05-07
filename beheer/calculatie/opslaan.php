@@ -31,8 +31,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $defaultRegelLabels = [
     't_garage' => 'Vertrek Garage',
-    't_voorstaan' => 'Voorstaan',
-    't_vertrek_klant' => 'Vertrek Klant',
+    't_voorstaan' => 'Naar grens',
+    't_vertrek_klant' => 'Vertrek land',
     't_aankomst_best' => 'Bestemming',
     't_retour_garage_heen' => 'Retour garage (heen)',
     't_garage_rit2' => 'Garage rit 2',
@@ -106,6 +106,12 @@ try {
         : 0.0;
     $kmDe = isset($_POST['km_de']) && $_POST['km_de'] !== ''
         ? (float) str_replace(',', '.', (string) $_POST['km_de'])
+        : 0.0;
+    $kmCh = isset($_POST['km_ch']) && $_POST['km_ch'] !== ''
+        ? (float) str_replace(',', '.', (string) $_POST['km_ch'])
+        : 0.0;
+    $kmOv = isset($_POST['km_ov']) && $_POST['km_ov'] !== ''
+        ? (float) str_replace(',', '.', (string) $_POST['km_ov'])
         : 0.0;
     $instructie = (string) ($_POST['instructie_kantoor'] ?? '');
 
@@ -235,40 +241,82 @@ try {
         }
     }
 
-    $stmt = $pdo->prepare(
-        'INSERT INTO calculaties (
-            tenant_id, titel, klant_id, contact_id, afdeling_id, rittype, passagiers,
-            rit_datum, rit_datum_eind,
-            vertrek_datum, vertrek_locatie, bestemming,
-            voertuig_id, extra_voertuigen, totaal_km, totaal_uren, prijs,
-            km_tussen, km_nl, km_de, instructie_kantoor,
-            aangemaakt_op, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), \'concept\')'
-    );
+    $hasKmCh = calculatie_db_has_column($pdo, 'calculaties', 'km_ch');
+    $hasKmOv = calculatie_db_has_column($pdo, 'calculaties', 'km_ov');
 
-    $stmt->execute([
-        $tenantId,
-        $titel,
-        $klantId,
-        $contactId,
-        $afdelingId,
-        $rittype,
-        $passagiers,
-        $rit_datum,
-        $rit_datum_eind,
-        $vertrekDatumSql,
-        $vertrekLocatie,
-        $bestemmingStr,
-        $hoofdbusId,
-        $extraVoertuigenString,
-        $totaalKm,
-        $totaalUren,
-        $prijsExcl,
-        $kmTussen,
-        $kmNl,
-        $kmDe,
-        $instructie,
-    ]);
+    if ($hasKmCh && $hasKmOv) {
+        $stmt = $pdo->prepare(
+            'INSERT INTO calculaties (
+                tenant_id, titel, klant_id, contact_id, afdeling_id, rittype, passagiers,
+                rit_datum, rit_datum_eind,
+                vertrek_datum, vertrek_locatie, bestemming,
+                voertuig_id, extra_voertuigen, totaal_km, totaal_uren, prijs,
+                km_tussen, km_nl, km_de, km_ch, km_ov, instructie_kantoor,
+                aangemaakt_op, status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), \'concept\')'
+        );
+
+        $stmt->execute([
+            $tenantId,
+            $titel,
+            $klantId,
+            $contactId,
+            $afdelingId,
+            $rittype,
+            $passagiers,
+            $rit_datum,
+            $rit_datum_eind,
+            $vertrekDatumSql,
+            $vertrekLocatie,
+            $bestemmingStr,
+            $hoofdbusId,
+            $extraVoertuigenString,
+            $totaalKm,
+            $totaalUren,
+            $prijsExcl,
+            $kmTussen,
+            $kmNl,
+            $kmDe,
+            $kmCh,
+            $kmOv,
+            $instructie,
+        ]);
+    } else {
+        $stmt = $pdo->prepare(
+            'INSERT INTO calculaties (
+                tenant_id, titel, klant_id, contact_id, afdeling_id, rittype, passagiers,
+                rit_datum, rit_datum_eind,
+                vertrek_datum, vertrek_locatie, bestemming,
+                voertuig_id, extra_voertuigen, totaal_km, totaal_uren, prijs,
+                km_tussen, km_nl, km_de, instructie_kantoor,
+                aangemaakt_op, status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), \'concept\')'
+        );
+
+        $stmt->execute([
+            $tenantId,
+            $titel,
+            $klantId,
+            $contactId,
+            $afdelingId,
+            $rittype,
+            $passagiers,
+            $rit_datum,
+            $rit_datum_eind,
+            $vertrekDatumSql,
+            $vertrekLocatie,
+            $bestemmingStr,
+            $hoofdbusId,
+            $extraVoertuigenString,
+            $totaalKm,
+            $totaalUren,
+            $prijsExcl,
+            $kmTussen,
+            $kmNl,
+            $kmDe,
+            $instructie,
+        ]);
+    }
 
     $calculatieId = (int) $pdo->lastInsertId();
     if ($calculatieId <= 0) {

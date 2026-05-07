@@ -65,6 +65,7 @@ function calculatie_parse_meta_from_post(array $post, string $rittype): array
         $kmList = $post['tussendagen_km'] ?? [];
         $paxList = $post['tussendagen_pax'] ?? [];
         $busList = $post['tussendagen_bus'] ?? [];
+        $zoneList = $post['tussendagen_zone'] ?? [];
 
         for ($i = 0; $i < $n; $i++) {
             $d = isset($datums[$i]) ? trim((string) $datums[$i]) : '';
@@ -76,6 +77,8 @@ function calculatie_parse_meta_from_post(array $post, string $rittype): array
             $km = isset($kmList[$i]) ? (float) str_replace(',', '.', (string) $kmList[$i]) : 0.0;
             $pax = isset($paxList[$i]) ? max(0, (int) $paxList[$i]) : 0;
             $bid = isset($busList[$i]) ? (int) $busList[$i] : 0;
+            $zoneRaw = isset($zoneList[$i]) ? trim((string) $zoneList[$i]) : 'nl';
+            $zone = in_array($zoneRaw, ['nl', 'de', 'ch', 'ov'], true) ? $zoneRaw : 'nl';
             if ($bid > 0) {
                 $busExtra[] = $bid;
             }
@@ -89,6 +92,7 @@ function calculatie_parse_meta_from_post(array $post, string $rittype): array
                 'km' => round($km, 2),
                 'passagiers' => $pax,
                 'voertuig_id' => $bid > 0 ? $bid : null,
+                'zone' => $zone,
             ];
         }
     }
@@ -97,7 +101,7 @@ function calculatie_parse_meta_from_post(array $post, string $rittype): array
     if (!$enabled) {
         $tussJson = null;
     } elseif ($items !== []) {
-        $payload = ['enabled' => true, 'items' => $items, 'schema' => 1];
+        $payload = ['enabled' => true, 'items' => $items, 'schema' => 2];
         try {
             $tussJson = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
         } catch (Throwable $e) {
@@ -105,7 +109,7 @@ function calculatie_parse_meta_from_post(array $post, string $rittype): array
         }
     } else {
         try {
-            $tussJson = json_encode(['enabled' => true, 'items' => [], 'schema' => 1], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+            $tussJson = json_encode(['enabled' => true, 'items' => [], 'schema' => 2], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
         } catch (Throwable $e) {
             $tussJson = null;
         }
@@ -191,7 +195,9 @@ function calculatie_append_tussendagen_to_instructie(string $base, ?string $tuss
         $km = $it['km'] ?? '';
         $pax = $it['passagiers'] ?? '';
         $bid = $it['voertuig_id'] ?? '';
-        $lines[] = $datum . ': ' . $van . ' → ' . $naar . ' | km ' . $km . ' | pax ' . $pax . ($bid ? ' | bus#' . $bid : '');
+        $zone = $it['zone'] ?? '';
+        $zoneSuffix = ($zone !== '' && $zone !== 'nl') ? (' | zone ' . $zone) : '';
+        $lines[] = $datum . ': ' . $van . ' → ' . $naar . ' | km ' . $km . $zoneSuffix . ' | pax ' . $pax . ($bid ? ' | bus#' . $bid : '');
     }
     return $base . implode("\n", $lines);
 }
