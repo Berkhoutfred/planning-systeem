@@ -11,6 +11,11 @@ const BUS_FACTOR = 1.15;
 const BUFFER_VOORSTAAN = 15;  
 const BUFFER_NAZORG = 15;     
 
+/** Zichtbare route-Km / zones (segment-tabel); niet de verborgen legacy POST-spiegel (#legacy_heen_mirror). */
+function isRouteKmInputForTotals(el) {
+    return el && el.matches('.km-calc') && !el.closest('#legacy_heen_mirror');
+}
+
 window.startHetSysteem = function() {
     directionsService = new google.maps.DirectionsService();
     init();
@@ -102,6 +107,9 @@ function init() {
     if (typeof window.calculatieExtrasAfterInit === 'function') {
         window.calculatieExtrasAfterInit();
     }
+    if (typeof window.routeHeenSegmentenInit === 'function') {
+        window.routeHeenSegmentenInit(typeof window.HEEN_SEGMENTS_BOOT !== 'undefined' ? window.HEEN_SEGMENTS_BOOT : null);
+    }
 }
 
 /** Eénmalig na laden: als alle zichtbare km-regels nog 0 zijn en kernadressen staan, routes laten berekenen (o.a. wizard-import). */
@@ -109,6 +117,7 @@ function tryInitialRouteIfNoKm() {
     setTimeout(function () {
         let sum = 0;
         document.querySelectorAll('.km-calc').forEach(function (i) {
+            if (!isRouteKmInputForTotals(i)) return;
             if (i.offsetParent !== null) {
                 sum += parseFloat(i.value) || 0;
             }
@@ -148,6 +157,9 @@ function fillKlantCard(s) {
                 // (Optioneel, soms nodig voor autocomplete styling)
             }
         });
+    }
+    if (typeof window.routeHeenRefreshFromLegacy === 'function') {
+        window.routeHeenRefreshFromLegacy();
     }
 }
 
@@ -357,6 +369,9 @@ function runGoogleRoute(stopMap) {
                 reisTijden[targetId] = Math.ceil((legs[i].duration.value * BUS_FACTOR) / 60);
             }
             updatePlanning();
+            if (typeof window.syncHeenSegmentDisplayFromLegacy === 'function') {
+                window.syncHeenSegmentDisplayFromLegacy();
+            }
             rekenen();
             calculateTussendagenKmAll();
         }
@@ -447,7 +462,8 @@ function syncFiscalFromZones() {
     let tzSum = 0;
 
     document.querySelectorAll('.km-zone-select').forEach(function (sel) {
-        const row = sel.closest('.rit-row') || sel.closest('.tz-row');
+        if (sel.closest('#legacy_heen_mirror')) return;
+        const row = sel.closest('.rit-row') || sel.closest('.tz-row') || sel.closest('tr.heen-seg-row');
         if (!row) return;
         const kmEl = row.querySelector('.km-calc');
         if (!kmEl) return;
@@ -477,6 +493,7 @@ function syncFiscalFromZones() {
     const fiscalSum = nl + de + ch + ov;
     let routeKm = 0;
     document.querySelectorAll('.km-calc').forEach(function (i) {
+        if (!isRouteKmInputForTotals(i)) return;
         if (i.offsetParent !== null) routeKm += parseFloat(i.value) || 0;
     });
     const fc = document.getElementById('fiscal_check');
@@ -493,6 +510,7 @@ function rekenen() {
 
     let totaalKm = 0;
     document.querySelectorAll('.km-calc').forEach(i => {
+        if (!isRouteKmInputForTotals(i)) return;
         if(i.offsetParent !== null) totaalKm += parseFloat(i.value) || 0;
     });
 

@@ -42,6 +42,8 @@ $blOvernSelect = 'klant';
 $blOvernBedrag = '';
 $busOptiesTussendagHTML = '';
 
+$heenSegmentsBoot = [];
+
 try {
     $instellingen = tenant_calculatie_instellingen_merged($pdo, $tenantId);
     $chauffeur_uurloon = $instellingen['uurloon_basis'];
@@ -60,7 +62,10 @@ try {
         foreach($stmtRegels->fetchAll(PDO::FETCH_ASSOC) as $r) { 
             $data[$r['type']] = ['tijd' => substr($r['tijd'], 0, 5), 'adres' => $r['adres'], 'km' => $r['km']]; 
         } 
-    } 
+    }
+
+    require_once __DIR__ . '/includes/route_heen_segments.php';
+    $heenSegmentsBoot = route_heen_segments_from_regels($data); 
 
     // Actieve prijscategorieën ophalen
     $stmtBussen = $pdo->prepare("SELECT * FROM calculatie_voertuigen WHERE tenant_id = ? AND actief = 1 ORDER BY capaciteit ASC");
@@ -233,6 +238,18 @@ function val($data, $rij, $veld, $default = '') {
     .rit-row-check-only input[type="checkbox"] { width: 14px; height: 14px; flex-shrink: 0; }
     .rit-row-check-only label { margin: 0; font-size: 11px; font-weight: 700; color: #003366; cursor: pointer; white-space: nowrap; }
     #block_buitenland_extra { display: none; margin-top: 12px; padding: 12px 14px; background: #f0fdfa; border: 1px solid #99f6e4; border-radius: 6px; font-size: 13px; }
+    .legacy-heen-sr-only {
+        position: absolute !important;
+        width: 1px; height: 1px; padding: 0; margin: -1px;
+        overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+    }
+    .heen-seg-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+    .heen-seg-table th { text-align: left; background: #003366; color: #fff; padding: 8px 10px; font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase; }
+    .heen-seg-table td { padding: 6px 8px; border-bottom: 1px solid #eee; vertical-align: middle; }
+    .heen-seg-table .form-control { height: 30px !important; font-size: 12px !important; padding: 4px 8px !important; }
+    .heen-td-t { width: 76px; }
+    .heen-td-km { width: 64px; }
+    .heen-td-rm { width: 36px; text-align: center; }
 </style> 
 
 <div class="container">
@@ -361,49 +378,73 @@ function val($data, $rij, $veld, $default = '') {
             <div class="box-header"><h3 class="box-title"><i class="fas fa-route"></i> Routeplanning</h3></div> 
             <div class="box-body">
 
-                <div class="header-rit">HEENREIS / RIT 1</div>
-                <div class="route-compact" style="background: #fdfdfd; padding: 8px 10px; border: 1px solid #eee; border-top:none;">
-                    
+                <div class="route-compact heen-segment-wrap" style="background: #fdfdfd; padding: 8px 10px; border: 1px solid #eee; border-radius: 4px;">
+                    <div style="font-weight:bold; color:#003366; margin-bottom:6px; border-bottom:1px solid #ddd; padding-bottom:5px;">
+                        HEENREIS / RIT 1 — segmenten
+                    </div>
+                    <p style="font-size:11px;color:#666;margin:0 0 8px;line-height:1.35;">Elke rij is één stuk route (Van → Naar). Zone/kolom alleen zichtbaar bij meerdaags of buitenland. Onderaan: snelle opties.</p>
+                    <table class="heen-seg-table">
+                        <thead>
+                            <tr>
+                                <th class="heen-td-t">Vertrek</th>
+                                <th>Van</th>
+                                <th>Naar</th>
+                                <th class="heen-td-t">Aankomst</th>
+                                <th class="heen-zone-col" style="display:none;">Zone</th>
+                                <th class="heen-td-km">Km</th>
+                                <th class="heen-td-rm"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="heen_segmenten_body"></tbody>
+                    </table>
+                    <button type="button" class="btn-add-bus" id="btn_heen_seg_add" style="margin-top:8px;font-size:11px;padding:4px 10px;">+ Segment</button>
+                    <div style="margin-top:12px;padding-top:8px;border-top:1px dashed #e0e0e0;display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;">
+                        <span style="font-size:10px;font-weight:700;color:#003366;text-transform:uppercase;">Opties</span>
+                        <label style="font-size:11px;display:inline-flex;align-items:center;gap:5px;cursor:pointer;">
+                            <input type="checkbox" id="opt_rg_retour_garage" title="Vult rit‑einde naar garage (enkel / breng‑haal)">
+                            <span>RG — retour garage na rit 1</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div id="legacy_heen_mirror" class="legacy-heen-sr-only" aria-hidden="true">
                     <div class="rit-row" id="row_garage">
-                        <div class="col-tijd"><label>Vertrek</label><input type="text" name="time[t_garage]" id="time_t_garage" class="form-control custom-time-input reken-trigger" value="<?= val($data, 't_garage', 'tijd') ?>" placeholder="--:--" readonly></div>
-                        <div class="col-adres"><label>Garage</label><input type="text" name="addr[t_garage]" id="addr_t_garage" class="form-control google-autocomplete" value="<?= val($data, 't_garage', 'adres') ?>" placeholder="Garage..."></div>
+                        <input type="text" name="time[t_garage]" id="time_t_garage" class="form-control custom-time-input reken-trigger" placeholder="--:--" readonly value="<?= val($data, 't_garage', 'tijd') ?>">
+                        <input type="text" name="addr[t_garage]" id="addr_t_garage" class="form-control reken-trigger" placeholder="Garage..." autocomplete="off" value="<?= val($data, 't_garage', 'adres') ?>">
                     </div>
                     <div class="rit-row" id="row_vertrek_klant">
-                        <div class="col-tijd"><label>Vertrek</label><input type="text" name="time[t_vertrek_klant]" id="time_t_vertrek_klant" class="form-control custom-time-input reken-trigger" value="<?= val($data, 't_vertrek_klant', 'tijd') ?>" placeholder="--:--" readonly></div>
-                        <div class="col-adres"><label>Vertrekadres</label><input type="text" name="addr[t_vertrek_klant]" id="addr_t_vertrek_klant" class="form-control google-autocomplete" value="<?= val($data, 't_vertrek_klant', 'adres') ?>" placeholder="Typ of zoek adres (Google Maps)…"></div>
-                        <div class="col-km"><label>Km</label><input type="number" name="km[t_vertrek_klant]" class="form-control km-calc reken-trigger" value="<?= val($data, 't_vertrek_klant', 'km', 0) ?>"></div>
-                        <div class="col-zone"><label>Zone</label><select class="form-control km-zone-select reken-trigger" title="Fiscale zone"><option value="nl">NL</option><option value="de">DE</option><option value="ch">CH</option><option value="ov">0%</option></select></div>
+                        <input type="text" name="time[t_vertrek_klant]" id="time_t_vertrek_klant" class="form-control custom-time-input reken-trigger" placeholder="--:--" readonly value="<?= val($data, 't_vertrek_klant', 'tijd') ?>">
+                        <input type="text" name="addr[t_vertrek_klant]" id="addr_t_vertrek_klant" class="form-control reken-trigger" placeholder="Vertrekadres" autocomplete="off" value="<?= val($data, 't_vertrek_klant', 'adres') ?>">
+                        <input type="number" name="km[t_vertrek_klant]" class="form-control km-calc reken-trigger" value="<?= val($data, 't_vertrek_klant', 'km', 0) ?>">
+                        <select class="form-control km-zone-select reken-trigger" title="Fiscale zone"><option value="nl">NL</option><option value="de">DE</option><option value="ch">CH</option><option value="ov">0%</option></select>
                     </div>
                     <div class="rit-row" id="row_voorstaan">
                         <input type="hidden" name="time[t_voorstaan]" id="time_t_voorstaan" value="<?= val($data, 't_voorstaan', 'tijd') ?>">
-                        <div class="col-tijd col-tijd-muted"><label>—</label><span class="tijd-hint">route</span></div>
-                        <div class="col-adres"><label>Naar grens</label><input type="text" name="addr[t_voorstaan]" id="addr_t_voorstaan" class="form-control google-autocomplete" value="<?= val($data, 't_voorstaan', 'adres') ?>" placeholder="Eerste grens / grensovergang..."></div>
-                        <div class="col-km"><label>Km</label><input type="number" name="km[t_voorstaan]" class="form-control km-calc reken-trigger" value="<?= val($data, 't_voorstaan', 'km', 0) ?>"></div>
-                        <div class="col-zone"><label>Zone</label><select class="form-control km-zone-select reken-trigger" title="Fiscale zone"><option value="nl">NL</option><option value="de">DE</option><option value="ch">CH</option><option value="ov">0%</option></select></div>
+                        <input type="text" name="addr[t_voorstaan]" id="addr_t_voorstaan" class="form-control reken-trigger" placeholder="Eerste grens" autocomplete="off" value="<?= val($data, 't_voorstaan', 'adres') ?>">
+                        <input type="number" name="km[t_voorstaan]" class="form-control km-calc reken-trigger" value="<?= val($data, 't_voorstaan', 'km', 0) ?>">
+                        <select class="form-control km-zone-select reken-trigger"><option value="nl">NL</option><option value="de">DE</option><option value="ch">CH</option><option value="ov">0%</option></select>
                     </div>
                     <div class="rit-row rit-row-check-only" id="row_chk_grens2_wrap">
                         <input type="checkbox" id="chk_grens2" value="1" <?= trim((string) val($data, 't_grens2', 'adres')) !== '' ? 'checked' : '' ?>>
                         <label for="chk_grens2">Tweede grens</label>
                     </div>
                     <div class="rit-row" id="row_grens2" style="<?= trim((string) val($data, 't_grens2', 'adres')) !== '' ? '' : 'display:none;' ?>">
-                        <input type="hidden" name="time[t_grens2]" id="time_t_grens2" value="<?= htmlspecialchars((string) val($data, 't_grens2', 'tijd')) ?>">
-                        <div class="col-tijd col-tijd-muted"><label>—</label><span class="tijd-hint">route</span></div>
-                        <div class="col-adres"><label>2e grens</label><input type="text" name="addr[t_grens2]" id="addr_t_grens2" class="form-control google-autocomplete" value="<?= val($data, 't_grens2', 'adres') ?>" placeholder="Tweede grens (bijv. AT)..."></div>
-                        <div class="col-km"><label>Km</label><input type="number" name="km[t_grens2]" class="form-control km-calc reken-trigger" value="<?= val($data, 't_grens2', 'km', 0) ?>"></div>
-                        <div class="col-zone"><label>Zone</label><select class="form-control km-zone-select reken-trigger" title="Fiscale zone"><option value="nl">NL</option><option value="de">DE</option><option value="ch">CH</option><option value="ov">0%</option></select></div>
+                        <input type="hidden" name="time[t_grens2]" id="time_t_grens2" value="<?= val($data, 't_grens2', 'tijd') ?>">
+                        <input type="text" name="addr[t_grens2]" id="addr_t_grens2" class="form-control reken-trigger" placeholder="2e grens" autocomplete="off" value="<?= val($data, 't_grens2', 'adres') ?>">
+                        <input type="number" name="km[t_grens2]" class="form-control km-calc reken-trigger" value="<?= val($data, 't_grens2', 'km', 0) ?>">
+                        <select class="form-control km-zone-select reken-trigger"><option value="nl">NL</option><option value="de">DE</option><option value="ch">CH</option><option value="ov">0%</option></select>
                     </div>
                     <div class="rit-row" id="row_aankomst_best">
-                        <div class="col-tijd"><label>Aankomst</label><input type="text" name="time[t_aankomst_best]" id="time_t_aankomst_best" class="form-control custom-time-input reken-trigger" value="<?= val($data, 't_aankomst_best', 'tijd') ?>" placeholder="--:--" readonly></div>
-                        <div class="col-adres"><label>Bestemming</label><input type="text" name="addr[t_aankomst_best]" id="addr_t_aankomst_best" class="form-control google-autocomplete" value="<?= val($data, 't_aankomst_best', 'adres') ?>" placeholder="Bestemming..."></div>
-                        <div class="col-km"><label>Km</label><input type="number" name="km[t_aankomst_best]" class="form-control km-calc reken-trigger" value="<?= val($data, 't_aankomst_best', 'km', 0) ?>"></div>
-                        <div class="col-zone"><label>Zone</label><select class="form-control km-zone-select reken-trigger" title="Fiscale zone"><option value="nl">NL</option><option value="de">DE</option><option value="ch">CH</option><option value="ov">0%</option></select></div>
+                        <input type="text" name="time[t_aankomst_best]" id="time_t_aankomst_best" class="form-control custom-time-input reken-trigger" placeholder="--:--" readonly value="<?= val($data, 't_aankomst_best', 'tijd') ?>">
+                        <input type="text" name="addr[t_aankomst_best]" id="addr_t_aankomst_best" class="form-control reken-trigger" placeholder="Bestemming" autocomplete="off" value="<?= val($data, 't_aankomst_best', 'adres') ?>">
+                        <input type="number" name="km[t_aankomst_best]" class="form-control km-calc reken-trigger" value="<?= val($data, 't_aankomst_best', 'km', 0) ?>">
+                        <select class="form-control km-zone-select reken-trigger"><option value="nl">NL</option><option value="de">DE</option><option value="ch">CH</option><option value="ov">0%</option></select>
                     </div>
-
-                    <div class="rit-row" id="row_retour_garage_heen" style="display:none; background:#f9f9f9; padding:5px; border-radius:4px;">
-                        <div class="col-tijd"><label>Einde Rit 1</label><input type="text" name="time[t_retour_garage_heen]" id="time_t_retour_garage_heen" class="form-control custom-time-input reken-trigger" value="<?= val($data, 't_retour_garage_heen', 'tijd') ?>" placeholder="--:--" readonly></div>
-                        <div class="col-adres"><label>Garage (na rit 1)</label><input type="text" name="addr[t_retour_garage_heen]" id="addr_t_retour_garage_heen" class="form-control google-autocomplete" value="<?= val($data, 't_retour_garage_heen', 'adres') ?>" placeholder="Garage..."></div>
-                        <div class="col-km"><label>Km</label><input type="number" name="km[t_retour_garage_heen]" class="form-control km-calc reken-trigger" value="<?= val($data, 't_retour_garage_heen', 'km', 0) ?>"></div>
-                        <div class="col-zone"><label>Zone</label><select class="form-control km-zone-select reken-trigger" title="Fiscale zone"><option value="nl">NL</option><option value="de">DE</option><option value="ch">CH</option><option value="ov">0%</option></select></div>
+                    <div class="rit-row" id="row_retour_garage_heen" style="display:none;">
+                        <input type="text" name="time[t_retour_garage_heen]" id="time_t_retour_garage_heen" class="form-control custom-time-input reken-trigger" placeholder="--:--" readonly value="<?= val($data, 't_retour_garage_heen', 'tijd') ?>">
+                        <input type="text" name="addr[t_retour_garage_heen]" id="addr_t_retour_garage_heen" class="form-control reken-trigger" placeholder="Garage..." autocomplete="off" value="<?= val($data, 't_retour_garage_heen', 'adres') ?>">
+                        <input type="number" name="km[t_retour_garage_heen]" class="form-control km-calc reken-trigger" value="<?= val($data, 't_retour_garage_heen', 'km', 0) ?>">
+                        <select class="form-control km-zone-select reken-trigger"><option value="nl">NL</option><option value="de">DE</option><option value="ch">CH</option><option value="ov">0%</option></select>
                     </div>
                 </div>
 
@@ -956,6 +997,7 @@ function val($data, $rij, $veld, $default = '') {
 </script>
 
 <script>
+window.HEEN_SEGMENTS_BOOT = <?= json_encode($heenSegmentsBoot ?? [], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
 window.CALC_BUITENLAND_DP = <?= json_encode($buitenlandMetaDp ?? [], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
 window.CALC_TUSSENDAGEN_BOOT = <?= json_encode(['enabled' => $tussendagenEnabledBoot ?? false, 'items' => $tussendagenItemsBoot ?? []], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
 window.HTML_BUS_TUSSENDAG = <?= json_encode($busOptiesTussendagHTML ?? '', JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
@@ -1134,6 +1176,7 @@ window.HTML_BUS_TUSSENDAG = <?= json_encode($busOptiesTussendagHTML ?? '', JSON_
 })();
 </script>
 
+<script src="js/route_heen_segmenten.js?v=<?= time() ?>"></script>
 <script src="rekenmachine.js?v=<?= time() ?>"></script> 
 
 <script>
