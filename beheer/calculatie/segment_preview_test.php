@@ -12,7 +12,6 @@ $pageTitle = 'Proef: route per segment';
 include '../includes/header.php';
 
 /**
- * Per segment: vertrektijd en aankomsttijd; vertrek rij N = aankomst rij N-1.
  * @var list<array{vertrektijd: string, van: string, naar: string, aankomst_tijd: string, km: string, zone: string}>
  */
 $demoSegmenten = [
@@ -52,60 +51,85 @@ $demoSegmenten = [
 ?>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <style>
-    .seg-test-wrap { max-width: 1160px; margin: 0 auto 40px; padding: 0 16px 24px; font-family: 'Segoe UI', sans-serif; }
-    .seg-test-wrap h1 { color: #003366; font-size: 22px; margin-bottom: 8px; }
-    .seg-banner {
-        background: #fff8e6; border: 1px solid #ffc107; border-radius: 8px;
-        padding: 14px 18px; margin-bottom: 24px; font-size: 14px; color: #856404;
+    .seg-test-wrap { max-width: 1100px; margin: 0 auto 40px; padding: 0 16px 32px; font-family: 'Segoe UI', system-ui, sans-serif; }
+    .seg-test-wrap h1 { color: #003366; font-size: 1.35rem; font-weight: 700; margin: 0 0 20px; letter-spacing: -0.02em; }
+    .seg-lead { color: #5c6370; font-size: 0.95rem; margin: 0 0 22px; line-height: 1.45; }
+    .seg-card {
+        border-radius: 10px;
+        border: 1px solid #e2e6ec;
+        background: linear-gradient(180deg, #fbfcfe 0%, #fff 48%);
+        box-shadow: 0 2px 12px rgba(0, 31, 71, 0.06);
+        overflow: hidden;
     }
-    .seg-banner strong { display: block; margin-bottom: 6px; color: #664d03; }
-    .seg-table-wrap { overflow-x: auto; border: 1px solid #ddd; border-radius: 8px; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
-    .seg-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .seg-table th {
-        text-align: left; background: #003366; color: #fff; padding: 10px 12px; font-weight: 600; white-space: nowrap;
+    .seg-table { width: 100%; border-collapse: collapse; font-size: 13px; color: #2c323a; }
+    .seg-table thead th {
+        text-align: left;
+        background: #003366;
+        color: #fff;
+        padding: 12px 14px;
+        font-weight: 600;
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        white-space: nowrap;
     }
-    .seg-table td { padding: 10px 12px; border-bottom: 1px solid #eee; vertical-align: top; }
-    .seg-table tr:nth-child(even) td { background: #f9fbfd; }
-    .seg-table tr:last-child td { border-bottom: none; }
-    .seg-table .col-km { text-align: right; white-space: nowrap; width: 52px; }
-    .seg-table .col-zone { text-align: center; width: 48px; font-weight: 700; color: #003366; }
-    .seg-table .col-vertrek-tijd,
-    .seg-table .col-aankomst-tijd { white-space: nowrap; width: 72px; font-weight: 600; color: #003366; }
-    .seg-chain-hint { font-size: 11px; color: #6c757d; margin-top: 4px; font-style: italic; }
-    .seg-chain-match { color: #198754; }
-    .seg-back { margin-top: 28px; font-size: 14px; }
-    .seg-back a { color: #003366; font-weight: 600; }
+    .seg-table thead th:first-child { padding-left: 18px; border-radius: 0; }
+    .seg-table thead th:last-child { padding-right: 18px; }
+    .seg-table tbody td {
+        padding: 13px 14px;
+        border-bottom: 1px solid #eef1f5;
+        vertical-align: middle;
+        line-height: 1.4;
+    }
+    .seg-table tbody td:first-child { padding-left: 18px; }
+    .seg-table tbody td:last-child { padding-right: 18px; }
+    .seg-table tbody tr:last-child td { border-bottom: none; }
+    .seg-table tbody tr:hover td { background: rgba(0, 51, 102, 0.04); }
+    .seg-t {
+        font-variant-numeric: tabular-nums;
+        font-weight: 600;
+        color: #003366;
+        white-space: nowrap;
+        width: 1%;
+    }
+    .seg-van-naar { min-width: 200px; max-width: 340px; }
+    .seg-km {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        color: #2c323a;
+        width: 1%;
+    }
+    .seg-zone {
+        text-align: center;
+        font-weight: 700;
+        font-size: 12px;
+        color: #003366;
+        width: 1%;
+    }
+    .seg-back { margin-top: 26px; font-size: 14px; }
+    .seg-back a { color: #003366; font-weight: 600; text-decoration: none; }
+    .seg-back a:hover { text-decoration: underline; }
 </style>
 
 <div class="seg-test-wrap">
     <h1><i class="fas fa-route" aria-hidden="true"></i> <?= htmlspecialchars($pageTitle) ?></h1>
+    <p class="seg-lead">Layout-proef · geen data uit je omgeving.</p>
 
-    <div class="seg-banner">
-        <strong><i class="fas fa-flask" aria-hidden="true"></i> Alleen een layout-proef</strong>
-        Kolommen: <strong>vertrektijd</strong> (eerste stop van het segment) · vertrekadres · aankomstadres ·
-        <strong>aankomsttijd</strong> (bij die aankomst) · km · zone. In de ketting is
-        <strong>vertrektijd van de volgende rij gelijk aan aankomsttijd van de vorige</strong>
-        (zelfde moment: je vertrekt pas weer vanaf die plek).
-        Het <strong>aankomstadres</strong> van rij 1 is het <strong>vertrekadres</strong> van rij 2 — zoals eerder.
-    </div>
-
-    <div class="seg-table-wrap">
+    <div class="seg-card">
         <table class="seg-table">
             <thead>
                 <tr>
                     <th>Vertrektijd</th>
-                    <th>Vertrek (adres)</th>
-                    <th>Aankomst (adres)</th>
+                    <th>Van</th>
+                    <th>Naar</th>
                     <th>Aankomsttijd</th>
-                    <th class="col-km">Km</th>
-                    <th class="col-zone">Zone</th>
+                    <th>Km</th>
+                    <th>Zone</th>
                 </tr>
             </thead>
             <tbody>
 <?php
-$prevNaar = null;
-$prevAankomstTijd = null;
-foreach ($demoSegmenten as $idx => $seg) {
+foreach ($demoSegmenten as $seg) {
     $vt = htmlspecialchars($seg['vertrektijd']);
     $at = htmlspecialchars($seg['aankomst_tijd']);
     $van = htmlspecialchars($seg['van']);
@@ -113,38 +137,13 @@ foreach ($demoSegmenten as $idx => $seg) {
     $km = htmlspecialchars($seg['km']);
     $zone = htmlspecialchars($seg['zone']);
 
-    $hintVertrek = '';
-    if ($prevNaar !== null && $prevNaar === $seg['van']) {
-        $hintVertrek .= '<div class="seg-chain-hint"><span class="seg-chain-match">✓ Adres = vorig aankomstadres</span></div>';
-    } elseif ($idx > 0) {
-        $hintVertrek .= '<div class="seg-chain-hint">(productie: gelijk vorig aankomstadres)</div>';
-    }
-
-    $hintTijd = '';
-    if ($idx > 0 && $prevAankomstTijd !== null && $prevAankomstTijd === $seg['vertrektijd']) {
-        $hintTijd = '<div class="seg-chain-hint"><span class="seg-chain-match">✓ = aankomsttijd vorig segment (= jouw vertrek hier)</span></div>';
-    } elseif ($idx > 0) {
-        $hintTijd = '<div class="seg-chain-hint">(productie: gelijk vorige aankomsttijd)</div>';
-    }
-
-    $hintAankomstTijd = '';
-    if ($idx < count($demoSegmenten) - 1) {
-        $nextVt = $demoSegmenten[$idx + 1]['vertrektijd'] ?? '';
-        if ($nextVt !== '' && $nextVt === $seg['aankomst_tijd']) {
-            $hintAankomstTijd = '<div class="seg-chain-hint"><span class="seg-chain-match">✓ = vertrektijd volgende rij</span></div>';
-        }
-    }
-
-    $prevNaar = $seg['naar'];
-    $prevAankomstTijd = $seg['aankomst_tijd'];
-
     echo "                <tr>\n";
-    echo "                    <td class=\"col-vertrek-tijd\">{$vt}{$hintTijd}</td>\n";
-    echo "                    <td>{$van}{$hintVertrek}</td>\n";
-    echo "                    <td>{$naar}</td>\n";
-    echo "                    <td class=\"col-aankomst-tijd\">{$at}{$hintAankomstTijd}</td>\n";
-    echo "                    <td class=\"col-km\">{$km}</td>\n";
-    echo "                    <td class=\"col-zone\">{$zone}</td>\n";
+    echo "                    <td class=\"seg-t\">{$vt}</td>\n";
+    echo "                    <td class=\"seg-van-naar\">{$van}</td>\n";
+    echo "                    <td class=\"seg-van-naar\">{$naar}</td>\n";
+    echo "                    <td class=\"seg-t\">{$at}</td>\n";
+    echo "                    <td class=\"seg-km\">{$km}</td>\n";
+    echo "                    <td class=\"seg-zone\">{$zone}</td>\n";
     echo "                </tr>\n";
 }
 ?>
