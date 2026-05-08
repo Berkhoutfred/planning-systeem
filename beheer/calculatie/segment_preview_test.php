@@ -110,32 +110,53 @@ $demoSegmenten = [
     .seg-back a { color: #003366; font-weight: 600; text-decoration: none; }
     .seg-back a:hover { text-decoration: underline; }
 
-    /* Opties onder de rit — rondjes + afkorting (alleen layout-proef) */
-    .seg-opt-block { margin-top: 28px; }
+    /* Opties — compact: kleine radio + afk. naast elkaar */
+    .seg-opt-block { margin-top: 22px; }
     .seg-opt-block h2 {
-        font-size: 0.95rem; font-weight: 700; color: #003366; margin: 0 0 6px; letter-spacing: -0.02em;
+        font-size: 0.82rem; font-weight: 700; color: #003366; margin: 0 0 8px; letter-spacing: 0.02em;
+        text-transform: uppercase;
     }
-    .seg-opt-lead { font-size: 0.85rem; color: #5c6370; margin: 0 0 14px; line-height: 1.45; }
-    .seg-opt-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
-    .seg-opt-item {
-        display: flex; align-items: flex-start; gap: 12px;
-        padding: 10px 14px; border-radius: 8px; border: 1px solid #e8ecf2;
-        background: #fafbfd;
+    .seg-opt-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px 12px;
+        padding: 8px 10px;
+        border-radius: 6px;
+        border: 1px solid #e4e9ef;
+        background: #f8fafc;
     }
-    .seg-opt-ring {
-        flex-shrink: 0; width: 38px; height: 38px; border-radius: 50%;
-        border: 2px solid #003366; display: flex; align-items: center; justify-content: center;
-        font-size: 11px; font-weight: 800; color: #003366; letter-spacing: 0.02em;
-        background: #fff;
+    .seg-opt-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        cursor: pointer;
+        font-size: 11px;
+        color: #374151;
+        user-select: none;
+        white-space: nowrap;
     }
-    .seg-opt-body { min-width: 0; padding-top: 2px; }
-    .seg-opt-body strong { display: block; font-size: 13px; color: #2c323a; font-weight: 600; }
-    .seg-opt-body span.note { display: block; font-size: 12px; color: #6b7280; margin-top: 3px; line-height: 1.35; }
+    .seg-opt-chip input[type="radio"] {
+        width: 13px;
+        height: 13px;
+        margin: 0;
+        accent-color: #003366;
+        flex-shrink: 0;
+    }
+    .seg-opt-afk {
+        font-weight: 700;
+        font-size: 11px;
+        letter-spacing: 0.03em;
+        color: #003366;
+    }
 
-    .seg-opt-example { margin-top: 18px; padding: 14px 16px; border-radius: 8px; border: 1px dashed #93a4bd; background: #f4f7fb; }
-    .seg-opt-example > p { margin: 0 0 10px; font-size: 12px; font-weight: 600; color: #003366; }
+    .seg-opt-example { margin-top: 12px; padding: 10px 12px; border-radius: 6px; border: 1px dashed #93a4bd; background: #f4f7fb; }
+    .seg-opt-example > p { margin: 0 0 8px; font-size: 11px; font-weight: 600; color: #003366; line-height: 1.35; }
     .seg-opt-example .seg-card { box-shadow: none; }
+    .seg-opt-example .seg-table thead th,
+    .seg-opt-example .seg-table tbody td { padding: 8px 10px; font-size: 12px; }
     .seg-example-row td { background: rgba(0, 51, 102, 0.06) !important; }
+    .seg-opt-example-note { margin: 8px 0 0; font-size: 10px; color: #6b7280; line-height: 1.35; }
 </style>
 
 <div class="seg-test-wrap">
@@ -180,35 +201,31 @@ foreach ($demoSegmenten as $seg) {
 
     <?php
     $optiesOnderRit = [
-        ['afk' => 'ER', 'label' => 'Extra ritregel', 'note' => 'Nog een segment in de ketting (extra Van → Naar).'],
-        ['afk' => 'RG', 'label' => 'Retour naar garage', 'note' => 'Voegt een segment toe: laatste punt → garage (zie voorbeeld hieronder).'],
-        ['afk' => 'ED', 'label' => 'Extra dag', 'note' => 'Tussen/accommodatie op een andere kalenderdag (zoals je «extra rijdag» nu).'],
-        ['afk' => 'RS', 'label' => 'Retour naar start / eerste adres', 'note' => 'Laatste stap terug naar het eerste ophaaladres.'],
-        ['afk' => 'LZ', 'label' => 'Later ophalen / tweede aanrij', 'note' => 'Rit splitst: eerst terug naar zaak, later opnieuw vertrek.'],
+        ['afk' => 'ER', 'title' => 'Extra ritregel'],
+        ['afk' => 'RG', 'title' => 'Retour naar garage'],
+        ['afk' => 'ED', 'title' => 'Extra dag'],
+        ['afk' => 'RS', 'title' => 'Retour naar start / eerste adres'],
+        ['afk' => 'LZ', 'title' => 'Later ophalen / tweede aanrij'],
     ];
     ?>
 
     <div class="seg-opt-block">
-        <h2>Opties onder de ritregel (proef)</h2>
-        <p class="seg-opt-lead">Rondje met korte afkorting — zo kun je opties scannen zonder lange zinnen. In productie worden dit vinkjes of keuzes die iets met de ketting doen.</p>
-        <ul class="seg-opt-list">
-<?php foreach ($optiesOnderRit as $op) :
+        <h2>Opties (proef)</h2>
+        <div class="seg-opt-row" role="group" aria-label="Ritopties demo">
+<?php foreach ($optiesOnderRit as $i => $op) :
     $afk = htmlspecialchars($op['afk']);
-    $lb = htmlspecialchars($op['label']);
-    $no = htmlspecialchars($op['note']);
+    $tit = htmlspecialchars($op['title']);
+    $rid = 'seg_demo_opt_' . $i;
     ?>
-            <li class="seg-opt-item">
-                <span class="seg-opt-ring" title="<?= $afk ?>"><?= $afk ?></span>
-                <div class="seg-opt-body">
-                    <strong><?= $lb ?></strong>
-                    <span class="note"><?= $no ?></span>
-                </div>
-            </li>
+            <label class="seg-opt-chip" title="<?= $tit ?>">
+                <input type="radio" name="segment_demo_opties" value="<?= $afk ?>" id="<?= $rid ?>">
+                <span class="seg-opt-afk"><?= $afk ?></span>
+            </label>
 <?php endforeach; ?>
-        </ul>
+        </div>
 
         <div class="seg-opt-example">
-            <p>Voorbeeld: optie «Retour naar garage» (RG) — er komt direct een extra segment onder de hoofdrit:</p>
+            <p>Voorbeeld bij RG: één extra segment (Hotel → garage).</p>
             <div class="seg-card">
                 <table class="seg-table">
                     <thead>
@@ -233,7 +250,7 @@ foreach ($demoSegmenten as $seg) {
                     </tbody>
                 </table>
             </div>
-            <p class="seg-opt-lead" style="margin:10px 0 0;">(Cijfers fictief; alleen om het idee te tonen: één regel die «doorrekent» na de laatste hoofdrit.)</p>
+            <p class="seg-opt-example-note">Fictieve tijd/km. Hover op ER/RG/… voor volledige naam.</p>
         </div>
     </div>
 
