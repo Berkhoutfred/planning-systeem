@@ -15,6 +15,13 @@
 #     of protocol: ftps-legacy als Hostinger dat vereist.
 #   — SFTP is een ander protocol; deze Action ondersteunt géén SFTP (alleen FTP/FTPS).
 #   — Zeldzaam: firewall blokkeert datacenter-IP's; dan Hostinger-support of deploy via andere route.
+#
+# Bij "connect ETIMEDOUT … :21 (control socket)":
+#   — De runner krijgt géén TCP-verbinding naar poort 21 (niet hetzelfde als trage upload).
+#   — Controleer het exacte FTP-hostname in hPanel (vaak ftp.<jouwdomein>.nl, niet je website-URL).
+#   — Als de stap "Check FTP-poort 21" faalt: Hostinger blokkeert mogelijk inkomend FTP vanuit
+#     cloud-datacenters (GitHub Actions). Oplossingen: handmatig uploaden (FileZilla), Hostinger
+#     "Git integration" in hPanel, of deploy via een runner buiten GitHub (eigen VPS/PC).
 
 name: Deploy to Hostinger (FTP)
 
@@ -22,6 +29,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   ftp-deploy:
@@ -29,6 +37,32 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      # Faalt snel met duidelijke melding i.p.v. minuten wachten op ETIMEDOUT in de FTP-action.
+      - name: Check FTP-poort 21 bereikbaar
+        env:
+          FTP_HOST: ${{ secrets.FTP_SERVER }}
+        run: |
+          set -e
+          if [ -z "$FTP_HOST" ]; then
+            echo "::error::Secret FTP_SERVER is leeg. Vul in onder Settings → Secrets → Actions."
+            exit 1
+          fi
+          echo "Test TCP naar poort 21 (max. ca. 45s met retries) …"
+          ok=0
+          for attempt in 1 2 3; do
+            if timeout 15 bash -c "echo >/dev/tcp/$FTP_HOST/21" 2>/dev/null; then
+              ok=1
+              break
+            fi
+            echo "Poging $attempt: geen verbinding, opnieuw over 10s …"
+            sleep 10
+          done
+          if [ "$ok" != "1" ]; then
+            echo "::error::Geen TCP-verbinding naar FTP-host op poort 21 (ETIMEDOUT). Controleer FTP_SERVER in GitHub-secrets en het hostname in hPanel. Als lokaal (FileZilla) wél werkt: mogelijk blokkeert Hostinger FTP vanaf GitHub; gebruik handmatige upload of Git-deploy in hPanel."
+            exit 1
+          fi
+          echo "OK: poort 21 accepteert verbinding."
 
       - name: FTP deploy
         uses: SamKirkland/FTP-Deploy-Action@v4.4.0
