@@ -37,9 +37,13 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           server-dir: /public_html/
+          # Bij herhaald "Timeout (control socket)": probeer protocol: ftps-legacy of (tijdelijk test) protocol: ftp
           protocol: ftps
           port: 21
-          timeout: 120000
+          # Langere wachttijd: trage verbindingen / grote sync; 120s was kort t.o.v. run ~2m
+          timeout: 600000
+          # losser TLS (helpend bij sommige shared hosts; zie action.yml 'strict or loose')
+          security: loose
           log-level: standard
           exclude: |
             **/.git*
