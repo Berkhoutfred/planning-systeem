@@ -16,6 +16,9 @@ if ($tenantId <= 0) {
     die("<div style='padding:20px; background:#f8d7da; color:#721c24; border:1px solid #f5c6cb; border-radius:5px;'><strong>Fout:</strong> Tenant context ontbreekt.</div>");
 }
 
+$uiBuildConf = require __DIR__ . '/includes/ui_build.php';
+$uiBuildLabel = 'nr. ' . (int) ($uiBuildConf['nr'] ?? 1) . ' · ' . htmlspecialchars((string) ($uiBuildConf['time'] ?? ''), ENT_QUOTES, 'UTF-8');
+
 // DATA OPHALEN 
 $id = isset($_GET['id']) ? intval($_GET['id']) : 0; 
 $is_nieuw = ($id === 0); 
@@ -275,6 +278,13 @@ function val($data, $rij, $veld, $default = '') {
         margin-bottom: 4px; background: #f1f5f9 !important; color: #0f172a;
     }
     .heen-td-aankomst-split .heen-at { margin-bottom: 0; }
+    .calculatie-ui-build {
+        text-align: center;
+        font-size: 11px;
+        color: #64748b;
+        margin: 16px 0 8px;
+        letter-spacing: 0.02em;
+    }
 </style> 
 
 <div class="container">
@@ -690,7 +700,8 @@ function val($data, $rij, $veld, $default = '') {
         </div>
         <?php endif; ?> 
 
-        <button type="submit" class="btn-save"><i class="fas fa-save"></i> OPSLAAN & TERUG NAAR OVERZICHT</button> 
+        <button type="submit" class="btn-save"><i class="fas fa-save"></i> OPSLAAN & TERUG NAAR OVERZICHT</button>
+        <p class="calculatie-ui-build">BusAI calculatie · bijgewerkt: <?= $uiBuildLabel ?></p>
     </form> 
 </div> 
 
@@ -1001,6 +1012,7 @@ function val($data, $rij, $veld, $default = '') {
                                     if(veldVoorstaan && veldVoorstaan.value === '') veldVoorstaan.value = volledigAdres;
                                     if(veldRetour && veldRetour.value === '') veldRetour.value = volledigAdres;
                                 }
+                                if (typeof window.routeHeenRefreshFromLegacy === 'function') window.routeHeenRefreshFromLegacy();
                             };
                             list.appendChild(div);
                         });

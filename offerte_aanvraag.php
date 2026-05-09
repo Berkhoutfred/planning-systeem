@@ -117,8 +117,8 @@ $tenant = offerte_resolve_tenant($pdo);
 $bedankt = isset($_GET['bedankt']) && (string) $_GET['bedankt'] === '1';
 $foutmelding = '';
 
-/** Zichtbaar onderaan de wizard (onderhoud / cache-debug). */
-$offerteWizardBuildLabel = '2026-05-07 · wizard';
+$uiBuildConf = require __DIR__ . '/beheer/calculatie/includes/ui_build.php';
+$offerteWizardBuildLabel = 'nr. ' . (int) ($uiBuildConf['nr'] ?? 1) . ' · ' . htmlspecialchars((string) ($uiBuildConf['time'] ?? ''), ENT_QUOTES, 'UTF-8');
 
 if ($tenant === null) {
     $foutmelding = 'Deze pagina is niet bereikbaar zonder geldige organisatie. Gebruik de link van uw vervoerder (met ?tenant=...) of neem contact op.';
