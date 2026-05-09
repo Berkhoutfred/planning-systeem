@@ -29,6 +29,50 @@
         return tb ? Array.from(tb.querySelectorAll('tr.heen-seg-row')) : [];
     }
 
+    function normalizeAddr(s) {
+        return String(s || '')
+            .trim()
+            .replace(/\s+/g, ' ');
+    }
+
+    function isRgChipActive() {
+        const gar = document.getElementById('addr_t_garage');
+        const ret = document.getElementById('addr_t_retour_garage_heen');
+        if (!gar || !ret) return false;
+        const g = normalizeAddr(gar.value);
+        const r = normalizeAddr(ret.value);
+        return g !== '' && r === g;
+    }
+
+    /** Vertrek bestemming = heen-bestemming; uitstap = eerste klantvertrek (segment-naar rit 1). */
+    function isRkChipActive() {
+        const vb = document.getElementById('addr_t_vertrek_best');
+        const ab = document.getElementById('addr_t_aankomst_best');
+        const rk = document.getElementById('addr_t_retour_klant');
+        const vl = document.getElementById('addr_t_vertrek_klant');
+        if (!vb || !ab || !rk || !vl) return false;
+        return (
+            normalizeAddr(vb.value) === normalizeAddr(ab.value) &&
+            normalizeAddr(rk.value) === normalizeAddr(vl.value) &&
+            normalizeAddr(ab.value) !== ''
+        );
+    }
+
+    function updateHeenOptChipStates() {
+        const btnRg = document.getElementById('btn_heen_opt_rg');
+        const btnRk = document.getElementById('btn_heen_opt_rk');
+        if (btnRg) {
+            const on = isRgChipActive();
+            btnRg.classList.toggle('is-active', on);
+            btnRg.setAttribute('aria-pressed', on ? 'true' : 'false');
+        }
+        if (btnRk) {
+            const on = isRkChipActive();
+            btnRk.classList.toggle('is-active', on);
+            btnRk.setAttribute('aria-pressed', on ? 'true' : 'false');
+        }
+    }
+
     /** Sync ketting: Van[i] = Naar[i-1] */
     function chainVanNaar() {
         const rows = getRows();
@@ -134,6 +178,7 @@
 
         if (typeof window.calculateRoute === 'function') window.calculateRoute();
         if (typeof window.rekenen === 'function') window.rekenen();
+        updateHeenOptChipStates();
     }
 
     function bindRow(row) {
@@ -213,21 +258,58 @@
         syncLegacyFromSegments();
     }
 
-    function wireOptiesDemo() {
-        const rg = document.getElementById('opt_rg_retour_garage');
-        if (!rg) return;
-        rg.addEventListener('change', function () {
-            const garEl = document.getElementById('addr_t_garage');
-            const retEl = document.getElementById('addr_t_retour_garage_heen');
-            const gaddr = garEl ? garEl.value.trim() : '';
-            if (!retEl || !gaddr) return;
-            if (rg.checked) {
-                retEl.value = gaddr;
-            } else {
-                retEl.value = '';
-            }
-            if (typeof window.calculateRoute === 'function') window.calculateRoute();
-            if (typeof window.rekenen === 'function') window.rekenen();
+    function wireOptieKnopen() {
+        const btnRg = document.getElementById('btn_heen_opt_rg');
+        const btnRk = document.getElementById('btn_heen_opt_rk');
+        if (btnRg) {
+            btnRg.addEventListener('click', function () {
+                const garEl = document.getElementById('addr_t_garage');
+                const retEl = document.getElementById('addr_t_retour_garage_heen');
+                const gaddr = garEl ? garEl.value.trim() : '';
+                if (!retEl) return;
+                if (!gaddr) return;
+                if (isRgChipActive()) {
+                    retEl.value = '';
+                } else {
+                    retEl.value = garEl.value;
+                }
+                updateHeenOptChipStates();
+                if (typeof window.calculateRoute === 'function') window.calculateRoute();
+                if (typeof window.rekenen === 'function') window.rekenen();
+            });
+        }
+        if (btnRk) {
+            btnRk.addEventListener('click', function () {
+                const vb = document.getElementById('addr_t_vertrek_best');
+                const ab = document.getElementById('addr_t_aankomst_best');
+                const rk = document.getElementById('addr_t_retour_klant');
+                const vl = document.getElementById('addr_t_vertrek_klant');
+                if (!vb || !ab || !rk || !vl) return;
+                if (isRkChipActive()) {
+                    vb.value = '';
+                    rk.value = '';
+                } else {
+                    vb.value = ab.value;
+                    rk.value = vl.value;
+                }
+                updateHeenOptChipStates();
+                if (typeof window.calculateRoute === 'function') window.calculateRoute();
+                if (typeof window.rekenen === 'function') window.rekenen();
+            });
+        }
+        const refreshIds = [
+            'addr_t_garage',
+            'addr_t_retour_garage_heen',
+            'addr_t_aankomst_best',
+            'addr_t_vertrek_klant',
+            'addr_t_vertrek_best',
+            'addr_t_retour_klant'
+        ];
+        refreshIds.forEach(function (id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.addEventListener('input', updateHeenOptChipStates);
+            el.addEventListener('change', updateHeenOptChipStates);
         });
     }
 
@@ -250,7 +332,8 @@
 
         bootFromData(bootRows || window.HEEN_SEGMENTS_BOOT || null);
         syncZoneColumnVisibility();
-        wireOptiesDemo();
+        wireOptieKnopen();
+        updateHeenOptChipStates();
 
         document.getElementById('chk_grens2')?.addEventListener('change', function () {
             syncLegacyFromSegments();
@@ -258,6 +341,7 @@
     };
 
     window.syncHeenSegmentsFromLegacy = syncLegacyFromSegments;
+    window.updateHeenOptChipStates = updateHeenOptChipStates;
 
     /**
      * Google Directions schrijft km naar legacy (#legacy_heen_mirror .rit-row).
