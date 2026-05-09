@@ -394,6 +394,11 @@
         }
         document.getElementById('btn_show_terugreis')?.addEventListener('click', function () {
             window.__calcTerugreisUserShow = true;
+            const ab = document.getElementById('addr_t_aankomst_best');
+            const vb = document.getElementById('addr_t_vertrek_best');
+            if (ab && vb && !vb.value.trim()) {
+                vb.value = ab.value.trim();
+            }
             if (typeof window.updateVisibility === 'function') window.updateVisibility();
         });
         const refreshIds = [

@@ -34,12 +34,18 @@ function init() {
         const ac = new google.maps.places.Autocomplete(el);
         ac.addListener('place_changed', () => {
             // Autocopy logica voor dagtochten
-            if(el.id === 'addr_t_aankomst_best') {
-                 const type = document.getElementById('rittype_select').value;
-                 const terugVeld = document.getElementById('addr_t_vertrek_best');
-                 if((type === 'dagtocht' || type === 'schoolreis') && terugVeld) {
-                     if(!terugVeld.value) terugVeld.value = el.value;
-                 }
+            if (el.id === 'addr_t_aankomst_best') {
+                const type = document.getElementById('rittype_select').value;
+                const terugVeld = document.getElementById('addr_t_vertrek_best');
+                if (
+                    (type === 'dagtocht' || type === 'schoolreis') &&
+                    terugVeld &&
+                    window.__calcTerugreisUserShow === true
+                ) {
+                    if (!terugVeld.value) {
+                        terugVeld.value = el.value;
+                    }
+                }
             }
             calculateRoute(); 
         });
@@ -76,6 +82,22 @@ function init() {
     document.querySelectorAll('.custom-time-input').forEach(input => {
         input.addEventListener('click', function(e) { e.preventDefault(); openTimeModal(this); });
     });
+    /** Segment-tabel (#heen_segmenten_body): rijen worden dynamisch toegevoegd — modal hier apart koppelen. */
+    document.addEventListener(
+        'click',
+        function (e) {
+            const el = e.target.closest('input.heen-vt, input.heen-at');
+            if (!el || !document.getElementById('heen_segmenten_body')?.contains(el)) {
+                return;
+            }
+            if (el.readOnly || el.classList.contains('heen-at--auto')) {
+                return;
+            }
+            e.preventDefault();
+            openTimeModal(el);
+        },
+        true
+    );
     document.getElementById('closeModalBtn').addEventListener('click', closeTimeModal);
 
     document.addEventListener('change', function (e) {
@@ -198,14 +220,28 @@ function populateContacts(data) {
     });
 }
 
-/** Terugreis-blok: open via knop of als er al data uit DB staat. */
+/**
+ * Terugreis-blok tonen alleen als er echte terugreis-planning is (DB of handmatig),
+ * niet doordat klantadres in retour_klant staat of bestemming naar vertrek_best is gekopieerd.
+ */
 function terugreisSectionHasData() {
-    const vb = document.getElementById('addr_t_vertrek_best');
-    const rk = document.getElementById('addr_t_retour_klant');
+    const typeEl = document.getElementById('rittype_select');
+    const type = typeEl ? typeEl.value : '';
     const tb = document.getElementById('time_t_vertrek_best');
-    const hAddr = (vb && vb.value.trim() !== '') || (rk && rk.value.trim() !== '');
-    const hTime = tb && tb.value.trim() !== '';
-    return hAddr || hTime;
+    if (tb && tb.value.trim() !== '') {
+        return true;
+    }
+    if (type === 'brenghaal') {
+        const vb = document.getElementById('addr_t_vertrek_best');
+        const vs2 = document.getElementById('addr_t_voorstaan_rit2');
+        if (vb && vb.value.trim() !== '') {
+            return true;
+        }
+        if (vs2 && vs2.value.trim() !== '') {
+            return true;
+        }
+    }
+    return false;
 }
 
 // --- ZICHTBAARHEID (V3.0 Logic) ---
@@ -665,4 +701,33 @@ function openTimeModal(el) { activeTimeInput = el; showHours(); document.getElem
 function closeTimeModal() { document.getElementById('timeModal').style.display = 'none'; activeTimeInput = null; }
 function showHours() { const g = document.getElementById('modalGrid'); if(!g) return; g.innerHTML = ''; for(let i=0; i<24; i++) createTimeBtn(i, (i<10?'0':'')+i+":00"); }
 function createTimeBtn(h, label) { const b = document.createElement('div'); b.className = 'time-btn'; b.innerText = label; b.onclick = () => showMinutes(h); document.getElementById('modalGrid').appendChild(b); }
-function showMinutes(h) { const g = document.getElementById('modalGrid'); g.innerHTML = ''; for(let i=0; i<60; i+=5) { const b = document.createElement('div'); b.className = 'time-btn'; const time = (h<10?'0':'')+h + ':' + (i<10?'0':'')+i; b.innerText = time; b.onclick = () => { if(activeTimeInput) { activeTimeInput.value = time; updatePlanning(); rekenen(); } closeTimeModal(); }; g.appendChild(b); }}
+function showMinutes(h) {
+    const g = document.getElementById('modalGrid');
+    if (!g) {
+        return;
+    }
+    g.innerHTML = '';
+    for (let i = 0; i < 60; i += 5) {
+        const b = document.createElement('div');
+        b.className = 'time-btn';
+        const time = (h < 10 ? '0' : '') + h + ':' + (i < 10 ? '0' : '') + i;
+        b.innerText = time;
+        b.onclick = function () {
+            if (activeTimeInput) {
+                activeTimeInput.value = time;
+                const segBody = document.getElementById('heen_segmenten_body');
+                if (
+                    segBody &&
+                    segBody.contains(activeTimeInput) &&
+                    typeof window.syncHeenSegmentsFromLegacy === 'function'
+                ) {
+                    window.syncHeenSegmentsFromLegacy();
+                }
+                updatePlanning();
+                rekenen();
+            }
+            closeTimeModal();
+        };
+        g.appendChild(b);
+    }
+}

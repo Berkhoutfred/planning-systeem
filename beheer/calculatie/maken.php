@@ -174,6 +174,8 @@ function val($data, $rij, $veld, $default = '') {
         margin-bottom: 4px; background: #f1f5f9 !important; color: #0f172a;
     }
     .heen-td-aankomst-split .heen-at { margin-bottom: 0; }
+    .heen-seg-table input.heen-vt,
+    .heen-seg-table input.heen-at:not([readonly]) { cursor: pointer; }
     .calculatie-ui-build {
         text-align: center;
         font-size: 11px;
@@ -255,7 +257,7 @@ function val($data, $rij, $veld, $default = '') {
                     <table class="heen-seg-table">
                         <thead>
                             <tr>
-                                <th class="heen-td-t">Vertrek klant</th>
+                                <th class="heen-td-t">Vertrek<br><span style="font-weight:400;font-size:9px;">rij 1 = bij klant</span></th>
                                 <th>Van</th>
                                 <th>Naar</th>
                                 <th class="heen-td-t">Aankomst<br><span style="font-weight:400;font-size:9px;">rij 1: adres + tijd</span></th>
