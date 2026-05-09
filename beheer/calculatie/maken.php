@@ -146,21 +146,25 @@ function val($data, $rij, $veld, $default = '') {
     .heen-td-t { width: 76px; }
     .heen-td-km { width: 64px; }
     .heen-td-rm { width: 36px; text-align: center; }
-    .heen-opt-row { margin-top: 12px; padding-top: 10px; border-top: 1px dashed #e0e0e0; display: flex; flex-wrap: wrap; align-items: stretch; gap: 10px 12px; }
-    .heen-opt-row > .heen-opt-label { font-size: 10px; font-weight: 700; color: #003366; text-transform: uppercase; align-self: center; margin-right: 4px; }
-    .heen-opt-chip {
-        display: inline-flex; flex-direction: column; align-items: flex-start; gap: 2px;
-        padding: 8px 12px; min-width: 118px;
-        background: #fff; border: 2px solid #c5ced9; border-radius: 6px;
-        cursor: pointer; text-align: left; font: inherit;
-        transition: border-color .15s, background .15s, box-shadow .15s;
+    .heen-opt-row { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e0e0e0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+    .heen-opt-row > .heen-opt-label { font-size: 9px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.06em; }
+    .heen-opt-mini {
+        display: inline-block; padding: 2px 8px; min-width: 0;
+        font-size: 11px; font-weight: 700; color: #003366;
+        background: #fff; border: 1px solid #94a3b8; border-radius: 4px;
+        cursor: pointer; line-height: 1.2;
     }
-    .heen-opt-chip:hover { border-color: #003366; background: #f8fafc; }
-    .heen-opt-chip:focus { outline: none; box-shadow: 0 0 0 3px rgba(0,51,102,.25); }
-    .heen-opt-chip.is-active { border-color: #003366; background: #e8eef5; box-shadow: inset 0 0 0 1px #003366; }
-    .heen-opt-chip .heen-opt-code { font-size: 13px; font-weight: 800; color: #003366; letter-spacing: .02em; }
-    .heen-opt-chip .heen-opt-title { font-size: 11px; font-weight: 600; color: #334155; }
-    .heen-opt-chip .heen-opt-hint { font-size: 10px; color: #64748b; line-height: 1.3; max-width: 220px; }
+    .heen-opt-mini:hover { border-color: #003366; background: #f1f5f9; }
+    .heen-opt-mini:focus { outline: none; box-shadow: 0 0 0 2px rgba(0,51,102,.2); }
+    .heen-opt-mini.is-active { border-color: #003366; background: #e8eef5; }
+    .terugreis-gate-bar { margin-top: 14px; align-items: center; gap: 10px; }
+    .btn-terugreis-open {
+        font-size: 11px; font-weight: 700; color: #003366;
+        padding: 5px 12px; border: 1px dashed #003366; border-radius: 6px;
+        background: #fff; cursor: pointer;
+    }
+    .btn-terugreis-open:hover { background: #f8fafc; }
+    .heen-at--auto { background: #f8fafc !important; color: #475569; font-size: 11px !important; }
 </style> 
 
 <div class="container"> 
@@ -231,11 +235,11 @@ function val($data, $rij, $veld, $default = '') {
                     <div style="font-weight:bold; color:#003366; margin-bottom:6px; border-bottom:1px solid #ddd; padding-bottom:5px;">
                         HEENREIS / RIT 1 — segmenten
                     </div>
-                    <p style="font-size:11px;color:#666;margin:0 0 8px;line-height:1.35;">Elke rij is één stuk route (Van → Naar). Zone/kolom alleen zichtbaar bij meerdaags of buitenland. Onderaan: snelle opties.</p>
+                    <p style="font-size:11px;color:#666;margin:0 0 8px;line-height:1.35;">Eerste rij is altijd <strong>garage → klant</strong> (km/tijd garage–klant). Volgende rijen starten bij het klantadres. Aankomst bij klant = vertrek klant minus 15 minuten.</p>
                     <table class="heen-seg-table">
                         <thead>
                             <tr>
-                                <th class="heen-td-t">Vertrek</th>
+                                <th class="heen-td-t">Vertrek klant</th>
                                 <th>Van</th>
                                 <th>Naar</th>
                                 <th class="heen-td-t">Aankomst</th>
@@ -247,20 +251,10 @@ function val($data, $rij, $veld, $default = '') {
                         <tbody id="heen_segmenten_body"></tbody>
                     </table>
                     <button type="button" class="btn-add-bus" id="btn_heen_seg_add" style="margin-top:8px;font-size:11px;padding:4px 10px;">+ Segment</button>
-                    <div class="heen-opt-row" role="group" aria-label="Snelle route-regels">
-                        <span class="heen-opt-label">Opties</span>
-                        <button type="button" class="heen-opt-chip" id="btn_heen_opt_rg" aria-pressed="false"
-                            title="Regel: na laatste stop van rit 1 door naar garage (enkel / breng-haal)">
-                            <span class="heen-opt-code">RG</span>
-                            <span class="heen-opt-title">Retour garage</span>
-                            <span class="heen-opt-hint">Van laatste punt door naar garage na rit 1</span>
-                        </button>
-                        <button type="button" class="heen-opt-chip" id="btn_heen_opt_rk" aria-pressed="false"
-                            title="Regel: terugreis van bestemming naar eerste klantadres">
-                            <span class="heen-opt-code">RK</span>
-                            <span class="heen-opt-title">Retour klant</span>
-                            <span class="heen-opt-hint">Vertrek rit 2 = bestemming → uitstap = 1e klantadres (vertrek)</span>
-                        </button>
+                    <div class="heen-opt-row" role="toolbar" aria-label="Regels">
+                        <span class="heen-opt-label">Regels</span>
+                        <button type="button" class="heen-opt-mini" id="btn_heen_opt_rg" aria-pressed="false" title="Retour garage na rit 1">RG</button>
+                        <button type="button" class="heen-opt-mini" id="btn_heen_opt_rk" aria-pressed="false" title="Terug: bestemming → 1e klantadres">RK</button>
                     </div>
                 </div>
 
@@ -318,7 +312,11 @@ function val($data, $rij, $veld, $default = '') {
                     </div>
                 </div>
 
-                <div id="block_terug" style="margin-top:20px;">
+                <div id="terugreis_gate_bar" class="terugreis-gate-bar" style="display:none;">
+                    <button type="button" id="btn_show_terugreis" class="btn-terugreis-open" title="Terugreis / rit 2 tonen">+ Rit 2 · terugreis</button>
+                </div>
+
+                <div id="block_terug" style="margin-top:20px;display:none;">
                     <div class="header-rit-2" id="header_terug">TERUGREIS / RIT 2</div>
                     <div class="route-compact" style="background: #fdfdfd; padding: 8px 10px; border: 1px solid #eee; border-top:none; border-radius: 0 0 4px 4px;">
                         

@@ -6,6 +6,55 @@
     'use strict';
 
     const MAX_SEG = 4;
+    /** Aankomst bij klant (rij 1) = vertrek bij klant − dit aantal minuten. */
+    const KLANT_VOORVERTREK_MIN = 15;
+
+    function parseHm(str) {
+        if (!str || typeof str !== 'string') return null;
+        const m = String(str).trim().match(/^(\d{1,2}):(\d{2})/);
+        if (!m) return null;
+        const h = parseInt(m[1], 10);
+        const mi = parseInt(m[2], 10);
+        if (isNaN(h) || isNaN(mi)) return null;
+        return h * 60 + mi;
+    }
+
+    function formatHm(totalMin) {
+        let t = totalMin % (24 * 60);
+        if (t < 0) t += 24 * 60;
+        const h = Math.floor(t / 60);
+        const mi = t % 60;
+        return (h < 10 ? '0' : '') + h + ':' + (mi < 10 ? '0' : '') + mi;
+    }
+
+    function hmMinusMinutes(hm, mins) {
+        const p = parseHm(hm);
+        if (p === null) return '';
+        return formatHm(p - mins);
+    }
+
+    /** Eerste segment: aankomst-kolom = vertrek klant − 15 min (readonly). */
+    function applyFirstRowKlantTijden(rows) {
+        const r0 = rows[0];
+        if (!r0 || !r0.classList.contains('heen-seg-first')) return;
+        const vtEl = r0.querySelector('.heen-vt');
+        const atEl = r0.querySelector('.heen-at');
+        const tvLegacy = document.getElementById('time_t_vertrek_klant');
+        let vt = vtEl && vtEl.value && vtEl.value.trim() ? vtEl.value.trim().substring(0, 5) : '';
+        if (!vt && tvLegacy && tvLegacy.value && tvLegacy.value.trim()) {
+            vt = tvLegacy.value.trim().substring(0, 5);
+        }
+        if (vtEl && vt) {
+            vtEl.value = vt;
+            if (tvLegacy) tvLegacy.value = vt;
+        }
+        if (atEl) {
+            atEl.readOnly = true;
+            atEl.classList.add('heen-at--auto');
+            atEl.value = vt ? hmMinusMinutes(vt, KLANT_VOORVERTREK_MIN) : '';
+            atEl.title = 'Aankomst bij klant (= vertrek − ' + KLANT_VOORVERTREK_MIN + ' min)';
+        }
+    }
 
     function ritType() {
         const el = document.getElementById('rittype_select');
@@ -128,7 +177,19 @@
         setZoneSelectInRow('row_vertrek_klant', seg[0].zone);
 
         const tv = document.getElementById('time_t_vertrek_klant');
-        if (tv && seg[0].vt) tv.value = seg[0].vt;
+        const r0 = rows[0];
+        const vtEl = r0 ? r0.querySelector('.heen-vt') : null;
+        if (tv && vtEl) {
+            if (seg[0].vt) {
+                tv.value = seg[0].vt;
+                vtEl.value = seg[0].vt;
+            } else if (vtEl.value && vtEl.value.trim()) {
+                tv.value = vtEl.value.trim().substring(0, 5);
+            } else if (tv.value && tv.value.trim()) {
+                vtEl.value = tv.value.trim().substring(0, 5);
+            }
+        }
+        applyFirstRowKlantTijden(rows);
 
         const chkG2 = document.getElementById('chk_grens2');
         const rowG2El = document.getElementById('row_grens2');
@@ -199,7 +260,7 @@
         if (idx >= MAX_SEG) return;
 
         const tr = document.createElement('tr');
-        tr.className = 'heen-seg-row';
+        tr.className = 'heen-seg-row' + (idx === 0 ? ' heen-seg-first' : '');
         const zoneDisplay = showZoneColumn() ? '' : 'display:none';
         tr.innerHTML =
             '<td class="heen-td-t"><input type="time" class="form-control heen-vt reken-trigger" step="60" title="Vertrek vanaf Van"></td>' +
@@ -217,6 +278,17 @@
         if (p.naar) tr.querySelector('.heen-naar').value = p.naar;
         if (p.km != null) tr.querySelector('.heen-km').value = String(p.km);
         if (p.zone) tr.querySelector('.heen-zone').value = String(p.zone);
+
+        if (idx === 0) {
+            tr.querySelector('.heen-van').placeholder = 'Garage';
+            tr.querySelector('.heen-naar').placeholder = 'Klant (vertrek)';
+            tr.querySelector('.heen-vt').title = 'Vertrek bij klant';
+            const rm = tr.querySelector('.heen-rm');
+            if (rm) {
+                rm.style.visibility = 'hidden';
+                rm.disabled = true;
+            }
+        }
 
         tb.appendChild(tr);
         bindRow(tr);
@@ -291,12 +363,18 @@
                 } else {
                     vb.value = ab.value;
                     rk.value = vl.value;
+                    window.__calcTerugreisUserShow = true;
+                    if (typeof window.updateVisibility === 'function') window.updateVisibility();
                 }
                 updateHeenOptChipStates();
                 if (typeof window.calculateRoute === 'function') window.calculateRoute();
                 if (typeof window.rekenen === 'function') window.rekenen();
             });
         }
+        document.getElementById('btn_show_terugreis')?.addEventListener('click', function () {
+            window.__calcTerugreisUserShow = true;
+            if (typeof window.updateVisibility === 'function') window.updateVisibility();
+        });
         const refreshIds = [
             'addr_t_garage',
             'addr_t_retour_garage_heen',
@@ -334,6 +412,7 @@
         syncZoneColumnVisibility();
         wireOptieKnopen();
         updateHeenOptChipStates();
+        if (typeof window.updateVisibility === 'function') window.updateVisibility();
 
         document.getElementById('chk_grens2')?.addEventListener('change', function () {
             syncLegacyFromSegments();

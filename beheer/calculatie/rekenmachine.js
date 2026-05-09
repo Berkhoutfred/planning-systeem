@@ -101,7 +101,6 @@ function init() {
         row.style.display = chk.checked ? 'flex' : 'none';
     })();
 
-    updateVisibility(); 
     rekenen();
     tryInitialRouteIfNoKm();
     if (typeof window.calculatieExtrasAfterInit === 'function') {
@@ -110,6 +109,7 @@ function init() {
     if (typeof window.routeHeenSegmentenInit === 'function') {
         window.routeHeenSegmentenInit(typeof window.HEEN_SEGMENTS_BOOT !== 'undefined' ? window.HEEN_SEGMENTS_BOOT : null);
     }
+    updateVisibility();
 }
 
 /** Eénmalig na laden: als alle zichtbare km-regels nog 0 zijn en kernadressen staan, routes laten berekenen (o.a. wizard-import). */
@@ -198,10 +198,21 @@ function populateContacts(data) {
     });
 }
 
+/** Terugreis-blok: open via knop of als er al data uit DB staat. */
+function terugreisSectionHasData() {
+    const vb = document.getElementById('addr_t_vertrek_best');
+    const rk = document.getElementById('addr_t_retour_klant');
+    const tb = document.getElementById('time_t_vertrek_best');
+    const hAddr = (vb && vb.value.trim() !== '') || (rk && rk.value.trim() !== '');
+    const hTime = tb && tb.value.trim() !== '';
+    return hAddr || hTime;
+}
+
 // --- ZICHTBAARHEID (V3.0 Logic) ---
 function updateVisibility() {
     const type = document.getElementById('rittype_select').value;
     const blockTerug = document.getElementById('block_terug');
+    const barTerug = document.getElementById('terugreis_gate_bar');
     const blockMeerdaags = document.getElementById('block_meerdaags');
     const headerTerug = document.getElementById('header_terug');
     const labelVertrekTerug = document.getElementById('label_vertrek_terug');
@@ -210,8 +221,23 @@ function updateVisibility() {
     const rowVoorstaanRit2 = document.getElementById('row_voorstaan_rit2');
     const rowRetourGarageHeen = document.getElementById('row_retour_garage_heen');
 
-    blockTerug.style.display = 'block';
-    blockMeerdaags.style.display = 'none';
+    if (!blockTerug) return;
+
+    const userOpenedTerug = window.__calcTerugreisUserShow === true;
+    const hasTerugData = terugreisSectionHasData();
+    let showTerugBlock = false;
+    if (type === 'enkel') {
+        showTerugBlock = false;
+    } else {
+        showTerugBlock = userOpenedTerug || hasTerugData;
+    }
+
+    if (barTerug) {
+        barTerug.style.display = type === 'enkel' || showTerugBlock ? 'none' : 'flex';
+    }
+
+    blockTerug.style.display = showTerugBlock ? 'block' : 'none';
+    if (blockMeerdaags) blockMeerdaags.style.display = 'none';
     if(headerTerug) headerTerug.innerText = "TERUGREIS";
     if(labelVertrekTerug) labelVertrekTerug.innerText = "Vertrek Bestemming";
     if(rowGarageRit2) rowGarageRit2.style.display = 'none';
@@ -219,13 +245,12 @@ function updateVisibility() {
     if(rowRetourGarageHeen) rowRetourGarageHeen.style.display = 'none';
 
     if (type === 'enkel') {
-        blockTerug.style.display = 'none'; 
         if(rowRetourGarageHeen) rowRetourGarageHeen.style.display = 'flex'; 
     }
     if (type === 'meerdaags' || type === 'buitenland') {
-        blockMeerdaags.style.display = 'block';
+        if (blockMeerdaags) blockMeerdaags.style.display = 'block';
     }
-    if (type === 'brenghaal') {
+    if (showTerugBlock && type === 'brenghaal') {
         if(headerTerug) headerTerug.innerText = "RIT 2 / OPHALEN";
         if(labelVertrekTerug) labelVertrekTerug.innerText = "Klant Instappen (Ophaaladres)";
         if(rowRetourGarageHeen) rowRetourGarageHeen.style.display = 'flex'; 
@@ -239,6 +264,8 @@ function updateVisibility() {
         if(g1 && g1end && !g1end.value) g1end.value = g1.value;
     }
 }
+
+window.updateVisibility = updateVisibility;
 
 // --- ROUTE MOTOR ---
 function calculateRoute() {
