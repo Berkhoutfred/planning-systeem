@@ -165,6 +165,12 @@ function val($data, $rij, $veld, $default = '') {
     }
     .btn-terugreis-open:hover { background: #f8fafc; }
     .heen-at--auto { background: #f8fafc !important; color: #475569; font-size: 11px !important; }
+    .heen-td-aankomst-split { vertical-align: top; }
+    .heen-td-aankomst-split .heen-at-addr {
+        height: 28px !important; font-size: 11px !important; padding: 4px 8px !important;
+        margin-bottom: 4px; background: #f1f5f9 !important; color: #0f172a;
+    }
+    .heen-td-aankomst-split .heen-at { margin-bottom: 0; }
 </style> 
 
 <div class="container"> 
@@ -242,7 +248,7 @@ function val($data, $rij, $veld, $default = '') {
                                 <th class="heen-td-t">Vertrek klant</th>
                                 <th>Van</th>
                                 <th>Naar</th>
-                                <th class="heen-td-t">Aankomst</th>
+                                <th class="heen-td-t">Aankomst<br><span style="font-weight:400;font-size:9px;">rij 1: adres + tijd</span></th>
                                 <th class="heen-zone-col" style="display:none;">Zone</th>
                                 <th class="heen-td-km">Km</th>
                                 <th class="heen-td-rm"></th>

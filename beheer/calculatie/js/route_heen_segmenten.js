@@ -48,11 +48,16 @@
             vtEl.value = vt;
             if (tvLegacy) tvLegacy.value = vt;
         }
+        const naarEl = r0.querySelector('.heen-naar');
+        const addrMirror = r0.querySelector('.heen-at-addr');
+        if (addrMirror && naarEl) {
+            addrMirror.value = naarEl.value.trim();
+        }
         if (atEl) {
             atEl.readOnly = true;
             atEl.classList.add('heen-at--auto');
             atEl.value = vt ? hmMinusMinutes(vt, KLANT_VOORVERTREK_MIN) : '';
-            atEl.title = 'Aankomst bij klant (= vertrek − ' + KLANT_VOORVERTREK_MIN + ' min)';
+            atEl.title = 'Aankomsttijd bij klant (= vertrek − ' + KLANT_VOORVERTREK_MIN + ' min)';
         }
     }
 
@@ -262,18 +267,28 @@
         const tr = document.createElement('tr');
         tr.className = 'heen-seg-row' + (idx === 0 ? ' heen-seg-first' : '');
         const zoneDisplay = showZoneColumn() ? '' : 'display:none';
+        const tdAank =
+            idx === 0
+                ? '<td class="heen-td-t heen-td-aankomst-split">' +
+                  '<input type="text" class="form-control heen-at-addr" readonly tabindex="-1" placeholder="Klant (aankomst)" title="Zelfde adres als Naar op deze rij" />' +
+                  '<input type="time" class="form-control heen-at reken-trigger" step="60" title="Aankomsttijd (vertrek − 15 min)" />' +
+                  '</td>'
+                : '<td class="heen-td-t"><input type="time" class="form-control heen-at reken-trigger" step="60" title="Aankomst bij Naar"></td>';
         tr.innerHTML =
-            '<td class="heen-td-t"><input type="time" class="form-control heen-vt reken-trigger" step="60" title="Vertrek vanaf Van"></td>' +
+            '<td class="heen-td-t"><input type="time" class="form-control heen-vt reken-trigger" step="60" title="Vertrek bij klant"></td>' +
             '<td><input type="text" class="form-control google-autocomplete heen-van reken-trigger" placeholder="Van" autocomplete="off"></td>' +
             '<td><input type="text" class="form-control google-autocomplete heen-naar reken-trigger" placeholder="Naar" autocomplete="off"></td>' +
-            '<td class="heen-td-t"><input type="time" class="form-control heen-at reken-trigger" step="60" title="Aankomst bij Naar"></td>' +
+            tdAank +
             '<td class="heen-zone-col" style="' + zoneDisplay + '"><select class="form-control km-zone-select heen-zone reken-trigger" title="Zone">' +
             '<option value="nl">NL</option><option value="de">DE</option><option value="ch">CH</option><option value="ov">0%</option></select></td>' +
             '<td class="heen-td-km"><input type="number" class="form-control km-calc heen-km reken-trigger" step="0.1" min="0" value="0"></td>' +
             '<td class="heen-td-rm"><button type="button" class="btn-remove-bus heen-rm" title="Verwijder">&times;</button></td>';
 
         if (p.vertrektijd) tr.querySelector('.heen-vt').value = p.vertrektijd;
-        if (p.aankomst_tijd) tr.querySelector('.heen-at').value = p.aankomst_tijd;
+        if (p.aankomst_tijd) {
+            const atIn = tr.querySelector('.heen-at');
+            if (atIn) atIn.value = p.aankomst_tijd;
+        }
         if (p.van) tr.querySelector('.heen-van').value = p.van;
         if (p.naar) tr.querySelector('.heen-naar').value = p.naar;
         if (p.km != null) tr.querySelector('.heen-km').value = String(p.km);
@@ -412,6 +427,9 @@
         syncZoneColumnVisibility();
         wireOptieKnopen();
         updateHeenOptChipStates();
+        if (typeof window.routeHeenRefreshFromLegacy === 'function') {
+            window.routeHeenRefreshFromLegacy();
+        }
         if (typeof window.updateVisibility === 'function') window.updateVisibility();
 
         document.getElementById('chk_grens2')?.addEventListener('change', function () {
