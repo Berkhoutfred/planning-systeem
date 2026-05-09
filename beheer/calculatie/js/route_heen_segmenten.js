@@ -49,6 +49,10 @@
             if (tvLegacy) tvLegacy.value = vt;
         }
         const naarEl = r0.querySelector('.heen-naar');
+        const vlAddr = document.getElementById('addr_t_vertrek_klant');
+        if (naarEl && vlAddr && vlAddr.value.trim() && !naarEl.value.trim()) {
+            naarEl.value = vlAddr.value.trim();
+        }
         const addrMirror = r0.querySelector('.heen-at-addr');
         if (addrMirror && naarEl) {
             addrMirror.value = naarEl.value.trim();
@@ -342,7 +346,9 @@
             addRow({ van: '', naar: '', km: '0', zone: 'nl' });
         }
         chainVanNaar();
-        syncLegacyFromSegments();
+        // Geen syncLegacyFromSegments() hier: die zette addr_t_vertrek_klant leeg zolang rij 1 "Naar"
+        // nog leeg is, waardoor het adres uit fillKlantCard werd gewist vóór routeHeenRefreshFromLegacy().
+        // Volledige legacy-sync gebeurt aan het eind van routeHeenSegmentenInit via routeHeenRefreshFromLegacy().
     }
 
     function wireOptieKnopen() {

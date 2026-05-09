@@ -117,6 +117,9 @@ $tenant = offerte_resolve_tenant($pdo);
 $bedankt = isset($_GET['bedankt']) && (string) $_GET['bedankt'] === '1';
 $foutmelding = '';
 
+/** Zichtbaar onderaan de wizard (onderhoud / cache-debug). */
+$offerteWizardBuildLabel = '2026-05-07 · wizard';
+
 if ($tenant === null) {
     $foutmelding = 'Deze pagina is niet bereikbaar zonder geldige organisatie. Gebruik de link van uw vervoerder (met ?tenant=...) of neem contact op.';
 }
@@ -712,6 +715,14 @@ $csrf = offerte_csrf_token();
         .thanks-hero h2 { margin: 0; font-size: 1.35rem; font-weight: 800; }
         .thanks-hero p { margin: 10px 0 0; color: var(--muted); font-size: 0.92rem; line-height: 1.5; }
         .err-page .card-inner { padding: 28px 22px; }
+        .offerte-build-label {
+            text-align: center;
+            font-size: 0.68rem;
+            color: var(--muted);
+            margin: 22px 8px 0;
+            opacity: 0.88;
+            letter-spacing: 0.02em;
+        }
     </style>
     <?php if ($tenant !== null && !$bedankt && $loadGoogleMaps): ?>
     <script defer src="https://maps.googleapis.com/maps/api/js?key=<?php echo offerte_h($mapsApiKey); ?>&libraries=places&callback=offerteInitMaps"></script>
@@ -928,6 +939,9 @@ $csrf = offerte_csrf_token();
                 </form>
             </div>
         </div>
+    <?php endif; ?>
+    <?php if ($tenant !== null): ?>
+        <p class="offerte-build-label"><?php echo offerte_h('Bijgewerkt: ' . $offerteWizardBuildLabel); ?></p>
     <?php endif; ?>
 </div>
 
