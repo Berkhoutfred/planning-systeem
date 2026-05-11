@@ -832,38 +832,67 @@ function updatePlanning() {
         const route2Points = getRoute2PlanningPoints();
         const route2TimeIds = ['time_t_garage_rit2', 'time_t_vertrek_best', 'time_t_voorstaan_rit2', 'time_t_retour_klant', 'time_t_retour_garage'];
         if (route2Points.length >= 2) {
+            const hasGarageLead = route2Points[0] && route2Points[0].addrId === 'addr_t_garage_rit2' && route2Points.length >= 3;
+            const leadIdx = hasGarageLead ? 1 : 0;
+            const leadPoint = route2Points[leadIdx];
+            const leadTimeEl = leadPoint ? document.getElementById(leadPoint.timeId) : null;
+            const leadTime = leadTimeEl ? (leadTimeEl.value || '').trim().substring(0, 5) : '';
             let previousArrival = null;
-            route2Points.forEach(function (point, idx) {
-                const timeEl = document.getElementById(point.timeId);
-                if (!timeEl) return;
-                if (idx === route2Points.length - 1) {
-                    delete timeEl.dataset.manual;
-                    return;
+            if (!leadTime) {
+                route2TimeIds.forEach(function (id) {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    el.value = '';
+                    if (id === 'time_t_retour_garage' || id === 'time_t_garage_rit2') delete el.dataset.manual;
+                });
+            } else {
+                if (hasGarageLead) {
+                    const garagePoint = route2Points[0];
+                    const garageTimeEl = document.getElementById(garagePoint.timeId);
+                    const rideToLead = reisTijden[leadPoint.addrId] || 0;
+                    if (garageTimeEl && rideToLead > 0) {
+                        const dLead = parseTime(leadTime);
+                        const dArriveLead = addMinutes(dLead, -BUFFER_VOORSTAAN);
+                        const dGarageStart = addMinutes(dArriveLead, -rideToLead);
+                        garageTimeEl.value = formatTime(dGarageStart);
+                        delete garageTimeEl.dataset.manual;
+                    }
                 }
-                let vertrek = '';
-                if (idx === 0) {
-                    vertrek = (timeEl.value || '').trim().substring(0, 5);
-                } else if (timeEl.dataset.manual === '1' && timeEl.value.trim()) {
-                    vertrek = timeEl.value.trim().substring(0, 5);
-                } else if (previousArrival) {
-                    vertrek = formatTime(previousArrival);
-                    timeEl.value = vertrek;
-                } else {
-                    timeEl.value = '';
+
+                route2Points.forEach(function (point, idx) {
+                    const timeEl = document.getElementById(point.timeId);
+                    if (!timeEl) return;
+                    if (idx === route2Points.length - 1) {
+                        delete timeEl.dataset.manual;
+                        return;
+                    }
+                    let vertrek = '';
+                    if (idx === leadIdx) {
+                        vertrek = leadTime;
+                    } else if (hasGarageLead && idx === 0) {
+                        vertrek = (timeEl.value || '').trim().substring(0, 5);
+                    } else if (timeEl.dataset.manual === '1' && timeEl.value.trim()) {
+                        vertrek = timeEl.value.trim().substring(0, 5);
+                    } else if (previousArrival) {
+                        vertrek = formatTime(previousArrival);
+                        timeEl.value = vertrek;
+                    } else {
+                        timeEl.value = '';
+                    }
+                    if (!vertrek) {
+                        previousArrival = null;
+                        return;
+                    }
+                    const nextPoint = route2Points[idx + 1];
+                    const travelMin = reisTijden[nextPoint.addrId] || 60;
+                    previousArrival = addMinutes(parseTime(vertrek), travelMin + (idx === route2Points.length - 2 ? BUFFER_NAZORG : 0));
+                });
+                const finalPoint = route2Points[route2Points.length - 1];
+                const finalTimeEl = document.getElementById(finalPoint.timeId);
+                if (finalTimeEl) {
+                    finalTimeEl.value = previousArrival ? formatTime(previousArrival) : '';
+                    delete finalTimeEl.dataset.manual;
                 }
-                if (!vertrek) {
-                    previousArrival = null;
-                    return;
-                }
-                const nextPoint = route2Points[idx + 1];
-                const travelMin = reisTijden[nextPoint.addrId] || 60;
-                previousArrival = addMinutes(parseTime(vertrek), travelMin + (idx === route2Points.length - 2 ? BUFFER_NAZORG : 0));
-            });
-            const finalPoint = route2Points[route2Points.length - 1];
-            const finalTimeEl = document.getElementById(finalPoint.timeId);
-            if (finalTimeEl) {
-                finalTimeEl.value = previousArrival ? formatTime(previousArrival) : '';
-                delete finalTimeEl.dataset.manual;
             }
         } else {
             route2TimeIds.forEach(function (id) {
