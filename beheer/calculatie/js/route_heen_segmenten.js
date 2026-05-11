@@ -531,7 +531,9 @@
                 vtEl.classList.remove('heen-vt--auto');
                 vtEl.dataset.timeEditable = '1';
                 if (i === 1) {
-                    vtEl.value = tv;
+                    if (vtEl.dataset.manual !== '1') {
+                        vtEl.value = tv;
+                    }
                     vtEl.title = 'Vertrek bij klant';
                 } else if (vtEl.dataset.manual !== '1') {
                     vtEl.value = stopAankomsten[i - 2] || '';
@@ -1080,7 +1082,7 @@
         });
 
         if (window.google && google.maps && google.maps.places) {
-            tr.querySelectorAll('.google-autocomplete').forEach(function (acEl) {
+            tr.querySelectorAll('.google-autocomplete:not([readonly])').forEach(function (acEl) {
                 try {
                     const ac = new google.maps.places.Autocomplete(acEl, { componentRestrictions: { country: ['nl', 'de', 'be', 'at', 'fr'] } });
                     ac.addListener('place_changed', function () {
@@ -1273,7 +1275,7 @@
         if (rows[0] && bv) {
             const n0 = rows[0].querySelector('.heen-naar');
             const v1 = rows[1] ? rows[1].querySelector('.heen-van') : null;
-            if (n0) n0.value = bv;
+            if (n0 && !n0.value.trim()) n0.value = bv;
             if (v1) v1.value = bv;
         }
         syncLegacyFromSegments();
