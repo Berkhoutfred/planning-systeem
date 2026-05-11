@@ -698,9 +698,62 @@
         return kinds.length === 2 && kinds[0] === 'rk-klant' && kinds[1] === 'rk-garage';
     }
 
+    function isRrChipActive() {
+        return window.__calcTerugreisUserShow === true
+            || readTrimmedValue('addr_t_vertrek_best') !== ''
+            || readTrimmedValue('time_t_vertrek_best') !== '';
+    }
+
+    function startRetourRit2() {
+        const wasActive = isRrChipActive();
+        const typeEl = document.getElementById('rittype_select');
+        if (typeEl && typeEl.value === 'enkel') {
+            typeEl.value = 'dagtocht';
+        }
+
+        const rows = getRows();
+        const parts = getRowPartitions(rows);
+        const coreRows = parts.coreRows;
+        const lastCore = coreRows[coreRows.length - 1];
+        const lastNaar = normalizeAddr(lastCore?.querySelector('.heen-naar')?.value || '');
+        const klant = getKlantAddress(rows);
+        const garage = getGarageAddress(rows);
+
+        const vertrekBest = document.getElementById('addr_t_vertrek_best');
+        const retourKlant = document.getElementById('addr_t_retour_klant');
+        const retourGarage = document.getElementById('addr_t_retour_garage');
+        const garageRit2 = document.getElementById('addr_t_garage_rit2');
+
+        if (vertrekBest && lastNaar) vertrekBest.value = lastNaar;
+        if (retourKlant && klant) retourKlant.value = klant;
+        if (retourGarage && garage) retourGarage.value = garage;
+        if (garageRit2 && garage) garageRit2.value = garage;
+
+        if (!wasActive) {
+            [
+                'time_t_vertrek_best',
+                'time_t_retour_klant',
+                'time_t_retour_garage',
+                'time_t_garage_rit2',
+                'time_t_voorstaan_rit2'
+            ].forEach(function (id) {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+        }
+
+        window.__calcTerugreisUserShow = true;
+        if (typeof window.updateVisibility === 'function') window.updateVisibility();
+        if (typeof window.calculateRoute === 'function') window.calculateRoute();
+        if (typeof window.rekenen === 'function') window.rekenen();
+        updateHeenOptChipStates();
+        updateRouteV2HiddenInput();
+    }
+
     function updateHeenOptChipStates() {
         const btnRg = document.getElementById('btn_heen_opt_rg');
         const btnRk = document.getElementById('btn_heen_opt_rk');
+        const btnRr = document.getElementById('btn_heen_opt_rr');
         if (btnRg) {
             const on = isRgChipActive();
             btnRg.classList.toggle('is-active', on);
@@ -710,6 +763,11 @@
             const on = isRkChipActive();
             btnRk.classList.toggle('is-active', on);
             btnRk.setAttribute('aria-pressed', on ? 'true' : 'false');
+        }
+        if (btnRr) {
+            const on = isRrChipActive();
+            btnRr.classList.toggle('is-active', on);
+            btnRr.setAttribute('aria-pressed', on ? 'true' : 'false');
         }
     }
 
@@ -1135,6 +1193,7 @@
     function wireOptieKnopen() {
         const btnRg = document.getElementById('btn_heen_opt_rg');
         const btnRk = document.getElementById('btn_heen_opt_rk');
+        const btnRr = document.getElementById('btn_heen_opt_rr');
         if (btnRg) {
             btnRg.addEventListener('click', function () {
                 if (isRgChipActive()) {
@@ -1153,6 +1212,11 @@
                 } else {
                     appendReturnRows('rk');
                 }
+            });
+        }
+        if (btnRr) {
+            btnRr.addEventListener('click', function () {
+                startRetourRit2();
             });
         }
         document.getElementById('btn_show_terugreis')?.addEventListener('click', function () {

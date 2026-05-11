@@ -271,6 +271,7 @@ function val($data, $rij, $veld, $default = '') {
                         <span class="heen-opt-label">Regels</span>
                         <button type="button" class="heen-opt-mini" id="btn_heen_opt_rg" aria-pressed="false" title="Retour garage na rit 1">RG</button>
                         <button type="button" class="heen-opt-mini" id="btn_heen_opt_rk" aria-pressed="false" title="Terug: bestemming → 1e klantadres">RK</button>
+                        <button type="button" class="heen-opt-mini" id="btn_heen_opt_rr" aria-pressed="false" title="Start retourrit als Rit 2">RR</button>
                     </div>
                 </div>
 
