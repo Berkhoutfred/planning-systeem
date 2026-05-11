@@ -18,7 +18,7 @@ $moduleBuitenland = isset($_GET['module']) && $_GET['module'] === 'buitenland';
 $rit = [
     'id' => 0, 'klant_id' => 0, 'contact_id' => 0, 'afdeling_id' => 0, 'rittype' => 'dagtocht', 
     'passagiers' => 50, 'rit_datum' => date('Y-m-d'), 'rit_datum_eind' => date('Y-m-d'), 
-    'totaal_km' => 0, 'totaal_uren' => 0, 'prijs' => 0, 'voertuig_id' => 0,
+    'totaal_km' => 0, 'totaal_uren' => 0, 'prijs' => 0, 'voertuig_id' => 0, 'route_v2_json' => null,
     'km_nl' => 0, 'km_de' => 0, 'km_eu' => 0, 'km_tussen' => 0
 ]; 
 if ($moduleBuitenland) {
@@ -185,6 +185,7 @@ function val($data, $rij, $veld, $default = '') {
     <form action="opslaan.php" method="POST" id="hoofdFormulier"> 
         
         <input type="hidden" name="naar_dashboard" value="1"> 
+        <input type="hidden" name="route_v2_json" id="route_v2_json" value="">
         
         <div class="section-box" style="border-top: 4px solid #003366;"> 
             <div class="box-header"><h3 class="box-title"><i class="fas fa-user"></i> Klantgegevens</h3></div> 
@@ -716,6 +717,7 @@ window.HTML_BUS_TUSSENDAG = <?= json_encode($busOptiesTussendagHTML ?? '', JSON_
 <script src="rekenmachine.js?v=<?= time() ?>"></script> 
 
 <script>
+window.ROUTE_V2_BOOT = null;
 setTimeout(() => {
     if(typeof window.rekenen === 'function') {
         window.oudeRekenen = window.rekenen;

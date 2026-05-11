@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/route_v2.php';
+
 /**
  * Meta voor calculatie: tussenritten (JSON) + buitenland-module (JSON).
  */
@@ -49,7 +51,7 @@ function calculatie_append_buitenland_dagprogramma(string $base, string $rittype
 }
 
 /**
- * @return array{tussendagen_json: string|null, buitenland_json: string|null, offerte_module: string|null, tussendagen_bus_ids: int[]}
+ * @return array{tussendagen_json: string|null, buitenland_json: string|null, route_v2_json: string|null, offerte_module: string|null, tussendagen_bus_ids: int[]}
  */
 function calculatie_parse_meta_from_post(array $post, string $rittype): array
 {
@@ -172,6 +174,7 @@ function calculatie_parse_meta_from_post(array $post, string $rittype): array
     return [
         'tussendagen_json' => $tussJson,
         'buitenland_json' => $buitenJson,
+        'route_v2_json' => calculatie_route_v2_from_post($post, $rittype),
         'offerte_module' => $offerteModule,
         'tussendagen_bus_ids' => array_values(array_unique(array_filter($busExtra, static fn (int $id): bool => $id > 0))),
     ];
@@ -235,6 +238,10 @@ function calculatie_persist_meta_columns(
     if (calculatie_db_has_column($pdo, 'calculaties', 'buitenland_meta')) {
         $sets[] = 'buitenland_meta = ?';
         $params[] = $metaPack['buitenland_json'];
+    }
+    if (calculatie_db_has_column($pdo, 'calculaties', 'route_v2_json')) {
+        $sets[] = 'route_v2_json = ?';
+        $params[] = $metaPack['route_v2_json'];
     }
 
     if ($sets === []) {

@@ -5,7 +5,7 @@
 (function () {
     'use strict';
 
-    const MAX_SEG = 4;
+    const MAX_SEG = 6;
     /** Aankomst bij klant (rij 1) = vertrek bij klant − dit aantal minuten. */
     const KLANT_VOORVERTREK_MIN = 15;
 
@@ -44,7 +44,163 @@
             }
             src.pop();
         }
+        const firstReturnIdx = src.findIndex(function (row) {
+            return !!row.dataset.returnKind;
+        });
+        if (firstReturnIdx > 2) {
+            for (let i = firstReturnIdx - 1; i >= 2; i--) {
+                const row = src[i];
+                const naar = row.querySelector('.heen-naar')?.value.trim() || '';
+                const km = parseFloat(row.querySelector('.heen-km')?.value || '0') || 0;
+                if (naar !== '' || km > 0 || row.dataset.returnKind) {
+                    break;
+                }
+                src.splice(i, 1);
+            }
+        }
         return src;
+    }
+
+    function getRowPartitions(rows) {
+        const allRows = Array.isArray(rows) ? rows.slice() : getRows();
+        const activeRows = getEffectiveRows(allRows);
+        const coreRows = [];
+        const returnRows = [];
+        activeRows.forEach(function (row) {
+            if (row.dataset.returnKind) {
+                returnRows.push(row);
+            } else {
+                coreRows.push(row);
+            }
+        });
+        return { allRows: allRows, activeRows: activeRows, coreRows: coreRows, returnRows: returnRows };
+    }
+
+    function getMainFormEl() {
+        return document.getElementById('hoofdFormulier') || document.getElementById('mainForm');
+    }
+
+    function readTrimmedValue(id) {
+        const el = document.getElementById(id);
+        return el && typeof el.value === 'string' ? el.value.trim() : '';
+    }
+
+    function readKmInput(nameKey) {
+        const el = document.querySelector('input[name="km[' + nameKey + ']"]');
+        if (!el || el.value === '') return 0;
+        return parseFloat(el.value) || 0;
+    }
+
+    function readZoneInRow(rowId) {
+        const row = document.getElementById(rowId);
+        const sel = row ? row.querySelector('.km-zone-select') : null;
+        return sel ? (sel.value || 'nl') : 'nl';
+    }
+
+    function buildRoute1SegmentsPayload() {
+        const parts = getRowPartitions(getRows());
+        const activeRows = parts.activeRows;
+        const payload = [];
+        activeRows.forEach(function (row, idx) {
+            const returnKind = row.dataset.returnKind || '';
+            payload.push({
+                seq: idx + 1,
+                day_index: 0,
+                kind: returnKind === 'rg'
+                    ? 'return_to_garage'
+                    : (returnKind === 'rk-klant'
+                        ? 'return_to_customer'
+                        : (returnKind === 'rk-garage' ? 'return_to_garage' : (idx === 0 ? 'garage_to_customer' : 'stop'))),
+                return_kind: returnKind,
+                from: row.querySelector('.heen-van')?.value.trim() || '',
+                to: row.querySelector('.heen-naar')?.value.trim() || '',
+                depart_at: row.querySelector('.heen-vt')?.value.trim() || '',
+                arrive_at: row.querySelector('.heen-at')?.value.trim() || '',
+                km: parseFloat(row.querySelector('.heen-km')?.value || '0') || 0,
+                zone: row.querySelector('.heen-zone')?.value || 'nl'
+            });
+        });
+        return payload;
+    }
+
+    function buildRoute2Payload() {
+        const route2Enabled = window.__calcTerugreisUserShow === true || readTrimmedValue('addr_t_vertrek_best') !== '' || readTrimmedValue('time_t_vertrek_best') !== '';
+        if (!route2Enabled) {
+            return { enabled: false, segments: [] };
+        }
+        const rows = [
+            { type: 't_garage_rit2', kind: 'garage_start', time: readTrimmedValue('time_t_garage_rit2'), address: readTrimmedValue('addr_t_garage_rit2'), km: 0, zone: readZoneInRow('row_garage_rit2') },
+            { type: 't_voorstaan_rit2', kind: 'preposition', time: readTrimmedValue('time_t_voorstaan_rit2'), address: readTrimmedValue('addr_t_voorstaan_rit2'), km: readKmInput('t_voorstaan_rit2'), zone: readZoneInRow('row_voorstaan_rit2') },
+            { type: 't_vertrek_best', kind: 'route2_depart', time: readTrimmedValue('time_t_vertrek_best'), address: readTrimmedValue('addr_t_vertrek_best'), km: readKmInput('t_vertrek_best'), zone: readZoneInRow('row_vertrek_best') },
+            { type: 't_retour_klant', kind: 'route2_customer', time: readTrimmedValue('time_t_retour_klant'), address: readTrimmedValue('addr_t_retour_klant'), km: readKmInput('t_retour_klant'), zone: readZoneInRow('row_retour_klant') },
+            { type: 't_retour_garage', kind: 'route2_garage_end', time: readTrimmedValue('time_t_retour_garage'), address: readTrimmedValue('addr_t_retour_garage'), km: readKmInput('t_retour_garage'), zone: readZoneInRow('row_garage_terug') }
+        ].filter(function (row) {
+            return row.time !== '' || row.address !== '' || row.km > 0;
+        });
+        return { enabled: rows.length > 0, segments: rows };
+    }
+
+    function buildTussendagenPayload() {
+        const items = [];
+        document.querySelectorAll('#tussendagen_rows .tz-row').forEach(function (row) {
+            const datum = row.querySelector('[name="tussendagen_datum[]"]')?.value.trim() || '';
+            const tijd = row.querySelector('[name="tussendagen_tijd[]"]')?.value.trim() || '';
+            const van = row.querySelector('[name="tussendagen_van[]"]')?.value.trim() || '';
+            const naar = row.querySelector('[name="tussendagen_naar[]"]')?.value.trim() || '';
+            const km = parseFloat(row.querySelector('[name="tussendagen_km[]"]')?.value || '0') || 0;
+            const zone = row.querySelector('[name="tussendagen_zone[]"]')?.value || 'nl';
+            if (datum === '' && tijd === '' && van === '' && naar === '' && km <= 0) {
+                return;
+            }
+            items.push({ datum: datum, tijd: tijd, van: van, naar: naar, km: km, zone: zone });
+        });
+        return { enabled: !!document.getElementById('tussendagen_enabled')?.checked, items: items };
+    }
+
+    function buildBuitenlandPayload() {
+        if (ritType() !== 'buitenland') {
+            return null;
+        }
+        const dagprogramma = [];
+        document.querySelectorAll('#dagprogramma_container textarea[name^="dagprogramma["]').forEach(function (ta) {
+            const datum = (ta.name.match(/\[(.*?)\]/) || [null, ''])[1] || '';
+            const tekst = ta.value.trim();
+            if (datum === '' && tekst === '') return;
+            dagprogramma.push({ datum: datum, tekst: tekst });
+        });
+        return {
+            overnachting_door: readTrimmedValue('buitenland_overnachting') || 'klant',
+            overnachting_bedrag_eur: readTrimmedValue('buitenland_overnachting_bedrag') || '',
+            dagprogramma: dagprogramma
+        };
+    }
+
+    function buildRouteV2Payload() {
+        const startDate = readTrimmedValue('rit_datum');
+        const endDate = readTrimmedValue('rit_datum_eind') || startDate;
+        return {
+            schema: 1,
+            rittype: ritType(),
+            dates: { start: startDate, end: endDate },
+            route1: {
+                label: 'Route 1',
+                return_mode: isRkChipActive() ? 'rk' : (isRgChipActive() ? 'rg' : ''),
+                segments: buildRoute1SegmentsPayload()
+            },
+            route2: buildRoute2Payload(),
+            tussendagen: buildTussendagenPayload(),
+            buitenland: buildBuitenlandPayload()
+        };
+    }
+
+    function updateRouteV2HiddenInput() {
+        const hidden = document.getElementById('route_v2_json');
+        if (!hidden) return;
+        try {
+            hidden.value = JSON.stringify(buildRouteV2Payload());
+        } catch (e) {
+            hidden.value = '';
+        }
     }
 
     /** Eerste segment: links vertrek garage, rechts aankomst bij klant. */
@@ -93,8 +249,11 @@
      */
     function applyAutoSegmentTijden(rows) {
         if (!rows || rows.length < 2) return;
-        const activeRows = getEffectiveRows(rows);
-        if (activeRows.length < 2) return;
+        const parts = getRowPartitions(rows);
+        const activeRows = parts.activeRows;
+        const coreRows = parts.coreRows;
+        const returnRows = parts.returnRows;
+        if (coreRows.length < 2) return;
 
         applyFirstRowKlantTijden(activeRows);
 
@@ -102,17 +261,27 @@
         const tVs = document.getElementById('time_t_voorstaan')?.value.trim() || '';
         const tG2 = document.getElementById('time_t_grens2')?.value.trim() || '';
         const tBest = document.getElementById('time_t_aankomst_best')?.value.trim() || '';
+        const tRetKlant = document.getElementById('time_t_retour_klant')?.value.trim() || '';
+        const tRetGarage = document.getElementById('time_t_retour_garage_heen')?.value.trim() || '';
 
         let stopAankomsten = [tBest];
-        if (activeRows.length === 3) {
+        if (coreRows.length === 3) {
             stopAankomsten = [tVs, tBest];
-        } else if (activeRows.length >= 4) {
+        } else if (coreRows.length >= 4) {
             stopAankomsten = [tVs, tG2, tBest];
         }
+        returnRows.forEach(function (row) {
+            if (row.dataset.returnKind === 'rk-klant') {
+                stopAankomsten.push(tRetKlant);
+            } else {
+                stopAankomsten.push(tRetGarage);
+            }
+        });
 
         for (let i = 1; i < activeRows.length; i++) {
             const vtEl = activeRows[i].querySelector('.heen-vt');
             const atEl = activeRows[i].querySelector('.heen-at');
+            const kind = activeRows[i].dataset.returnKind || '';
 
             if (vtEl) {
                 vtEl.readOnly = true;
@@ -123,7 +292,7 @@
                     vtEl.title = 'Vertrek bij klant';
                 } else if (vtEl.dataset.manual !== '1') {
                     vtEl.value = stopAankomsten[i - 2] || '';
-                    vtEl.title = 'Vertrek vanaf deze stop';
+                    vtEl.title = kind ? 'Vertrek voor retourregel' : 'Vertrek vanaf deze stop';
                 }
             }
             if (atEl) {
@@ -131,7 +300,7 @@
                 atEl.classList.add('heen-at--auto');
                 delete atEl.dataset.timeEditable;
                 atEl.value = stopAankomsten[i - 1] || '';
-                atEl.title = 'Automatische aankomsttijd op deze stop';
+                atEl.title = kind ? 'Automatische aankomsttijd voor retourregel' : 'Automatische aankomsttijd op deze stop';
             }
         }
 
@@ -183,27 +352,81 @@
             .replace(/\s+/g, ' ');
     }
 
+    function getGarageAddress(rows) {
+        const list = Array.isArray(rows) ? rows : getRows();
+        const row0 = list[0];
+        const fromRow = row0 ? normalizeAddr(row0.querySelector('.heen-van')?.value || '') : '';
+        if (fromRow) return fromRow;
+        return normalizeAddr(document.getElementById('addr_t_garage')?.value || '');
+    }
+
+    function getKlantAddress(rows) {
+        const list = Array.isArray(rows) ? rows : getRows();
+        const row0 = list[0];
+        const fromRow = row0 ? normalizeAddr(row0.querySelector('.heen-naar')?.value || '') : '';
+        if (fromRow) return fromRow;
+        return normalizeAddr(document.getElementById('addr_t_vertrek_klant')?.value || '');
+    }
+
+    function syncReturnRowTargets(rows) {
+        const list = Array.isArray(rows) ? rows : getRows();
+        const garage = getGarageAddress(list);
+        const klant = getKlantAddress(list);
+        list.forEach(function (row) {
+            const naarEl = row.querySelector('.heen-naar');
+            if (!naarEl || !row.dataset.returnKind) return;
+            if (row.dataset.returnKind === 'rg' || row.dataset.returnKind === 'rk-garage') {
+                if (garage) naarEl.value = garage;
+            } else if (row.dataset.returnKind === 'rk-klant') {
+                if (klant) naarEl.value = klant;
+            }
+        });
+    }
+
+    function removeReturnRows() {
+        getRows().forEach(function (row) {
+            if (row.dataset.returnKind) {
+                row.remove();
+            }
+        });
+    }
+
+    function appendReturnRows(mode) {
+        const beforeRows = getRows();
+        const parts = getRowPartitions(beforeRows);
+        const coreRows = parts.coreRows;
+        const activeCount = coreRows.length;
+        const lastCore = coreRows[coreRows.length - 1];
+        const lastNaar = normalizeAddr(lastCore?.querySelector('.heen-naar')?.value || '');
+        const garage = getGarageAddress(beforeRows);
+        const klant = getKlantAddress(beforeRows);
+        if (coreRows.length < 2 || !lastNaar || !garage) return;
+
+        removeReturnRows();
+
+        if (mode === 'rg') {
+            if (activeCount + 1 > MAX_SEG) return;
+            addRow({ van: lastNaar, naar: garage, km: '0', zone: 'nl', return_kind: 'rg' });
+        } else if (mode === 'rk') {
+            if (!klant) return;
+            if (activeCount + 2 > MAX_SEG) return;
+            addRow({ van: lastNaar, naar: klant, km: '0', zone: 'nl', return_kind: 'rk-klant' });
+            addRow({ van: klant, naar: garage, km: '0', zone: 'nl', return_kind: 'rk-garage' });
+        }
+        syncLegacyFromSegments();
+    }
+
     function isRgChipActive() {
-        const gar = document.getElementById('addr_t_garage');
-        const ret = document.getElementById('addr_t_retour_garage_heen');
-        if (!gar || !ret) return false;
-        const g = normalizeAddr(gar.value);
-        const r = normalizeAddr(ret.value);
-        return g !== '' && r === g;
+        const parts = getRowPartitions(getRows());
+        return parts.returnRows.length === 1 && parts.returnRows[0].dataset.returnKind === 'rg';
     }
 
     /** Vertrek bestemming = heen-bestemming; uitstap = eerste klantvertrek (segment-naar rit 1). */
     function isRkChipActive() {
-        const vb = document.getElementById('addr_t_vertrek_best');
-        const ab = document.getElementById('addr_t_aankomst_best');
-        const rk = document.getElementById('addr_t_retour_klant');
-        const vl = document.getElementById('addr_t_vertrek_klant');
-        if (!vb || !ab || !rk || !vl) return false;
-        return (
-            normalizeAddr(vb.value) === normalizeAddr(ab.value) &&
-            normalizeAddr(rk.value) === normalizeAddr(vl.value) &&
-            normalizeAddr(ab.value) !== ''
-        );
+        const kinds = getRowPartitions(getRows()).returnRows.map(function (row) {
+            return row.dataset.returnKind || '';
+        });
+        return kinds.length === 2 && kinds[0] === 'rk-klant' && kinds[1] === 'rk-garage';
     }
 
     function updateHeenOptChipStates() {
@@ -239,19 +462,32 @@
      * Segmentwaarden → legacy addr/km/zone/chk grens2
      */
     function syncLegacyFromSegments() {
-        chainVanNaar();
         const allRows = getRows();
-        const rows = getEffectiveRows(allRows);
-        const n = rows.length;
+        syncReturnRowTargets(allRows);
+        chainVanNaar();
+        const parts = getRowPartitions(allRows);
+        const rows = parts.activeRows;
+        const coreRows = parts.coreRows;
+        const returnRows = parts.returnRows;
+        const n = coreRows.length;
         if (n < 2) return;
 
-        const seg = rows.map(function (row) {
+        const seg = coreRows.map(function (row) {
             return {
                 van: row.querySelector('.heen-van')?.value.trim() || '',
                 naar: row.querySelector('.heen-naar')?.value.trim() || '',
                 km: row.querySelector('.heen-km')?.value || '0',
                 zone: row.querySelector('.heen-zone')?.value || 'nl',
                 vt: row.querySelector('.heen-vt')?.value || '',
+                at: row.querySelector('.heen-at')?.value || ''
+            };
+        });
+        const retSeg = returnRows.map(function (row) {
+            return {
+                kind: row.dataset.returnKind || '',
+                naar: row.querySelector('.heen-naar')?.value.trim() || '',
+                km: row.querySelector('.heen-km')?.value || '0',
+                zone: row.querySelector('.heen-zone')?.value || 'nl',
                 at: row.querySelector('.heen-at')?.value || ''
             };
         });
@@ -269,6 +505,10 @@
             if (!row) return;
             const sel = row.querySelector('.km-zone-select');
             if (sel && z) sel.value = z;
+        };
+        const setTime = function (id, v) {
+            const el = document.getElementById(id);
+            if (el) el.value = v;
         };
 
         setAddr('addr_t_garage', seg[0].van);
@@ -311,6 +551,15 @@
         }
         const chkG2 = document.getElementById('chk_grens2');
         const rowG2El = document.getElementById('row_grens2');
+
+        setAddr('addr_t_retour_klant', '');
+        setKm('t_retour_klant', '0');
+        setZoneSelectInRow('row_retour_klant', 'nl');
+        setTime('time_t_retour_klant', '');
+        setAddr('addr_t_retour_garage_heen', '');
+        setKm('t_retour_garage_heen', '0');
+        setZoneSelectInRow('row_retour_garage_heen', 'nl');
+        setTime('time_t_retour_garage_heen', '');
 
         if (n === 2) {
             setAddr('addr_t_voorstaan', '');
@@ -355,11 +604,28 @@
             if (tb && last.at) tb.value = last.at;
         }
 
+        if (retSeg.length === 1 && retSeg[0].kind === 'rg') {
+            setAddr('addr_t_retour_garage_heen', retSeg[0].naar);
+            setKm('t_retour_garage_heen', retSeg[0].km);
+            setZoneSelectInRow('row_retour_garage_heen', retSeg[0].zone);
+            setTime('time_t_retour_garage_heen', retSeg[0].at);
+        } else if (retSeg.length >= 2 && retSeg[0].kind === 'rk-klant' && retSeg[1].kind === 'rk-garage') {
+            setAddr('addr_t_retour_klant', retSeg[0].naar);
+            setKm('t_retour_klant', retSeg[0].km);
+            setZoneSelectInRow('row_retour_klant', retSeg[0].zone);
+            setTime('time_t_retour_klant', retSeg[0].at);
+            setAddr('addr_t_retour_garage_heen', retSeg[1].naar);
+            setKm('t_retour_garage_heen', retSeg[1].km);
+            setZoneSelectInRow('row_retour_garage_heen', retSeg[1].zone);
+            setTime('time_t_retour_garage_heen', retSeg[1].at);
+        }
+
         applyAutoSegmentTijden(allRows);
 
         if (typeof window.calculateRoute === 'function') window.calculateRoute();
         if (typeof window.rekenen === 'function') window.rekenen();
         updateHeenOptChipStates();
+        updateRouteV2HiddenInput();
     }
 
     function bindRow(row) {
@@ -403,7 +669,12 @@
         if (!tb) return;
         const p = prefill || {};
         const idx = tb.querySelectorAll('tr.heen-seg-row').length;
+        const coreCount = getRows().filter(function (row) { return !row.dataset.returnKind; }).length;
         if (idx >= MAX_SEG) return;
+        if (!p.return_kind && coreCount >= 4) return;
+        const insertBefore = !p.return_kind
+            ? Array.from(tb.querySelectorAll('tr.heen-seg-row')).find(function (row) { return !!row.dataset.returnKind; }) || null
+            : null;
 
         const tr = document.createElement('tr');
         tr.className = 'heen-seg-row' + (idx === 0 ? ' heen-seg-first' : '');
@@ -428,6 +699,7 @@
         if (p.naar) tr.querySelector('.heen-naar').value = p.naar;
         if (p.km != null) tr.querySelector('.heen-km').value = String(p.km);
         if (p.zone) tr.querySelector('.heen-zone').value = String(p.zone);
+        if (p.return_kind) tr.dataset.returnKind = String(p.return_kind);
 
         if (idx === 0) {
             tr.querySelector('.heen-van').placeholder = 'Garage';
@@ -443,10 +715,18 @@
             tr.querySelector('.heen-vt').title = 'Vertrek bij klant';
         }
 
-        tb.appendChild(tr);
+        if (insertBefore) {
+            tb.insertBefore(tr, insertBefore);
+        } else {
+            tb.appendChild(tr);
+        }
         bindRow(tr);
 
         tr.querySelector('.heen-rm').addEventListener('click', function () {
+            const remainingCore = getRows().filter(function (row) {
+                return row !== tr && !row.dataset.returnKind;
+            }).length;
+            if (!tr.dataset.returnKind && remainingCore < 2) return;
             if (tb.querySelectorAll('tr.heen-seg-row').length <= 2) return;
             tr.remove();
             syncLegacyFromSegments();
@@ -490,40 +770,22 @@
         const btnRk = document.getElementById('btn_heen_opt_rk');
         if (btnRg) {
             btnRg.addEventListener('click', function () {
-                const garEl = document.getElementById('addr_t_garage');
-                const retEl = document.getElementById('addr_t_retour_garage_heen');
-                const gaddr = garEl ? garEl.value.trim() : '';
-                if (!retEl) return;
-                if (!gaddr) return;
                 if (isRgChipActive()) {
-                    retEl.value = '';
+                    removeReturnRows();
+                    syncLegacyFromSegments();
                 } else {
-                    retEl.value = garEl.value;
+                    appendReturnRows('rg');
                 }
-                updateHeenOptChipStates();
-                if (typeof window.calculateRoute === 'function') window.calculateRoute();
-                if (typeof window.rekenen === 'function') window.rekenen();
             });
         }
         if (btnRk) {
             btnRk.addEventListener('click', function () {
-                const vb = document.getElementById('addr_t_vertrek_best');
-                const ab = document.getElementById('addr_t_aankomst_best');
-                const rk = document.getElementById('addr_t_retour_klant');
-                const vl = document.getElementById('addr_t_vertrek_klant');
-                if (!vb || !ab || !rk || !vl) return;
                 if (isRkChipActive()) {
-                    vb.value = '';
-                    rk.value = '';
+                    removeReturnRows();
+                    syncLegacyFromSegments();
                 } else {
-                    vb.value = ab.value;
-                    rk.value = vl.value;
-                    window.__calcTerugreisUserShow = true;
-                    if (typeof window.updateVisibility === 'function') window.updateVisibility();
+                    appendReturnRows('rk');
                 }
-                updateHeenOptChipStates();
-                if (typeof window.calculateRoute === 'function') window.calculateRoute();
-                if (typeof window.rekenen === 'function') window.rekenen();
             });
         }
         document.getElementById('btn_show_terugreis')?.addEventListener('click', function () {
@@ -572,10 +834,23 @@
         syncZoneColumnVisibility();
         wireOptieKnopen();
         updateHeenOptChipStates();
+        const form = getMainFormEl();
+        if (form) {
+            const syncRouteV2 = function (e) {
+                if (e && e.target && e.target.id === 'route_v2_json') return;
+                updateRouteV2HiddenInput();
+            };
+            form.addEventListener('input', syncRouteV2, true);
+            form.addEventListener('change', syncRouteV2, true);
+            form.addEventListener('submit', function () {
+                updateRouteV2HiddenInput();
+            });
+        }
         if (typeof window.routeHeenRefreshFromLegacy === 'function') {
             window.routeHeenRefreshFromLegacy();
         }
         if (typeof window.updateVisibility === 'function') window.updateVisibility();
+        updateRouteV2HiddenInput();
 
         document.getElementById('chk_grens2')?.addEventListener('change', function () {
             syncLegacyFromSegments();
@@ -590,9 +865,12 @@
      * Kopieer die km terug naar de zichtbare segmentrijen (zelfde mapping als syncLegacyFromSegments).
      */
     window.syncHeenSegmentDisplayFromLegacy = function () {
-        const rows = getRows();
-        const activeRows = getEffectiveRows(rows);
-        const n = activeRows.length;
+        const parts = getRowPartitions(getRows());
+        const rows = parts.allRows;
+        const activeRows = parts.activeRows;
+        const coreRows = parts.coreRows;
+        const returnRows = parts.returnRows;
+        const n = coreRows.length;
         if (n < 2) return;
 
         const legacyKm = function (key) {
@@ -600,24 +878,31 @@
             if (!el || el.value === '') return '0';
             return String(el.value);
         };
-        const setRowKm = function (idx, v) {
-            const inp = activeRows[idx] && activeRows[idx].querySelector('.heen-km');
+        const setRowKm = function (row, v) {
+            const inp = row && row.querySelector('.heen-km');
             if (inp) inp.value = v;
         };
 
-        setRowKm(0, legacyKm('t_vertrek_klant'));
+        setRowKm(coreRows[0], legacyKm('t_vertrek_klant'));
         if (n === 2) {
-            setRowKm(1, legacyKm('t_aankomst_best'));
+            setRowKm(coreRows[1], legacyKm('t_aankomst_best'));
         } else if (n === 3) {
-            setRowKm(1, legacyKm('t_voorstaan'));
-            setRowKm(2, legacyKm('t_aankomst_best'));
+            setRowKm(coreRows[1], legacyKm('t_voorstaan'));
+            setRowKm(coreRows[2], legacyKm('t_aankomst_best'));
         } else {
-            setRowKm(1, legacyKm('t_voorstaan'));
-            setRowKm(2, legacyKm('t_grens2'));
-            setRowKm(n - 1, legacyKm('t_aankomst_best'));
+            setRowKm(coreRows[1], legacyKm('t_voorstaan'));
+            setRowKm(coreRows[2], legacyKm('t_grens2'));
+            setRowKm(coreRows[n - 1], legacyKm('t_aankomst_best'));
         }
 
-        for (let i = n; i < rows.length; i++) {
+        if (returnRows.length === 1 && returnRows[0].dataset.returnKind === 'rg') {
+            setRowKm(returnRows[0], legacyKm('t_retour_garage_heen'));
+        } else if (returnRows.length >= 2) {
+            setRowKm(returnRows[0], legacyKm('t_retour_klant'));
+            setRowKm(returnRows[1], legacyKm('t_retour_garage_heen'));
+        }
+
+        for (let i = activeRows.length; i < rows.length; i++) {
             const kmEl = rows[i].querySelector('.heen-km');
             const vtEl = rows[i].querySelector('.heen-vt');
             const atEl = rows[i].querySelector('.heen-at');
@@ -627,6 +912,7 @@
         }
 
         applyAutoSegmentTijden(rows);
+        updateRouteV2HiddenInput();
     };
 
     /** Na klant/adres uit DB: verborgen velden → eerste segmenten bijwerken */
@@ -642,4 +928,6 @@
         }
         syncLegacyFromSegments();
     };
+
+    window.updateRouteV2HiddenInput = updateRouteV2HiddenInput;
 })();

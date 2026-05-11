@@ -19,7 +19,7 @@ function route_heen_time_minus_minutes(string $hhmm, int $minutes): string
  * Heenroute als segmenten voor UI / JSON-boot (parallel aan calculatie_regels).
  *
  * @param array<string, array{tijd?:string,adres?:string,km?:mixed}> $data Zoals calculaties_bewerken $data
- * @return list<array{vertrektijd:string,aankomst_tijd:string,van:string,naar:string,km:string,zone:string}>
+ * @return list<array{vertrektijd:string,aankomst_tijd:string,van:string,naar:string,km:string,zone:string,return_kind?:string}>
  */
 function route_heen_segments_from_regels(array $data): array
 {
@@ -28,17 +28,25 @@ function route_heen_segments_from_regels(array $data): array
     $gVs = trim((string) ($data['t_voorstaan']['adres'] ?? ''));
     $gG2 = trim((string) ($data['t_grens2']['adres'] ?? ''));
     $gBest = trim((string) ($data['t_aankomst_best']['adres'] ?? ''));
+    $gRetKlant = trim((string) ($data['t_retour_klant']['adres'] ?? ''));
+    $gRetGarage = trim((string) ($data['t_retour_garage_heen']['adres'] ?? ''));
 
     $kmVl = isset($data['t_vertrek_klant']['km']) ? (string) $data['t_vertrek_klant']['km'] : '0';
     $kmVs = isset($data['t_voorstaan']['km']) ? (string) $data['t_voorstaan']['km'] : '0';
     $kmG2 = isset($data['t_grens2']['km']) ? (string) $data['t_grens2']['km'] : '0';
     $kmBest = isset($data['t_aankomst_best']['km']) ? (string) $data['t_aankomst_best']['km'] : '0';
+    $kmRetKlant = isset($data['t_retour_klant']['km']) ? (string) $data['t_retour_klant']['km'] : '0';
+    $kmRetGarage = isset($data['t_retour_garage_heen']['km']) ? (string) $data['t_retour_garage_heen']['km'] : '0';
 
     $tGarage = substr((string) ($data['t_garage']['tijd'] ?? ''), 0, 5);
     $tVl = substr((string) ($data['t_vertrek_klant']['tijd'] ?? ''), 0, 5);
     $tVs = substr((string) ($data['t_voorstaan']['tijd'] ?? ''), 0, 5);
     $tG2 = substr((string) ($data['t_grens2']['tijd'] ?? ''), 0, 5);
     $tBest = substr((string) ($data['t_aankomst_best']['tijd'] ?? ''), 0, 5);
+    $tRetKlant = substr((string) ($data['t_retour_klant']['tijd'] ?? ''), 0, 5);
+    $tRetGarage = substr((string) ($data['t_retour_garage_heen']['tijd'] ?? ''), 0, 5);
+    $hasRetKlant = $gRetKlant !== '' && ($tRetKlant !== '' || (float) $kmRetKlant > 0.0);
+    $hasRetGarage = $gRetGarage !== '' && ($tRetGarage !== '' || (float) $kmRetGarage > 0.0 || $hasRetKlant);
 
     $segs = [];
 
@@ -86,6 +94,32 @@ function route_heen_segments_from_regels(array $data): array
             'naar' => $gBest,
             'km' => $kmBest,
             'zone' => 'nl',
+        ];
+    }
+
+    $lastNaar = $gBest !== '' ? $gBest : ($gG2 !== '' ? $gG2 : ($gVs !== '' ? $gVs : ($gVl !== '' ? $gVl : $gGarage)));
+    if ($lastNaar !== '' && $hasRetKlant) {
+        $segs[] = [
+            'vertrektijd' => $tBest,
+            'aankomst_tijd' => $tRetKlant,
+            'van' => $lastNaar,
+            'naar' => $gRetKlant,
+            'km' => $kmRetKlant,
+            'zone' => 'nl',
+            'return_kind' => 'rk-klant',
+        ];
+        $lastNaar = $gRetKlant;
+    }
+
+    if ($lastNaar !== '' && $hasRetGarage) {
+        $segs[] = [
+            'vertrektijd' => $hasRetKlant ? $tRetKlant : $tBest,
+            'aankomst_tijd' => $tRetGarage,
+            'van' => $lastNaar,
+            'naar' => $gRetGarage,
+            'km' => $kmRetGarage,
+            'zone' => 'nl',
+            'return_kind' => $hasRetKlant ? 'rk-garage' : 'rg',
         ];
     }
 

@@ -30,6 +30,7 @@ $rit = [
     'totaal_km'=>0, 'totaal_uren'=>0, 'prijs'=>0, 'voertuig_id'=>0,
     'km_nl'=>0, 'km_de'=>0, 'km_ch'=>0, 'km_ov'=>0, 'km_eu'=>0, 'km_tussen'=>0,
     'instructie_kantoor'=>'',
+    'route_v2_json' => null,
     'extra_voertuigen' => null, // <-- De nieuwe kolom toevoegen aan defaults
     'datum_offerte_verstuurd' => null,
     'datum_bevestiging_verstuurd' => null,
@@ -46,6 +47,7 @@ $blOvernBedrag = '';
 $busOptiesTussendagHTML = '';
 
 $heenSegmentsBoot = [];
+$routeV2Boot = null;
 
 try {
     $instellingen = tenant_calculatie_instellingen_merged($pdo, $tenantId);
@@ -68,7 +70,12 @@ try {
     }
 
     require_once __DIR__ . '/includes/route_heen_segments.php';
-    $heenSegmentsBoot = route_heen_segments_from_regels($data); 
+    require_once __DIR__ . '/includes/route_v2.php';
+    $routeV2Boot = calculatie_route_v2_decode(isset($rit['route_v2_json']) ? (string) $rit['route_v2_json'] : null);
+    $heenSegmentsBoot = calculatie_route_v2_extract_route1_segments($routeV2Boot);
+    if ($heenSegmentsBoot === []) {
+        $heenSegmentsBoot = route_heen_segments_from_regels($data);
+    }
 
     // Actieve prijscategorieën ophalen
     $stmtBussen = $pdo->prepare("SELECT * FROM calculatie_voertuigen WHERE tenant_id = ? AND actief = 1 ORDER BY capaciteit ASC");
@@ -295,6 +302,7 @@ function val($data, $rij, $veld, $default = '') {
     <form action="calculaties_update.php" method="POST" id="mainForm"> 
         <input type="hidden" name="id" value="<?= $rit['id'] ?>"> 
         <input type="hidden" name="naar_dashboard" value="1"> 
+        <input type="hidden" name="route_v2_json" id="route_v2_json" value="<?= htmlspecialchars((string) ($rit['route_v2_json'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
 
         <div class="section-box" style="border-top: 4px solid #003366;"> 
             <div class="box-header"><h3 class="box-title"><i class="fas fa-user"></i> Klantgegevens</h3></div> 
@@ -1034,6 +1042,7 @@ function val($data, $rij, $veld, $default = '') {
 
 <script>
 window.HEEN_SEGMENTS_BOOT = <?= json_encode($heenSegmentsBoot ?? [], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
+window.ROUTE_V2_BOOT = <?= json_encode($routeV2Boot ?? null, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
 window.CALC_BUITENLAND_DP = <?= json_encode($buitenlandMetaDp ?? [], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
 window.CALC_TUSSENDAGEN_BOOT = <?= json_encode(['enabled' => $tussendagenEnabledBoot ?? false, 'items' => $tussendagenItemsBoot ?? []], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
 window.HTML_BUS_TUSSENDAG = <?= json_encode($busOptiesTussendagHTML ?? '', JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
