@@ -450,9 +450,189 @@ function getHeenVoorrijTijd() {
     return formatTime(addMinutes(parseTime(tVertrek), -BUFFER_VOORSTAAN));
 }
 
+function getHeenSegmentRowsForPlanning() {
+    const body = document.getElementById('heen_segmenten_body');
+    if (!body) return [];
+    const rows = Array.from(body.querySelectorAll('tr.heen-seg-row'));
+    while (rows.length > 2) {
+        const last = rows[rows.length - 1];
+        const naar = last.querySelector('.heen-naar')?.value.trim() || '';
+        const km = parseFloat(last.querySelector('.heen-km')?.value || '0') || 0;
+        if (naar !== '' || km > 0) break;
+        rows.pop();
+    }
+    return rows;
+}
+
+function getHeenSegmentLegMinutes(activeCount) {
+    const ritVl = reisTijden['addr_t_vertrek_klant'] || 30;
+    const ritVs = reisTijden['addr_t_voorstaan'] || 0;
+    const ritG2 = reisTijden['addr_t_grens2'] || 0;
+    const ritBest = reisTijden['addr_t_aankomst_best'] || 0;
+    if (activeCount <= 1) return [];
+    if (activeCount === 2) return [ritVl, ritBest];
+    if (activeCount === 3) return [ritVl, ritVs, ritBest];
+    return [ritVl, ritVs, ritG2, ritBest];
+}
+
+function syncHeenSegmentPlanning() {
+    const rows = getHeenSegmentRowsForPlanning();
+    if (rows.length < 2) {
+        return false;
+    }
+
+    const legacyGarage = document.getElementById('time_t_garage');
+    const legacyVertrekKlant = document.getElementById('time_t_vertrek_klant');
+    const legacyVoorstaan = document.getElementById('time_t_voorstaan');
+    const legacyGrens2 = document.getElementById('time_t_grens2');
+    const legacyBest = document.getElementById('time_t_aankomst_best');
+    const legacyGarageEnd = document.getElementById('time_t_retour_garage_heen');
+    const legMinutes = getHeenSegmentLegMinutes(rows.length);
+
+    const row0Vt = rows[0].querySelector('.heen-vt');
+    const row0At = rows[0].querySelector('.heen-at');
+    const leadVt = rows[1].querySelector('.heen-vt');
+
+    if (!leadVt || !legacyVertrekKlant) {
+        return false;
+    }
+
+    const leadTime = (leadVt.value || legacyVertrekKlant.value || '').trim().substring(0, 5);
+    leadVt.readOnly = true;
+    leadVt.dataset.timeEditable = '1';
+    leadVt.classList.remove('heen-vt--auto');
+    leadVt.title = 'Vertrek bij klant';
+
+    if (row0Vt) {
+        row0Vt.readOnly = true;
+        row0Vt.dataset.timeEditable = '1';
+        row0Vt.classList.remove('heen-vt--auto');
+        row0Vt.title = 'Vertrek vanuit garage';
+    }
+    if (row0At) {
+        row0At.readOnly = true;
+        row0At.dataset.timeEditable = '1';
+        row0At.classList.remove('heen-at--auto');
+        row0At.title = 'Aankomst bij klant';
+    }
+
+    if (!leadTime) {
+        legacyVertrekKlant.value = '';
+        if (row0At && row0At.dataset.manual !== '1') row0At.value = '';
+        if (row0Vt && row0Vt.dataset.manual !== '1') row0Vt.value = '';
+        if (legacyGarage && legacyGarage.dataset.manual !== '1') legacyGarage.value = '';
+        if (legacyBest) legacyBest.value = '';
+        if (legacyVoorstaan) legacyVoorstaan.value = '';
+        if (legacyGrens2) legacyGrens2.value = '';
+        if (legacyGarageEnd) legacyGarageEnd.value = '';
+        for (let i = 1; i < rows.length; i++) {
+            const vtEl = rows[i].querySelector('.heen-vt');
+            const atEl = rows[i].querySelector('.heen-at');
+            if (vtEl) {
+                vtEl.readOnly = true;
+                vtEl.dataset.timeEditable = '1';
+                vtEl.classList.remove('heen-vt--auto');
+                vtEl.title = i === 1 ? 'Vertrek bij klant' : 'Vertrek vanaf deze stop';
+                if (i > 1 && vtEl.dataset.manual !== '1') {
+                    vtEl.value = '';
+                }
+            }
+            if (atEl) {
+                atEl.readOnly = true;
+                atEl.classList.add('heen-at--auto');
+                delete atEl.dataset.timeEditable;
+                atEl.value = '';
+                atEl.title = 'Automatische aankomsttijd op deze stop';
+            }
+        }
+        return true;
+    }
+
+    legacyVertrekKlant.value = leadTime;
+    leadVt.value = leadTime;
+
+    const dLead = parseTime(leadTime);
+    let dRow0At = addMinutes(dLead, -BUFFER_VOORSTAAN);
+    if (row0At && row0At.dataset.manual === '1' && row0At.value.trim()) {
+        dRow0At = parseTime(row0At.value.trim());
+    } else if (row0At) {
+        row0At.value = formatTime(dRow0At);
+    }
+
+    const dGarageAuto = addMinutes(dRow0At, -(legMinutes[0] || 0));
+    if (legacyGarage && legacyGarage.dataset.manual !== '1') {
+        legacyGarage.value = formatTime(dGarageAuto);
+    }
+    if (row0Vt && row0Vt.dataset.manual !== '1') {
+        row0Vt.value = legacyGarage && legacyGarage.value ? legacyGarage.value.trim().substring(0, 5) : formatTime(dGarageAuto);
+    }
+
+    let previousArrival = null;
+    let finalArrival = null;
+    let stop1Vertrek = '';
+    let stop2Vertrek = '';
+
+    for (let i = 1; i < rows.length; i++) {
+        const vtEl = rows[i].querySelector('.heen-vt');
+        const atEl = rows[i].querySelector('.heen-at');
+        if (!vtEl || !atEl) continue;
+
+        vtEl.readOnly = true;
+        vtEl.dataset.timeEditable = '1';
+        vtEl.classList.remove('heen-vt--auto');
+        vtEl.title = i === 1 ? 'Vertrek bij klant' : 'Vertrek vanaf deze stop';
+
+        let vertrekTime = '';
+        if (i === 1) {
+            vertrekTime = leadTime;
+        } else if (vtEl.dataset.manual === '1' && vtEl.value.trim()) {
+            vertrekTime = vtEl.value.trim().substring(0, 5);
+        } else if (previousArrival) {
+            vertrekTime = formatTime(previousArrival);
+        }
+
+        vtEl.value = vertrekTime;
+        if (!vertrekTime) {
+            atEl.value = '';
+            atEl.readOnly = true;
+            atEl.classList.add('heen-at--auto');
+            delete atEl.dataset.timeEditable;
+            atEl.title = 'Automatische aankomsttijd op deze stop';
+            previousArrival = null;
+            finalArrival = null;
+            continue;
+        }
+
+        const dVertrek = parseTime(vertrekTime);
+        const dAankomst = addMinutes(dVertrek, legMinutes[i] || 0);
+        atEl.value = formatTime(dAankomst);
+        atEl.readOnly = true;
+        atEl.classList.add('heen-at--auto');
+        delete atEl.dataset.timeEditable;
+        atEl.title = 'Automatische aankomsttijd op deze stop';
+
+        previousArrival = dAankomst;
+        finalArrival = dAankomst;
+        if (i === 2) stop1Vertrek = vertrekTime;
+        if (i === 3) stop2Vertrek = vertrekTime;
+    }
+
+    if (legacyVoorstaan) legacyVoorstaan.value = stop1Vertrek;
+    if (legacyGrens2) legacyGrens2.value = stop2Vertrek;
+    if (legacyBest) legacyBest.value = finalArrival ? formatTime(finalArrival) : '';
+
+    if (legacyGarageEnd) {
+        const ritNaarGarageHeen = reisTijden['addr_t_retour_garage_heen'] || 30;
+        legacyGarageEnd.value = finalArrival ? formatTime(addMinutes(finalArrival, ritNaarGarageHeen + 15)) : '';
+    }
+
+    return true;
+}
+
 function updatePlanning() {
+    const segmentPlanningHandled = syncHeenSegmentPlanning();
     const tVertrek = document.getElementById('time_t_vertrek_klant').value;
-    if(tVertrek) {
+    if(tVertrek && !segmentPlanningHandled) {
         const dVertrek = parseTime(tVertrek);
         const tVoorrij = getHeenVoorrijTijd();
         const dVoorrij = tVoorrij ? parseTime(tVoorrij) : addMinutes(dVertrek, -BUFFER_VOORSTAAN);
@@ -488,7 +668,7 @@ function updatePlanning() {
         const dGarageHeenEnd = addMinutes(dAankomst, ritNaarGarageHeen + 15); 
         if(document.getElementById('time_t_retour_garage_heen'))
             document.getElementById('time_t_retour_garage_heen').value = formatTime(dGarageHeenEnd);
-    } else {
+    } else if (!segmentPlanningHandled) {
         const elGarage = document.getElementById('time_t_garage');
         const elBest = document.getElementById('time_t_aankomst_best');
         const elVs = document.getElementById('time_t_voorstaan');
@@ -743,12 +923,15 @@ function showMinutes(h) {
                 ) {
                     activeTimeInput.dataset.manual = '1';
                 }
-                if (activeTimeInput.matches('tr.heen-seg-first .heen-vt, tr.heen-seg-first .heen-at')) {
+                if (activeTimeInput.matches('input.heen-vt')) {
                     activeTimeInput.dataset.manual = '1';
                     if (activeTimeInput.matches('tr.heen-seg-first .heen-vt')) {
                         const garageLegacy = document.getElementById('time_t_garage');
                         if (garageLegacy) garageLegacy.dataset.manual = '1';
                     }
+                }
+                if (activeTimeInput.matches('tr.heen-seg-first .heen-at')) {
+                    activeTimeInput.dataset.manual = '1';
                 }
                 const segBody = document.getElementById('heen_segmenten_body');
                 if (

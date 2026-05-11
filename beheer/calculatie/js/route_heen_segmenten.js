@@ -115,18 +115,15 @@
             const atEl = activeRows[i].querySelector('.heen-at');
 
             if (vtEl) {
+                vtEl.readOnly = true;
+                vtEl.classList.remove('heen-vt--auto');
+                vtEl.dataset.timeEditable = '1';
                 if (i === 1) {
-                    vtEl.readOnly = true;
-                    vtEl.classList.remove('heen-vt--auto');
-                    vtEl.dataset.timeEditable = '1';
                     vtEl.value = tv;
                     vtEl.title = 'Vertrek bij klant';
-                } else {
-                    vtEl.readOnly = true;
-                    vtEl.classList.add('heen-vt--auto');
-                    delete vtEl.dataset.timeEditable;
+                } else if (vtEl.dataset.manual !== '1') {
                     vtEl.value = stopAankomsten[i - 2] || '';
-                    vtEl.title = 'Automatisch vanaf vorige stop';
+                    vtEl.title = 'Vertrek vanaf deze stop';
                 }
             }
             if (atEl) {
@@ -144,8 +141,8 @@
             if (vtEl) {
                 vtEl.value = '';
                 vtEl.readOnly = true;
-                vtEl.classList.add('heen-vt--auto');
-                delete vtEl.dataset.timeEditable;
+                vtEl.classList.remove('heen-vt--auto');
+                vtEl.dataset.timeEditable = '1';
                 vtEl.title = 'Vul eerst een bestemming in';
             }
             if (atEl) {
@@ -370,21 +367,20 @@
             el.addEventListener('input', syncLegacyFromSegments);
             el.addEventListener('change', syncLegacyFromSegments);
         });
-        if (row.classList.contains('heen-seg-first')) {
-            const vtEl = row.querySelector('.heen-vt');
-            const atEl = row.querySelector('.heen-at');
-            const markManual = function (el) {
-                if (!el) return;
-                if (el.value && el.value.trim() !== '') {
-                    el.dataset.manual = '1';
-                } else {
-                    delete el.dataset.manual;
-                }
-            };
-            if (vtEl) {
-                vtEl.addEventListener('input', function () { markManual(vtEl); });
-                vtEl.addEventListener('change', function () { markManual(vtEl); });
+        const markManual = function (el) {
+            if (!el) return;
+            if (el.value && el.value.trim() !== '') {
+                el.dataset.manual = '1';
+            } else {
+                delete el.dataset.manual;
             }
+        };
+        row.querySelectorAll('.heen-vt').forEach(function (el) {
+            el.addEventListener('input', function () { markManual(el); });
+            el.addEventListener('change', function () { markManual(el); });
+        });
+        if (row.classList.contains('heen-seg-first')) {
+            const atEl = row.querySelector('.heen-at');
             if (atEl) {
                 atEl.addEventListener('input', function () { markManual(atEl); });
                 atEl.addEventListener('change', function () { markManual(atEl); });
