@@ -293,7 +293,7 @@
             return { enabled: false, segments: [] };
         }
         const rows = [
-            { type: 't_garage_rit2', kind: 'garage_start', time: readTrimmedValue('time_t_garage_rit2'), address: readTrimmedValue('addr_t_garage_rit2'), km: 0, zone: readZoneInRow('row_garage_rit2') },
+            { type: 't_garage_rit2', kind: 'garage_start', time: readTrimmedValue('time_t_garage_rit2'), address: readTrimmedValue('addr_t_garage_rit2'), km: readKmInput('t_garage_rit2'), zone: readZoneInRow('row_garage_rit2') },
             { type: 't_voorstaan_rit2', kind: 'preposition', time: readTrimmedValue('time_t_voorstaan_rit2'), address: readTrimmedValue('addr_t_voorstaan_rit2'), km: readKmInput('t_voorstaan_rit2'), zone: readZoneInRow('row_voorstaan_rit2') },
             { type: 't_vertrek_best', kind: 'route2_depart', time: readTrimmedValue('time_t_vertrek_best'), address: readTrimmedValue('addr_t_vertrek_best'), km: readKmInput('t_vertrek_best'), zone: readZoneInRow('row_vertrek_best') },
             { type: 't_retour_klant', kind: 'route2_customer', time: readTrimmedValue('time_t_retour_klant'), address: readTrimmedValue('addr_t_retour_klant'), km: readKmInput('t_retour_klant'), zone: readZoneInRow('row_retour_klant') },
@@ -705,7 +705,6 @@
     }
 
     function startRetourRit2() {
-        const wasActive = isRrChipActive();
         const typeEl = document.getElementById('rittype_select');
         if (typeEl && typeEl.value === 'enkel') {
             typeEl.value = 'dagtocht';
@@ -714,35 +713,53 @@
         const rows = getRows();
         const parts = getRowPartitions(rows);
         const coreRows = parts.coreRows;
-        const lastCore = coreRows[coreRows.length - 1];
-        const lastNaar = normalizeAddr(lastCore?.querySelector('.heen-naar')?.value || '');
+        const coreStops = coreRows.map(function (row) {
+            return normalizeAddr(row.querySelector('.heen-naar')?.value || '');
+        }).filter(function (value) {
+            return value !== '';
+        });
+        const lastNaar = coreStops.length ? coreStops[coreStops.length - 1] : '';
+        const reverseMids = coreStops.slice(1, -1).reverse();
+        const reverseMid1 = reverseMids[0] || '';
+        const reverseMid2 = reverseMids[1] || '';
         const klant = getKlantAddress(rows);
         const garage = getGarageAddress(rows);
 
+        const voorstaanRit2 = document.getElementById('addr_t_voorstaan_rit2');
         const vertrekBest = document.getElementById('addr_t_vertrek_best');
         const retourKlant = document.getElementById('addr_t_retour_klant');
         const retourGarage = document.getElementById('addr_t_retour_garage');
         const garageRit2 = document.getElementById('addr_t_garage_rit2');
 
-        if (vertrekBest && lastNaar) vertrekBest.value = lastNaar;
-        if (retourKlant && klant) retourKlant.value = klant;
-        if (retourGarage && garage) retourGarage.value = garage;
-        if (garageRit2 && garage) garageRit2.value = garage;
+        if (vertrekBest) vertrekBest.value = lastNaar;
+        if (voorstaanRit2) voorstaanRit2.value = reverseMid1;
+        if (retourKlant) retourKlant.value = coreStops.length > 1 ? klant : '';
+        if (retourGarage) retourGarage.value = garage;
+        if (garageRit2) garageRit2.value = reverseMid2;
 
-        if (!wasActive) {
-            [
-                'time_t_vertrek_best',
-                'time_t_retour_klant',
-                'time_t_retour_garage',
-                'time_t_garage_rit2',
-                'time_t_voorstaan_rit2'
-            ].forEach(function (id) {
-                const el = document.getElementById(id);
-                if (el) el.value = '';
-            });
-        }
+        [
+            'time_t_vertrek_best',
+            'time_t_retour_klant',
+            'time_t_retour_garage',
+            'time_t_garage_rit2',
+            'time_t_voorstaan_rit2'
+        ].forEach(function (id) {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        [
+            'km[t_garage_rit2]',
+            'km[t_voorstaan_rit2]',
+            'km[t_vertrek_best]',
+            'km[t_retour_klant]',
+            'km[t_retour_garage]'
+        ].forEach(function (nameKey) {
+            const el = document.querySelector('input[name="' + nameKey + '"]');
+            if (el) el.value = '0';
+        });
 
         window.__calcTerugreisUserShow = true;
+        window.__calcRetourRitMode = true;
         if (typeof window.updateVisibility === 'function') window.updateVisibility();
         if (typeof window.calculateRoute === 'function') window.calculateRoute();
         if (typeof window.rekenen === 'function') window.rekenen();
@@ -1221,6 +1238,7 @@
         }
         document.getElementById('btn_show_terugreis')?.addEventListener('click', function () {
             window.__calcTerugreisUserShow = true;
+            window.__calcRetourRitMode = false;
             const ab = document.getElementById('addr_t_aankomst_best');
             const vb = document.getElementById('addr_t_vertrek_best');
             if (ab && vb && !vb.value.trim()) {

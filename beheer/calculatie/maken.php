@@ -340,6 +340,8 @@ function val($data, $rij, $veld, $default = '') {
                         <div class="rit-row" id="row_garage_rit2" style="display:none; background:#f9f9f9; padding:5px; margin-bottom:10px; border-radius:4px;">
                             <div class="col-tijd"><label>Start Rit 2</label><input type="text" name="time[t_garage_rit2]" id="time_t_garage_rit2" class="form-control custom-time-input reken-trigger" placeholder="--:--" readonly></div>
                             <div class="col-adres"><label>Garage Start (Rit 2)</label><input type="text" name="addr[t_garage_rit2]" id="addr_t_garage_rit2" class="form-control google-autocomplete" value="Industrieweg 95a, Zutphen" placeholder="Garage..."></div>
+                            <div class="col-km"><label>Km</label><input type="number" name="km[t_garage_rit2]" class="form-control km-calc reken-trigger" value="0"></div>
+                            <div class="col-zone"><label>Zone</label><select class="form-control km-zone-select reken-trigger" title="Fiscale zone"><option value="nl">NL</option><option value="de">DE</option><option value="ch">CH</option><option value="ov">0%</option></select></div>
                         </div>
 
                         <div class="rit-row" id="row_voorstaan_rit2" style="display:none;">
