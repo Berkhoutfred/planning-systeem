@@ -466,13 +466,23 @@ function runGoogleLeg(origin, destination, targetId) {
             return;
         }
         const leg = response.routes[0].legs[0];
+        const kmRounded = Math.ceil(leg.distance.value / 1000);
         const addrInput = document.getElementById(targetId);
         if (addrInput) {
             const row = addrInput.closest('.rit-row');
             if (row) {
                 const kmInput = row.querySelector('.km-calc');
-                if (kmInput) kmInput.value = Math.ceil(leg.distance.value / 1000);
+                if (kmInput) kmInput.value = kmRounded;
             }
+        }
+        if (targetId === 'addr_t_vertrek_klant') {
+            const hiddenKm = document.querySelector('input[name="km[t_vertrek_klant]"]');
+            if (hiddenKm) hiddenKm.value = String(kmRounded);
+            const firstVisibleKm = document.querySelector('#heen_segmenten_body tr.heen-seg-row .heen-km');
+            if (firstVisibleKm) firstVisibleKm.value = String(kmRounded);
+        } else if (targetId === 'addr_t_retour_garage_heen') {
+            const hiddenKm = document.querySelector('input[name="km[t_retour_garage_heen]"]');
+            if (hiddenKm) hiddenKm.value = String(kmRounded);
         }
         reisTijden[targetId] = Math.ceil((leg.duration.value * BUS_FACTOR) / 60);
         updatePlanning();
