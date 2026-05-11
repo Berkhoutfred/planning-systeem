@@ -595,7 +595,8 @@
      */
     window.syncHeenSegmentDisplayFromLegacy = function () {
         const rows = getRows();
-        const n = rows.length;
+        const activeRows = getEffectiveRows(rows);
+        const n = activeRows.length;
         if (n < 2) return;
 
         const legacyKm = function (key) {
@@ -604,7 +605,7 @@
             return String(el.value);
         };
         const setRowKm = function (idx, v) {
-            const inp = rows[idx] && rows[idx].querySelector('.heen-km');
+            const inp = activeRows[idx] && activeRows[idx].querySelector('.heen-km');
             if (inp) inp.value = v;
         };
 
@@ -618,6 +619,15 @@
             setRowKm(1, legacyKm('t_voorstaan'));
             setRowKm(2, legacyKm('t_grens2'));
             setRowKm(n - 1, legacyKm('t_aankomst_best'));
+        }
+
+        for (let i = n; i < rows.length; i++) {
+            const kmEl = rows[i].querySelector('.heen-km');
+            const vtEl = rows[i].querySelector('.heen-vt');
+            const atEl = rows[i].querySelector('.heen-at');
+            if (kmEl) kmEl.value = '0';
+            if (vtEl) vtEl.value = '';
+            if (atEl) atEl.value = '';
         }
 
         applyAutoSegmentTijden(rows);

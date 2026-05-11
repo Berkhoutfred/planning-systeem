@@ -264,13 +264,14 @@ function val($data, $rij, $veld, $default = '') {
     .heen-opt-mini:hover { border-color: #003366; background: #f1f5f9; }
     .heen-opt-mini:focus { outline: none; box-shadow: 0 0 0 2px rgba(0,51,102,.2); }
     .heen-opt-mini.is-active { border-color: #003366; background: #e8eef5; }
-    .terugreis-gate-bar { margin-top: 14px; align-items: center; gap: 10px; }
+    .terugreis-gate-bar { margin-top: 14px; align-items: center; gap: 10px; display: none !important; }
     .btn-terugreis-open {
         font-size: 11px; font-weight: 700; color: #003366;
         padding: 5px 12px; border: 1px dashed #003366; border-radius: 6px;
         background: #fff; cursor: pointer;
     }
     .btn-terugreis-open:hover { background: #f8fafc; }
+    #block_terug { display: none !important; }
     .heen-vt--auto,
     .heen-at--auto { background: #f8fafc !important; color: #475569; font-size: 11px !important; }
     .heen-seg-table input.heen-vt,
@@ -412,9 +413,8 @@ function val($data, $rij, $veld, $default = '') {
 
                 <div class="route-compact heen-segment-wrap" style="background: #fdfdfd; padding: 8px 10px; border: 1px solid #eee; border-radius: 4px;">
                     <div style="font-weight:bold; color:#003366; margin-bottom:6px; border-bottom:1px solid #ddd; padding-bottom:5px;">
-                        HEENREIS / RIT 1 — segmenten
+                        Route 1
                     </div>
-                    <p style="font-size:11px;color:#666;margin:0 0 8px;line-height:1.35;">Eerste rij is altijd <strong>garage → klant</strong>. Rechts vul je <strong>vertrek klant</strong> in; links wordt <strong>vertrek garage</strong> automatisch terug gerekend met 15 minuten marge. Volgende rijen lopen daarna door vanaf het klantadres.</p>
                     <table class="heen-seg-table">
                         <thead>
                             <tr>
@@ -429,7 +429,7 @@ function val($data, $rij, $veld, $default = '') {
                         </thead>
                         <tbody id="heen_segmenten_body"></tbody>
                     </table>
-                    <button type="button" class="btn-add-bus" id="btn_heen_seg_add" style="margin-top:8px;font-size:11px;padding:4px 10px;">+ Segment</button>
+                    <button type="button" class="btn-add-bus" id="btn_heen_seg_add" style="margin-top:8px;font-size:11px;padding:4px 10px;">+ regel</button>
                     <div class="heen-opt-row" role="toolbar" aria-label="Regels">
                         <span class="heen-opt-label">Regels</span>
                         <button type="button" class="heen-opt-mini" id="btn_heen_opt_rg" aria-pressed="false" title="Retour garage na rit 1">RG</button>
