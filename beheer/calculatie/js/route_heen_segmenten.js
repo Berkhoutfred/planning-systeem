@@ -348,22 +348,8 @@
         };
         const route2Payload = buildRoute2Payload();
         const tussPayload = buildTussendagenPayload();
-        const plannerFallbackDays = buildPlannerDays(route1Payload, route2Payload, tussPayload, startDate);
-        const plannerData = typeof window.routePlannerBuildData === 'function'
-            ? window.routePlannerBuildData({
-                startDate: startDate,
-                fallbackEndDate: readTrimmedValue('rit_datum_eind') || startDate,
-                route1: route1Payload,
-                route2: route2Payload,
-                tussendagen: tussPayload,
-                fallbackDays: plannerFallbackDays
-            })
-            : null;
-        const plannerDays = plannerData && Array.isArray(plannerData.days) ? plannerData.days : plannerFallbackDays;
-        const finalTussPayload = plannerData && plannerData.tussendagen ? plannerData.tussendagen : tussPayload;
-        const endDate = plannerData && plannerData.endDate
-            ? plannerData.endDate
-            : resolvePlannerEndDate(plannerDays, readTrimmedValue('rit_datum_eind') || startDate);
+        const plannerDays = buildPlannerDays(route1Payload, route2Payload, tussPayload, startDate);
+        const endDate = resolvePlannerEndDate(plannerDays, readTrimmedValue('rit_datum_eind') || startDate);
         return {
             schema: 2,
             rittype: ritType(),
@@ -371,7 +357,7 @@
             days: plannerDays,
             route1: route1Payload,
             route2: route2Payload,
-            tussendagen: finalTussPayload,
+            tussendagen: tussPayload,
             buitenland: buildBuitenlandPayload()
         };
     }
@@ -380,15 +366,7 @@
         const hidden = document.getElementById('route_v2_json');
         if (!hidden) return;
         try {
-            const payload = buildRouteV2Payload();
-            hidden.value = JSON.stringify(payload);
-            const endEl = document.getElementById('rit_datum_eind');
-            if (endEl && payload && payload.dates && payload.dates.end && endEl.value !== payload.dates.end) {
-                endEl.value = payload.dates.end;
-                if (typeof window.rebuildDagprogrammaBL === 'function') {
-                    window.rebuildDagprogrammaBL();
-                }
-            }
+            hidden.value = JSON.stringify(buildRouteV2Payload());
         } catch (e) {
             hidden.value = '';
         }

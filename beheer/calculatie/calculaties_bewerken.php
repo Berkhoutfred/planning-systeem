@@ -271,14 +271,14 @@ function val($data, $rij, $veld, $default = '') {
     .heen-opt-mini:hover { border-color: #003366; background: #f1f5f9; }
     .heen-opt-mini:focus { outline: none; box-shadow: 0 0 0 2px rgba(0,51,102,.2); }
     .heen-opt-mini.is-active { border-color: #003366; background: #e8eef5; }
-    .terugreis-gate-bar { margin-top: 14px; align-items: center; gap: 10px; display: none; }
+    .terugreis-gate-bar { margin-top: 14px; align-items: center; gap: 10px; display: none !important; }
     .btn-terugreis-open {
         font-size: 11px; font-weight: 700; color: #003366;
         padding: 5px 12px; border: 1px dashed #003366; border-radius: 6px;
         background: #fff; cursor: pointer;
     }
     .btn-terugreis-open:hover { background: #f8fafc; }
-    #block_terug { display: none; }
+    #block_terug { display: none !important; }
     .heen-vt--auto,
     .heen-at--auto { background: #f8fafc !important; color: #475569; font-size: 11px !important; }
     .heen-seg-table input.heen-vt,
@@ -290,27 +290,6 @@ function val($data, $rij, $veld, $default = '') {
         margin: 16px 0 8px;
         letter-spacing: 0.02em;
     }
-    .route-planner-wrap { margin-top: 14px; padding: 10px 12px; border: 1px solid #dbe4ee; border-radius: 6px; background: #f8fbff; }
-    .route-planner-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 8px; }
-    .route-planner-head strong { color: #003366; font-size: 13px; }
-    .route-planner-head span { font-size: 11px; color: #64748b; }
-    .route-planner-toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
-    .planner-chip { display: inline-flex; align-items: center; justify-content: center; min-width: 42px; padding: 6px 10px; border: 1px solid #94a3b8; border-radius: 6px; background: #fff; color: #003366; font-size: 11px; font-weight: 700; cursor: pointer; }
-    .planner-chip:hover { background: #eff6ff; border-color: #003366; }
-    #route_planner_days { display: grid; gap: 10px; }
-    .planner-day-card { border: 1px solid #d7e3f0; border-radius: 6px; background: #fff; padding: 10px; }
-    .planner-day-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 8px; }
-    .planner-day-date { font-size: 11px; color: #64748b; margin-top: 2px; }
-    .planner-badge { display: inline-block; min-width: 32px; padding: 2px 6px; margin-right: 6px; border-radius: 999px; background: #e2e8f0; color: #0f172a; font-size: 10px; font-weight: 700; text-align: center; }
-    .planner-day-actions, .planner-route-actions { display: flex; flex-wrap: wrap; gap: 6px; }
-    .planner-mini-btn { padding: 4px 8px; border: 1px solid #94a3b8; border-radius: 4px; background: #fff; color: #003366; font-size: 11px; font-weight: 700; cursor: pointer; }
-    .planner-mini-btn--danger { color: #b91c1c; border-color: #fca5a5; }
-    .planner-mini-btn[disabled] { opacity: .45; cursor: not-allowed; }
-    .planner-route-card { border: 1px dashed #dbe4ee; border-radius: 6px; padding: 8px; margin-top: 8px; background: #fcfdff; }
-    .planner-route-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 6px; color: #003366; }
-    .planner-add-row { margin-top: 8px; font-size: 11px; padding: 4px 10px; }
-    .planner-readonly { background: #f8fafc !important; color: #64748b; }
-    .planner-rest-note { font-size: 12px; color: #64748b; padding: 4px 0; }
 </style> 
 
 <div class="container">
@@ -561,20 +540,6 @@ function val($data, $rij, $veld, $default = '') {
                             <div class="col-zone"><label>Zone</label><select class="form-control km-zone-select reken-trigger" title="Fiscale zone"><option value="nl">NL</option><option value="de">DE</option><option value="ch">CH</option><option value="ov">0%</option></select></div>
                         </div>
                     </div>
-                </div>
-
-                <div id="planner_controls_wrap" class="route-planner-wrap">
-                    <div class="route-planner-head">
-                        <strong>Vervolgplanning</strong>
-                        <span>Start extra routes, extra dagen of rustdagen vanaf hier.</span>
-                    </div>
-                    <div class="route-planner-toolbar">
-                        <button type="button" class="planner-chip" id="btn_planner_r2" title="Start Route 2 op dag 1">R2</button>
-                        <button type="button" class="planner-chip" id="btn_planner_s3" title="Start Route 3 op dag 1">S3</button>
-                        <button type="button" class="planner-chip" id="btn_planner_xd" title="Voeg extra dag toe">XD</button>
-                        <button type="button" class="planner-chip" id="btn_planner_rd" title="Voeg rustdag toe">RD</button>
-                    </div>
-                    <div id="route_planner_days"></div>
                 </div>
 
                 <div id="block_meerdaags" style="display:none; margin-top:12px; padding:8px 10px; background:#e3f2fd; border:1px solid #90caf9; border-radius:4px;">
@@ -1353,7 +1318,5 @@ function customFinancieleBerekening() {
     }
 }
 </script>
-
-<script src="js/route_planner_v2.js?v=<?= time() ?>"></script>
 
 <script src="https://maps.googleapis.com/maps/api/js?key=<?php echo urlencode(env_value('GOOGLE_MAPS_API_KEY', '')); ?>&libraries=places&callback=startHetSysteem" async defer></script>
