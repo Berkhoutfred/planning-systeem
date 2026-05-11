@@ -72,14 +72,16 @@
             naarEl.value = vlAddr.value.trim();
         }
         if (vtEl) {
-            vtEl.readOnly = false;
+            vtEl.readOnly = true;
             vtEl.classList.remove('heen-vt--auto');
+            vtEl.dataset.timeEditable = '1';
         }
         if (atEl) {
             const defAt = defaultFirstRowAankomst(vt);
             const manualAt = atEl.dataset.manual === '1' && atEl.value.trim() !== '';
             atEl.readOnly = false;
             atEl.classList.remove('heen-at--auto');
+            atEl.dataset.timeEditable = '1';
             if (!manualAt) {
                 atEl.value = defAt;
             }
@@ -119,12 +121,14 @@
             if (vtEl) {
                 vtEl.readOnly = true;
                 vtEl.classList.add('heen-vt--auto');
+                delete vtEl.dataset.timeEditable;
                 vtEl.value = stopTijden[i - 1] || '';
                 vtEl.title = 'Automatisch vanaf vorige stop';
             }
             if (atEl) {
                 atEl.readOnly = true;
                 atEl.classList.add('heen-at--auto');
+                delete atEl.dataset.timeEditable;
                 atEl.value = stopTijden[i] || '';
                 atEl.title = 'Automatische aankomsttijd op deze stop';
             }
@@ -137,12 +141,14 @@
                 vtEl.value = '';
                 vtEl.readOnly = true;
                 vtEl.classList.add('heen-vt--auto');
+                delete vtEl.dataset.timeEditable;
                 vtEl.title = 'Vul eerst een bestemming in';
             }
             if (atEl) {
                 atEl.value = '';
                 atEl.readOnly = true;
                 atEl.classList.add('heen-at--auto');
+                delete atEl.dataset.timeEditable;
                 atEl.title = 'Vul eerst een bestemming in';
             }
         }
@@ -374,9 +380,9 @@
         const tr = document.createElement('tr');
         tr.className = 'heen-seg-row' + (idx === 0 ? ' heen-seg-first' : '');
         const zoneDisplay = showZoneColumn() ? '' : 'display:none';
-        const tdAank = '<td class="heen-td-t"><input type="time" class="form-control heen-at reken-trigger" step="60" title="Aankomst bij Naar"></td>';
+        const tdAank = '<td class="heen-td-t"><input type="text" class="form-control custom-time-input heen-at reken-trigger" placeholder="--:--" readonly title="Aankomst bij Naar"></td>';
         tr.innerHTML =
-            '<td class="heen-td-t"><input type="time" class="form-control heen-vt reken-trigger" step="60" title="Vertrek bij klant"></td>' +
+            '<td class="heen-td-t"><input type="text" class="form-control custom-time-input heen-vt reken-trigger" placeholder="--:--" readonly title="Vertrek bij klant"></td>' +
             '<td><input type="text" class="form-control google-autocomplete heen-van reken-trigger" placeholder="Van" autocomplete="off"></td>' +
             '<td><input type="text" class="form-control google-autocomplete heen-naar reken-trigger" placeholder="Naar" autocomplete="off"></td>' +
             tdAank +

@@ -90,7 +90,7 @@ function init() {
             if (!el || !document.getElementById('heen_segmenten_body')?.contains(el)) {
                 return;
             }
-            if (el.readOnly || el.classList.contains('heen-at--auto')) {
+            if (el.dataset.timeEditable !== '1') {
                 return;
             }
             e.preventDefault();
