@@ -33,10 +33,6 @@
         return formatHm(p - mins);
     }
 
-    function defaultFirstRowAankomst(vt) {
-        return vt ? hmMinusMinutes(vt, KLANT_VOORVERTREK_MIN) : '';
-    }
-
     function getEffectiveRows(rows) {
         const src = Array.isArray(rows) ? rows.slice() : getRows();
         while (src.length > 2) {
@@ -51,21 +47,16 @@
         return src;
     }
 
-    /** Eerste segment: aankomst-kolom = vertrek klant − 15 min (readonly). */
+    /** Eerste segment: links vertrek garage, rechts vertrek klant. */
     function applyFirstRowKlantTijden(rows) {
         const r0 = rows[0];
         if (!r0 || !r0.classList.contains('heen-seg-first')) return;
         const vtEl = r0.querySelector('.heen-vt');
         const atEl = r0.querySelector('.heen-at');
+        const tgLegacy = document.getElementById('time_t_garage');
         const tvLegacy = document.getElementById('time_t_vertrek_klant');
-        let vt = vtEl && vtEl.value && vtEl.value.trim() ? vtEl.value.trim().substring(0, 5) : '';
-        if (!vt && tvLegacy && tvLegacy.value && tvLegacy.value.trim()) {
-            vt = tvLegacy.value.trim().substring(0, 5);
-        }
-        if (vtEl && vt) {
-            vtEl.value = vt;
-            if (tvLegacy) tvLegacy.value = vt;
-        }
+        const vt = tgLegacy && tgLegacy.value && tgLegacy.value.trim() ? tgLegacy.value.trim().substring(0, 5) : '';
+        const at = tvLegacy && tvLegacy.value && tvLegacy.value.trim() ? tvLegacy.value.trim().substring(0, 5) : '';
         const naarEl = r0.querySelector('.heen-naar');
         const vlAddr = document.getElementById('addr_t_vertrek_klant');
         if (naarEl && vlAddr && vlAddr.value.trim() && !naarEl.value.trim()) {
@@ -75,24 +66,24 @@
             vtEl.readOnly = true;
             vtEl.classList.remove('heen-vt--auto');
             vtEl.dataset.timeEditable = '1';
+            if (vtEl.dataset.manual !== '1') {
+                vtEl.value = vt;
+            }
+            vtEl.title = 'Vertrek vanuit garage';
         }
         if (atEl) {
-            const defAt = defaultFirstRowAankomst(vt);
-            const manualAt = atEl.dataset.manual === '1' && atEl.value.trim() !== '';
-            atEl.readOnly = false;
+            atEl.readOnly = true;
             atEl.classList.remove('heen-at--auto');
             atEl.dataset.timeEditable = '1';
-            if (!manualAt) {
-                atEl.value = defAt;
-            }
-            atEl.title = 'Aankomst / voorrijtijd bij klant';
+            atEl.value = at;
+            atEl.title = 'Vertrek bij klant';
         }
     }
 
     /**
      * Zichtbare tijden volgen de legacy-ketting:
-     * rij 1 vertrek = handmatig "vertrek klant"
-     * rij 1 aankomst = voorstaan bij klant
+     * rij 1 vertrek = vertrek garage
+     * rij 1 aankomst = vertrek klant (leidend)
      * volgende rijen lopen automatisch door tot de eindbestemming.
      */
     function applyAutoSegmentTijden(rows) {
@@ -275,17 +266,31 @@
         setKm('t_vertrek_klant', seg[0].km);
         setZoneSelectInRow('row_vertrek_klant', seg[0].zone);
 
+        const tg = document.getElementById('time_t_garage');
         const tv = document.getElementById('time_t_vertrek_klant');
         const r0 = rows[0];
         const vtEl = r0 ? r0.querySelector('.heen-vt') : null;
-        if (tv && vtEl) {
+        const atEl = r0 ? r0.querySelector('.heen-at') : null;
+        if (tg && vtEl) {
             if (seg[0].vt) {
-                tv.value = seg[0].vt;
-                vtEl.value = seg[0].vt;
+                tg.value = seg[0].vt;
+                if (vtEl.dataset.manual !== '1') {
+                    vtEl.value = seg[0].vt;
+                }
             } else if (vtEl.value && vtEl.value.trim()) {
-                tv.value = vtEl.value.trim().substring(0, 5);
+                tg.value = vtEl.value.trim().substring(0, 5);
+            } else if (tg.value && tg.value.trim() && vtEl.dataset.manual !== '1') {
+                vtEl.value = tg.value.trim().substring(0, 5);
+            }
+        }
+        if (tv && atEl) {
+            if (seg[0].at) {
+                tv.value = seg[0].at;
+                atEl.value = seg[0].at;
+            } else if (atEl.value && atEl.value.trim()) {
+                tv.value = atEl.value.trim().substring(0, 5);
             } else if (tv.value && tv.value.trim()) {
-                vtEl.value = tv.value.trim().substring(0, 5);
+                atEl.value = tv.value.trim().substring(0, 5);
             }
         }
         const chkG2 = document.getElementById('chk_grens2');
@@ -347,24 +352,26 @@
             el.addEventListener('change', syncLegacyFromSegments);
         });
         if (row.classList.contains('heen-seg-first')) {
-            const atEl = row.querySelector('.heen-at');
             const vtEl = row.querySelector('.heen-vt');
-            const syncManualState = function () {
-                if (!atEl) return;
-                const vt = vtEl && vtEl.value ? vtEl.value.trim().substring(0, 5) : '';
-                const defAt = defaultFirstRowAankomst(vt);
-                const cur = atEl.value ? atEl.value.trim().substring(0, 5) : '';
-                if (cur !== '' && defAt !== '' && cur !== defAt) {
-                    atEl.dataset.manual = '1';
-                } else {
-                    delete atEl.dataset.manual;
-                }
-            };
-            if (atEl) {
-                atEl.addEventListener('input', syncManualState);
-                atEl.addEventListener('change', syncManualState);
+            if (vtEl) {
+                const markManualGarage = function () {
+                    if (vtEl.value && vtEl.value.trim() !== '') {
+                        vtEl.dataset.manual = '1';
+                    } else {
+                        delete vtEl.dataset.manual;
+                    }
+                };
+                vtEl.addEventListener('input', markManualGarage);
+                vtEl.addEventListener('change', markManualGarage);
             }
         }
+        row.querySelectorAll('.heen-vt, .heen-at').forEach(function (el) {
+            el.addEventListener('click', function (e) {
+                if (el.dataset.timeEditable !== '1') return;
+                e.preventDefault();
+                if (typeof window.openTimeModal === 'function') window.openTimeModal(el);
+            });
+        });
         row.querySelectorAll('.heen-van, .heen-naar').forEach(function (el) {
             el.addEventListener('blur', chainVanNaar);
         });
@@ -380,9 +387,9 @@
         const tr = document.createElement('tr');
         tr.className = 'heen-seg-row' + (idx === 0 ? ' heen-seg-first' : '');
         const zoneDisplay = showZoneColumn() ? '' : 'display:none';
-        const tdAank = '<td class="heen-td-t"><input type="text" class="form-control custom-time-input heen-at reken-trigger" placeholder="--:--" readonly title="Aankomst bij Naar"></td>';
+        const tdAank = '<td class="heen-td-t"><input type="text" class="form-control custom-time-input heen-at reken-trigger" placeholder="--:--" readonly title="Vertrek bij klant"></td>';
         tr.innerHTML =
-            '<td class="heen-td-t"><input type="text" class="form-control custom-time-input heen-vt reken-trigger" placeholder="--:--" readonly title="Vertrek bij klant"></td>' +
+            '<td class="heen-td-t"><input type="text" class="form-control custom-time-input heen-vt reken-trigger" placeholder="--:--" readonly title="Vertrek vanuit garage"></td>' +
             '<td><input type="text" class="form-control google-autocomplete heen-van reken-trigger" placeholder="Van" autocomplete="off"></td>' +
             '<td><input type="text" class="form-control google-autocomplete heen-naar reken-trigger" placeholder="Naar" autocomplete="off"></td>' +
             tdAank +
@@ -404,7 +411,8 @@
         if (idx === 0) {
             tr.querySelector('.heen-van').placeholder = 'Garage';
             tr.querySelector('.heen-naar').placeholder = 'Klant (vertrek)';
-            tr.querySelector('.heen-vt').title = 'Vertrek bij klant';
+            tr.querySelector('.heen-vt').title = 'Vertrek vanuit garage';
+            tr.querySelector('.heen-at').title = 'Vertrek bij klant';
             const rm = tr.querySelector('.heen-rm');
             if (rm) {
                 rm.style.visibility = 'hidden';
@@ -445,7 +453,7 @@
                 addRow({ van: '', naar: '', km: '0', zone: 'nl' });
             }
         } else {
-            addRow({ van: 'Industrieweg 95, Zutphen', naar: '', km: '0', zone: 'nl', vertrektijd: '08:00' });
+            addRow({ van: 'Industrieweg 95, Zutphen', naar: '', km: '0', zone: 'nl', vertrektijd: '' });
             addRow({ van: '', naar: '', km: '0', zone: 'nl' });
         }
         chainVanNaar();

@@ -443,10 +443,6 @@ function runGoogleRoute(stopMap) {
 
 // --- TIJDMACHINE ---
 function getHeenVoorrijTijd() {
-    const segAt = document.querySelector('#heen_segmenten_body tr.heen-seg-first .heen-at');
-    if (segAt && segAt.value && segAt.value.trim()) {
-        return segAt.value.trim().substring(0, 5);
-    }
     const tVertrek = document.getElementById('time_t_vertrek_klant').value;
     if (!tVertrek) {
         return '';
@@ -492,6 +488,15 @@ function updatePlanning() {
         const dGarageHeenEnd = addMinutes(dAankomst, ritNaarGarageHeen + 15); 
         if(document.getElementById('time_t_retour_garage_heen'))
             document.getElementById('time_t_retour_garage_heen').value = formatTime(dGarageHeenEnd);
+    } else {
+        const elGarage = document.getElementById('time_t_garage');
+        const elBest = document.getElementById('time_t_aankomst_best');
+        const elVs = document.getElementById('time_t_voorstaan');
+        const elG2 = document.getElementById('time_t_grens2');
+        if (elGarage && elGarage.dataset.manual !== '1') elGarage.value = '';
+        if (elBest) elBest.value = '';
+        if (elVs) elVs.value = '';
+        if (elG2) elG2.value = '';
     }
     
     const type = document.getElementById('rittype_select').value;
@@ -738,8 +743,10 @@ function showMinutes(h) {
                 ) {
                     activeTimeInput.dataset.manual = '1';
                 }
-                if (activeTimeInput.matches('tr.heen-seg-first .heen-at')) {
+                if (activeTimeInput.matches('tr.heen-seg-first .heen-vt')) {
                     activeTimeInput.dataset.manual = '1';
+                    const garageLegacy = document.getElementById('time_t_garage');
+                    if (garageLegacy) garageLegacy.dataset.manual = '1';
                 }
                 const segBody = document.getElementById('heen_segmenten_body');
                 if (

@@ -248,7 +248,7 @@ function val($data, $rij, $veld, $default = '') {
                     <div style="font-weight:bold; color:#003366; margin-bottom:6px; border-bottom:1px solid #ddd; padding-bottom:5px;">
                         HEENREIS / RIT 1 — segmenten
                     </div>
-                    <p style="font-size:11px;color:#666;margin:0 0 8px;line-height:1.35;">Eerste rij is altijd <strong>garage → klant</strong> (km/tijd garage–klant). Volgende rijen starten bij het klantadres. Aankomst bij klant = vertrek klant minus 15 minuten.</p>
+                    <p style="font-size:11px;color:#666;margin:0 0 8px;line-height:1.35;">Eerste rij is altijd <strong>garage → klant</strong>. Rechts vul je <strong>vertrek klant</strong> in; links wordt <strong>vertrek garage</strong> automatisch terug gerekend met 15 minuten marge. Volgende rijen lopen daarna door vanaf het klantadres.</p>
                     <table class="heen-seg-table">
                         <thead>
                             <tr>

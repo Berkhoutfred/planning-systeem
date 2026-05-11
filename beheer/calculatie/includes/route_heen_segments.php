@@ -34,17 +34,16 @@ function route_heen_segments_from_regels(array $data): array
     $kmG2 = isset($data['t_grens2']['km']) ? (string) $data['t_grens2']['km'] : '0';
     $kmBest = isset($data['t_aankomst_best']['km']) ? (string) $data['t_aankomst_best']['km'] : '0';
 
+    $tGarage = substr((string) ($data['t_garage']['tijd'] ?? ''), 0, 5);
     $tVl = substr((string) ($data['t_vertrek_klant']['tijd'] ?? ''), 0, 5);
     $tBest = substr((string) ($data['t_aankomst_best']['tijd'] ?? ''), 0, 5);
 
     $segs = [];
 
     if ($gGarage !== '' || $gVl !== '') {
-        $vertrekKlant = $tVl !== '' ? $tVl : '08:00';
-        $aankKlant = $tVl !== '' ? route_heen_time_minus_minutes($tVl, 15) : '';
         $segs[] = [
-            'vertrektijd' => $vertrekKlant,
-            'aankomst_tijd' => $aankKlant,
+            'vertrektijd' => $tGarage,
+            'aankomst_tijd' => $tVl,
             'van' => $gGarage !== '' ? $gGarage : $gVl,
             'naar' => $gVl !== '' ? $gVl : $gGarage,
             'km' => $kmVl,
@@ -91,8 +90,8 @@ function route_heen_segments_from_regels(array $data): array
     if ($segs === []) {
         return [
             [
-                'vertrektijd' => '08:00',
-                'aankomst_tijd' => route_heen_time_minus_minutes('08:00', 15),
+                'vertrektijd' => '',
+                'aankomst_tijd' => '',
                 'van' => '',
                 'naar' => '',
                 'km' => '0',
