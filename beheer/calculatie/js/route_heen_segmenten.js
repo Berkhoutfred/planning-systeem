@@ -1037,6 +1037,17 @@
         if (p.zone) tr.querySelector('.heen-zone').value = String(p.zone);
         if (p.return_kind) tr.dataset.returnKind = String(p.return_kind);
 
+        const vanInput = tr.querySelector('.heen-van');
+        const naarInput = tr.querySelector('.heen-naar');
+        if (idx > 0 && vanInput) {
+            vanInput.readOnly = true;
+            vanInput.title = 'Automatisch vanaf vorige locatie';
+        }
+        if (p.return_kind && naarInput) {
+            naarInput.readOnly = true;
+            naarInput.title = 'Automatisch doel voor retourregel';
+        }
+
         if (idx === 0) {
             tr.querySelector('.heen-van').placeholder = 'Garage';
             tr.querySelector('.heen-naar').placeholder = 'Klant (vertrek)';
