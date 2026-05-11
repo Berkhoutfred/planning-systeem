@@ -622,13 +622,15 @@
         return normalizeAddr(document.getElementById('addr_t_vertrek_klant')?.value || '');
     }
 
-    function syncReturnRowTargets(rows) {
+    function syncReturnRowTargets(rows, options) {
         const list = Array.isArray(rows) ? rows : getRows();
         const garage = getGarageAddress(list);
         const klant = getKlantAddress(list);
+        const activeEl = options && options.preserveActiveAddress ? document.activeElement : null;
         list.forEach(function (row) {
             const naarEl = row.querySelector('.heen-naar');
             if (!naarEl || !row.dataset.returnKind) return;
+            if (activeEl && naarEl === activeEl) return;
             if (row.dataset.returnKind === 'rg' || row.dataset.returnKind === 'rk-garage') {
                 if (garage) naarEl.value = garage;
             } else if (row.dataset.returnKind === 'rk-klant') {
@@ -701,12 +703,14 @@
     }
 
     /** Sync ketting: Van[i] = Naar[i-1] */
-    function chainVanNaar() {
+    function chainVanNaar(options) {
         const rows = getRows();
+        const activeEl = options && options.preserveActiveAddress ? document.activeElement : null;
         for (let i = 1; i < rows.length; i++) {
             const prevNaar = rows[i - 1].querySelector('.heen-naar');
             const van = rows[i].querySelector('.heen-van');
             if (!prevNaar || !van) continue;
+            if (activeEl && van === activeEl) continue;
             const pv = prevNaar.value.trim();
             if (pv && van.value.trim() !== pv) {
                 van.value = pv;
@@ -717,10 +721,11 @@
     /**
      * Segmentwaarden → legacy addr/km/zone/chk grens2
      */
-    function syncLegacyFromSegments() {
+    function syncLegacyFromSegments(options) {
+        const opts = options || {};
         const allRows = getRows();
-        syncReturnRowTargets(allRows);
-        chainVanNaar();
+        syncReturnRowTargets(allRows, opts);
+        chainVanNaar(opts);
         const parts = getRowPartitions(allRows);
         const rows = parts.activeRows;
         const coreRows = parts.coreRows;
@@ -730,7 +735,12 @@
 
         const firstVanEl = allRows[0] ? allRows[0].querySelector('.heen-van') : null;
         const normalizedGarage = getGarageAddress(allRows);
-        if (firstVanEl && normalizedGarage && normalizeAddr(firstVanEl.value) !== normalizedGarage) {
+        if (
+            firstVanEl &&
+            (!opts.preserveActiveAddress || firstVanEl !== document.activeElement) &&
+            normalizedGarage &&
+            normalizeAddr(firstVanEl.value) !== normalizedGarage
+        ) {
             firstVanEl.value = normalizedGarage;
         }
 
@@ -919,10 +929,12 @@
             setTime('time_t_retour_garage_heen', retSeg[1].at);
         }
 
-        applyAutoSegmentTijden(allRows);
+        if (!opts.skipAutoTimes) {
+            applyAutoSegmentTijden(allRows);
+        }
 
-        if (typeof window.calculateRoute === 'function') window.calculateRoute();
-        if (typeof window.rekenen === 'function') window.rekenen();
+        if (!opts.skipRoute && typeof window.calculateRoute === 'function') window.calculateRoute();
+        if (!opts.skipRekenen && typeof window.rekenen === 'function') window.rekenen();
         updateHeenOptChipStates();
         updateRouteV2HiddenInput();
     }
@@ -947,7 +959,11 @@
                 }
                 addressSyncTimer = setTimeout(function () {
                     addressSyncTimer = null;
-                    syncLegacyFromSegments();
+                    syncLegacyFromSegments({
+                        preserveActiveAddress: true,
+                        skipAutoTimes: true,
+                        skipRekenen: true
+                    });
                 }, 450);
             });
             el.addEventListener('change', flushAddressSync);
