@@ -1164,8 +1164,20 @@ window.HTML_BUS_TUSSENDAG = <?= json_encode($busOptiesTussendagHTML ?? '', JSON_
         const cb = document.getElementById('tussendagen_enabled');
         const inner = document.getElementById('block_tussendagen_inner');
         const tzRows = document.getElementById('tussendagen_rows');
+        const wrap = document.getElementById('wrap_extra_rijdag');
+        const rt = document.getElementById('rittype_select');
+        const startEl = document.getElementById('rit_datum');
+        const endEl = document.getElementById('rit_datum_eind');
+        function allowTz() {
+            const type = rt ? rt.value : '';
+            if (type === 'meerdaags' || type === 'buitenland') return true;
+            return !!(startEl && endEl && startEl.value && endEl.value && endEl.value > startEl.value);
+        }
         function syncTz() {
             if (!inner) return;
+            const allow = allowTz();
+            if (wrap) wrap.style.display = allow ? '' : 'none';
+            if (!allow && cb) cb.checked = false;
             const on = cb && cb.checked;
             inner.style.display = on ? 'block' : 'none';
             if (on && tzRows && tzRows.children.length === 0) {
@@ -1191,12 +1203,12 @@ window.HTML_BUS_TUSSENDAG = <?= json_encode($busOptiesTussendagHTML ?? '', JSON_
         const btnAdd = document.getElementById('btn_tz_add');
         if (btnAdd) btnAdd.addEventListener('click', function () { addTzRow({}); });
 
-        const rt = document.getElementById('rittype_select');
         function syncBuiten() {
             const bl = document.getElementById('block_buitenland_extra');
             if (!bl || !rt) return;
             bl.style.display = rt.value === 'buitenland' ? 'block' : 'none';
             rebuildDagprogrammaBL();
+            syncTz();
         }
         if (rt) {
             rt.addEventListener('change', syncBuiten);
@@ -1206,8 +1218,12 @@ window.HTML_BUS_TUSSENDAG = <?= json_encode($busOptiesTussendagHTML ?? '', JSON_
             const e = document.getElementById('rit_datum_eind');
             if (e && e.value < this.value) e.value = this.value;
             rebuildDagprogrammaBL();
+            syncTz();
         });
-        document.getElementById('rit_datum_eind')?.addEventListener('change', rebuildDagprogrammaBL);
+        document.getElementById('rit_datum_eind')?.addEventListener('change', function () {
+            rebuildDagprogrammaBL();
+            syncTz();
+        });
     };
 })();
 </script>
