@@ -333,8 +333,14 @@ function calculateRoute() {
     } else if (route1ReturnMode === 'rg') {
         if (lastHeenStop && sEnd1) stopsHeen.push({loc: sEnd1, id: 'addr_t_retour_garage_heen'});
     }
-    
-    if(stopsHeen.length >= 2) runGoogleRoute(stopsHeen);
+
+    const singleCoreRgRoute = route1ReturnMode === 'rg' && s1 && sVl && sEnd1 && !sGrens && !useGrens2 && !s4;
+    if (singleCoreRgRoute) {
+        runGoogleLeg(s1, sVl, 'addr_t_vertrek_klant');
+        runGoogleLeg(sVl, sEnd1, 'addr_t_retour_garage_heen');
+    } else if(stopsHeen.length >= 2) {
+        runGoogleRoute(stopsHeen);
+    }
 
     // TERUG
     if(type !== 'enkel') {
@@ -445,6 +451,36 @@ function runGoogleRoute(stopMap) {
             rekenen();
             calculateTussendagenKmAll();
         }
+    });
+}
+
+function runGoogleLeg(origin, destination, targetId) {
+    if (!directionsService || !origin || !destination || !targetId) return;
+    directionsService.route({
+        origin: origin,
+        destination: destination,
+        travelMode: 'DRIVING',
+        unitSystem: google.maps.UnitSystem.METRIC
+    }, function(response, status) {
+        if (status !== 'OK' || !response.routes || !response.routes[0] || !response.routes[0].legs || !response.routes[0].legs[0]) {
+            return;
+        }
+        const leg = response.routes[0].legs[0];
+        const addrInput = document.getElementById(targetId);
+        if (addrInput) {
+            const row = addrInput.closest('.rit-row');
+            if (row) {
+                const kmInput = row.querySelector('.km-calc');
+                if (kmInput) kmInput.value = Math.ceil(leg.distance.value / 1000);
+            }
+        }
+        reisTijden[targetId] = Math.ceil((leg.duration.value * BUS_FACTOR) / 60);
+        updatePlanning();
+        if (typeof window.syncHeenSegmentDisplayFromLegacy === 'function') {
+            window.syncHeenSegmentDisplayFromLegacy();
+        }
+        rekenen();
+        calculateTussendagenKmAll();
     });
 }
 
