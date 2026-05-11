@@ -293,7 +293,7 @@
             return { enabled: false, segments: [] };
         }
         const rows = [
-            { type: 't_garage_rit2', kind: 'garage_start', time: readTrimmedValue('time_t_garage_rit2'), address: readTrimmedValue('addr_t_garage_rit2'), km: 0, zone: readZoneInRow('row_garage_rit2') },
+            { type: 't_garage_rit2', kind: 'garage_start', time: readTrimmedValue('time_t_garage_rit2'), address: readTrimmedValue('addr_t_garage_rit2'), km: readKmInput('t_garage_rit2'), zone: readZoneInRow('row_garage_rit2') },
             { type: 't_voorstaan_rit2', kind: 'preposition', time: readTrimmedValue('time_t_voorstaan_rit2'), address: readTrimmedValue('addr_t_voorstaan_rit2'), km: readKmInput('t_voorstaan_rit2'), zone: readZoneInRow('row_voorstaan_rit2') },
             { type: 't_vertrek_best', kind: 'route2_depart', time: readTrimmedValue('time_t_vertrek_best'), address: readTrimmedValue('addr_t_vertrek_best'), km: readKmInput('t_vertrek_best'), zone: readZoneInRow('row_vertrek_best') },
             { type: 't_retour_klant', kind: 'route2_customer', time: readTrimmedValue('time_t_retour_klant'), address: readTrimmedValue('addr_t_retour_klant'), km: readKmInput('t_retour_klant'), zone: readZoneInRow('row_retour_klant') },
@@ -595,6 +595,125 @@
         });
     }
 
+    function getTerugVisiblePoints() {
+        const type = ritType();
+        const finalGarage = normalizeGarageAddress(readTrimmedValue('addr_t_retour_garage') || readTrimmedValue('addr_t_garage'));
+        const points = [];
+        const pushPoint = function (cfg) {
+            const address = cfg.normalizeGarage
+                ? normalizeGarageAddress(readTrimmedValue(cfg.addrId))
+                : normalizeAddr(readTrimmedValue(cfg.addrId));
+            if (!address) return;
+            if (cfg.skipIfFinalGarage && finalGarage && address === finalGarage) return;
+            points.push({
+                addrId: cfg.addrId,
+                timeId: cfg.timeId,
+                kmKey: cfg.kmKey || '',
+                rowId: cfg.rowId || '',
+                address: address,
+                time: readTrimmedValue(cfg.timeId),
+                km: cfg.kmKey ? readKmInput(cfg.kmKey) : 0,
+                zone: cfg.rowId ? readZoneInRow(cfg.rowId) : 'nl'
+            });
+        };
+
+        if (type === 'brenghaal') {
+            pushPoint({ addrId: 'addr_t_garage_rit2', timeId: 'time_t_garage_rit2', kmKey: 't_garage_rit2', rowId: 'row_garage_rit2', normalizeGarage: true });
+            pushPoint({ addrId: 'addr_t_voorstaan_rit2', timeId: 'time_t_voorstaan_rit2', kmKey: 't_voorstaan_rit2', rowId: 'row_voorstaan_rit2' });
+        } else {
+            pushPoint({ addrId: 'addr_t_vertrek_best', timeId: 'time_t_vertrek_best', rowId: 'row_vertrek_best' });
+            pushPoint({ addrId: 'addr_t_voorstaan_rit2', timeId: 'time_t_voorstaan_rit2', kmKey: 't_voorstaan_rit2', rowId: 'row_voorstaan_rit2' });
+            pushPoint({ addrId: 'addr_t_garage_rit2', timeId: 'time_t_garage_rit2', kmKey: 't_garage_rit2', rowId: 'row_garage_rit2', skipIfFinalGarage: true, normalizeGarage: true });
+        }
+
+        pushPoint({ addrId: 'addr_t_retour_klant', timeId: 'time_t_retour_klant', kmKey: 't_retour_klant', rowId: 'row_retour_klant' });
+        pushPoint({ addrId: 'addr_t_retour_garage', timeId: 'time_t_retour_garage', kmKey: 't_retour_garage', rowId: 'row_garage_terug', normalizeGarage: true });
+
+        return points;
+    }
+
+    function getTerugVisibleSegments() {
+        const points = getTerugVisiblePoints();
+        const segments = [];
+        for (let i = 0; i < points.length - 1; i++) {
+            const fromPoint = points[i];
+            const toPoint = points[i + 1];
+            segments.push({
+                from: fromPoint.address,
+                to: toPoint.address,
+                vt: fromPoint.time,
+                at: toPoint.time,
+                km: toPoint.km,
+                zone: toPoint.zone,
+                startAddrId: fromPoint.addrId,
+                endAddrId: toPoint.addrId,
+                startTimeId: fromPoint.timeId
+            });
+        }
+        return segments;
+    }
+
+    function renderTerugSegmentTable() {
+        const tbody = document.getElementById('terug_segmenten_body');
+        if (!tbody) return;
+        const segments = getTerugVisibleSegments();
+        tbody.innerHTML = '';
+
+        segments.forEach(function (segment, idx) {
+            const tr = document.createElement('tr');
+            tr.className = 'terug-seg-row';
+            tr.innerHTML =
+                '<td class="heen-td-t"><input type="text" class="form-control heen-vt" readonly></td>' +
+                '<td><input type="text" class="form-control heen-van" readonly></td>' +
+                '<td><input type="text" class="form-control heen-naar"></td>' +
+                '<td class="heen-td-t"><input type="text" class="form-control heen-at" readonly></td>' +
+                '<td class="heen-zone-col"><input type="text" class="form-control heen-zone-view" readonly></td>' +
+                '<td class="heen-td-km"><input type="number" class="form-control heen-km" readonly></td>' +
+                '<td class="heen-td-rm"></td>';
+
+            const fromEl = tr.querySelector('.heen-van');
+            const toEl = tr.querySelector('.heen-naar');
+            const vtEl = tr.querySelector('.heen-vt');
+            const atEl = tr.querySelector('.heen-at');
+            const zoneEl = tr.querySelector('.heen-zone-view');
+            const kmEl = tr.querySelector('.heen-km');
+
+            fromEl.value = segment.from;
+            toEl.value = segment.to;
+            vtEl.value = segment.vt || '';
+            atEl.value = segment.at || '';
+            zoneEl.value = (segment.zone || 'nl').toUpperCase();
+            kmEl.value = String(segment.km || 0);
+            atEl.classList.add('heen-at--auto');
+            if (idx > 0) vtEl.classList.add('heen-vt--auto');
+
+            toEl.addEventListener('change', function () {
+                const target = document.getElementById(segment.endAddrId);
+                if (target) target.value = toEl.value.trim();
+                if (typeof window.calculateRoute === 'function') window.calculateRoute();
+                if (typeof window.rekenen === 'function') window.rekenen();
+                if (typeof window.updateRouteV2HiddenInput === 'function') window.updateRouteV2HiddenInput();
+                renderTerugSegmentTable();
+            });
+
+            if (idx === 0) {
+                vtEl.readOnly = false;
+                vtEl.dataset.timeEditable = '1';
+                vtEl.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const target = document.getElementById(segment.startTimeId);
+                    if (target && typeof window.openTimeModal === 'function') {
+                        window.openTimeModal(target);
+                    }
+                });
+            }
+
+            tbody.appendChild(tr);
+        });
+
+        syncZoneColumnVisibility();
+    }
+
     function getRows() {
         const tb = document.getElementById('heen_segmenten_body');
         return tb ? Array.from(tb.querySelectorAll('tr.heen-seg-row')) : [];
@@ -714,20 +833,28 @@
         const rows = getRows();
         const parts = getRowPartitions(rows);
         const coreRows = parts.coreRows;
+        const coreStops = coreRows.map(function (row) {
+            return normalizeAddr(row.querySelector('.heen-naar')?.value || '');
+        }).filter(function (value) {
+            return value !== '';
+        });
         const lastCore = coreRows[coreRows.length - 1];
         const lastNaar = normalizeAddr(lastCore?.querySelector('.heen-naar')?.value || '');
+        const reverseMids = coreStops.slice(1, -1).reverse();
         const klant = getKlantAddress(rows);
         const garage = getGarageAddress(rows);
 
+        const voorstaanRit2 = document.getElementById('addr_t_voorstaan_rit2');
         const vertrekBest = document.getElementById('addr_t_vertrek_best');
         const retourKlant = document.getElementById('addr_t_retour_klant');
         const retourGarage = document.getElementById('addr_t_retour_garage');
         const garageRit2 = document.getElementById('addr_t_garage_rit2');
 
         if (vertrekBest && lastNaar) vertrekBest.value = lastNaar;
+        if (voorstaanRit2) voorstaanRit2.value = reverseMids[0] || '';
         if (retourKlant && klant) retourKlant.value = klant;
         if (retourGarage && garage) retourGarage.value = garage;
-        if (garageRit2 && garage) garageRit2.value = garage;
+        if (garageRit2) garageRit2.value = reverseMids[1] || '';
 
         if (!wasActive) {
             [
@@ -740,12 +867,23 @@
                 const el = document.getElementById(id);
                 if (el) el.value = '';
             });
+            [
+                't_garage_rit2',
+                't_voorstaan_rit2',
+                't_vertrek_best',
+                't_retour_klant',
+                't_retour_garage'
+            ].forEach(function (key) {
+                const el = document.querySelector('input[name="km[' + key + ']"]');
+                if (el) el.value = '0';
+            });
         }
 
         window.__calcTerugreisUserShow = true;
         if (typeof window.updateVisibility === 'function') window.updateVisibility();
         if (typeof window.calculateRoute === 'function') window.calculateRoute();
         if (typeof window.rekenen === 'function') window.rekenen();
+        renderTerugSegmentTable();
         updateHeenOptChipStates();
         updateRouteV2HiddenInput();
     }
@@ -1224,6 +1362,7 @@
         setById('time_t_retour_garage', '');
 
         [
+            't_garage_rit2',
             't_vertrek_klant',
             't_voorstaan',
             't_grens2',
@@ -1255,6 +1394,7 @@
         });
         if (typeof window.updateVisibility === 'function') window.updateVisibility();
         updateHeenOptChipStates();
+        renderTerugSegmentTable();
         updateRouteV2HiddenInput();
         window.CALC_ROUTE_FORCE_FRESH = false;
     };
@@ -1334,6 +1474,7 @@
         syncZoneColumnVisibility();
         wireOptieKnopen();
         updateHeenOptChipStates();
+        renderTerugSegmentTable();
         const form = getMainFormEl();
         if (form) {
             const syncRouteV2 = function (e) {
@@ -1362,6 +1503,7 @@
 
     window.syncHeenSegmentsFromLegacy = syncLegacyFromSegments;
     window.updateHeenOptChipStates = updateHeenOptChipStates;
+    window.syncTerugSegmentDisplayFromLegacy = renderTerugSegmentTable;
 
     /**
      * Google Directions schrijft km naar legacy (#legacy_heen_mirror .rit-row).

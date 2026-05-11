@@ -335,11 +335,31 @@ function val($data, $rij, $veld, $default = '') {
 
                 <div id="block_terug" style="margin-top:20px;display:none;">
                     <div class="header-rit-2" id="header_terug">TERUGREIS / RIT 2</div>
-                    <div class="route-compact" style="background: #fdfdfd; padding: 8px 10px; border: 1px solid #eee; border-top:none; border-radius: 0 0 4px 4px;">
+                    <div class="route-compact heen-segment-wrap" style="background: #fdfdfd; padding: 8px 10px; border: 1px solid #eee; border-top:none; border-radius: 0 0 4px 4px;">
+                        <div style="font-weight:bold; color:#003366; margin-bottom:6px; border-bottom:1px solid #ddd; padding-bottom:5px;">
+                            Route 2
+                        </div>
+                        <table class="heen-seg-table">
+                            <thead>
+                                <tr>
+                                    <th class="heen-td-t">Vertrek</th>
+                                    <th>Van</th>
+                                    <th>Naar</th>
+                                    <th class="heen-td-t">Aankomst</th>
+                                    <th class="heen-zone-col" style="display:none;">Zone</th>
+                                    <th class="heen-td-km">Km</th>
+                                    <th class="heen-td-rm"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="terug_segmenten_body"></tbody>
+                        </table>
+                        <div id="legacy_terug_mirror" class="legacy-heen-sr-only" aria-hidden="true" style="display:none;">
                         
                         <div class="rit-row" id="row_garage_rit2" style="display:none; background:#f9f9f9; padding:5px; margin-bottom:10px; border-radius:4px;">
                             <div class="col-tijd"><label>Start Rit 2</label><input type="text" name="time[t_garage_rit2]" id="time_t_garage_rit2" class="form-control custom-time-input reken-trigger" placeholder="--:--" readonly></div>
                             <div class="col-adres"><label>Garage Start (Rit 2)</label><input type="text" name="addr[t_garage_rit2]" id="addr_t_garage_rit2" class="form-control google-autocomplete" value="Industrieweg 95a, Zutphen" placeholder="Garage..."></div>
+                            <div class="col-km"><label>Km</label><input type="number" name="km[t_garage_rit2]" class="form-control km-calc reken-trigger" value="0"></div>
+                            <div class="col-zone"><label>Zone</label><select class="form-control km-zone-select reken-trigger" title="Fiscale zone"><option value="nl">NL</option><option value="de">DE</option><option value="ch">CH</option><option value="ov">0%</option></select></div>
                         </div>
 
                         <div class="rit-row" id="row_voorstaan_rit2" style="display:none;">
@@ -368,6 +388,7 @@ function val($data, $rij, $veld, $default = '') {
                             <div class="col-adres"><label>Garage Retour (Einde)</label><input type="text" name="addr[t_retour_garage]" id="addr_t_retour_garage" class="form-control google-autocomplete" value="Industrieweg 95a, Zutphen" placeholder="Garage..."></div>
                             <div class="col-km"><label>Km</label><input type="number" name="km[t_retour_garage]" class="form-control km-calc reken-trigger" value="0"></div>
                             <div class="col-zone"><label>Zone</label><select class="form-control km-zone-select reken-trigger" title="Fiscale zone"><option value="nl">NL</option><option value="de">DE</option><option value="ch">CH</option><option value="ov">0%</option></select></div>
+                        </div>
                         </div>
                     </div>
                 </div>

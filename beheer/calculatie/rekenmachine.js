@@ -228,15 +228,15 @@ function terugreisSectionHasData() {
     const typeEl = document.getElementById('rittype_select');
     const type = typeEl ? typeEl.value : '';
     const tb = document.getElementById('time_t_vertrek_best');
+    const vb = document.getElementById('addr_t_vertrek_best');
     if (tb && tb.value.trim() !== '') {
         return true;
     }
+    if (vb && vb.value.trim() !== '') {
+        return true;
+    }
     if (type === 'brenghaal') {
-        const vb = document.getElementById('addr_t_vertrek_best');
         const vs2 = document.getElementById('addr_t_voorstaan_rit2');
-        if (vb && vb.value.trim() !== '') {
-            return true;
-        }
         if (vs2 && vs2.value.trim() !== '') {
             return true;
         }
@@ -298,6 +298,9 @@ function updateVisibility() {
         if(g1 && g2 && !g2.value) g2.value = g1.value;
         const g1end = document.getElementById('addr_t_retour_garage_heen');
         if(g1 && g1end && !g1end.value) g1end.value = g1.value;
+    }
+    if (typeof window.syncTerugSegmentDisplayFromLegacy === 'function') {
+        window.syncTerugSegmentDisplayFromLegacy();
     }
 }
 
@@ -361,6 +364,8 @@ function calculateRoute() {
              if(stopsRit2.length >= 2) runGoogleRoute(stopsRit2);
         } else {
              const s5 = document.getElementById('addr_t_vertrek_best').value; 
+             const s5mid = document.getElementById('addr_t_voorstaan_rit2')?.value.trim() || '';
+             const s5mid2 = document.getElementById('addr_t_garage_rit2')?.value.trim() || '';
              const s6 = document.getElementById('addr_t_retour_klant').value; 
              const s7 = document.getElementById('addr_t_retour_garage').value || s1; 
              const terugOpen = window.__calcTerugreisUserShow === true || terugreisSectionHasData();
@@ -369,6 +374,8 @@ function calculateRoute() {
              if(s4) stopsTerug.push({loc: s4, id: 'dummy_start_terug'}); 
              
              if(s5) stopsTerug.push({loc: s5, id: 'addr_t_vertrek_best'});
+             if(s5mid) stopsTerug.push({loc: s5mid, id: 'addr_t_voorstaan_rit2'});
+             if(s5mid2 && s5mid2 !== s7) stopsTerug.push({loc: s5mid2, id: 'addr_t_garage_rit2'});
              if(s6) stopsTerug.push({loc: s6, id: 'addr_t_retour_klant'});
              stopsTerug.push({loc: s7, id: 'addr_t_retour_garage'});
 
@@ -448,6 +455,9 @@ function runGoogleRoute(stopMap) {
             if (typeof window.syncHeenSegmentDisplayFromLegacy === 'function') {
                 window.syncHeenSegmentDisplayFromLegacy();
             }
+            if (typeof window.syncTerugSegmentDisplayFromLegacy === 'function') {
+                window.syncTerugSegmentDisplayFromLegacy();
+            }
             rekenen();
             calculateTussendagenKmAll();
         }
@@ -488,6 +498,9 @@ function runGoogleLeg(origin, destination, targetId) {
         updatePlanning();
         if (typeof window.syncHeenSegmentDisplayFromLegacy === 'function') {
             window.syncHeenSegmentDisplayFromLegacy();
+        }
+        if (typeof window.syncTerugSegmentDisplayFromLegacy === 'function') {
+            window.syncTerugSegmentDisplayFromLegacy();
         }
         rekenen();
         calculateTussendagenKmAll();
@@ -798,17 +811,40 @@ function updatePlanning() {
     else if (type === 'dagtocht' || type === 'schoolreis' || type === 'meerdaags' || type === 'buitenland' || type === 'trein') {
         const tVertrekTerug = document.getElementById('time_t_vertrek_best').value;
         if(tVertrekTerug) {
-            const dTerug = parseTime(tVertrekTerug);
-            const ritTerug = reisTijden['addr_t_retour_klant'] || 60;
-            const dKlantTerug = addMinutes(dTerug, ritTerug);
-            document.getElementById('time_t_retour_klant').value = formatTime(dKlantTerug);
+            let cursor = parseTime(tVertrekTerug);
+            const mid1 = document.getElementById('addr_t_voorstaan_rit2')?.value.trim() || '';
+            const mid2 = document.getElementById('addr_t_garage_rit2')?.value.trim() || '';
+            const klantStop = document.getElementById('addr_t_retour_klant')?.value.trim() || '';
+            const finalGarage = document.getElementById('addr_t_retour_garage')?.value.trim() || '';
+
+            if (mid1) {
+                cursor = addMinutes(cursor, reisTijden['addr_t_voorstaan_rit2'] || 60);
+                document.getElementById('time_t_voorstaan_rit2').value = formatTime(cursor);
+            } else {
+                document.getElementById('time_t_voorstaan_rit2').value = '';
+            }
+            if (mid2 && (!finalGarage || mid2 !== finalGarage)) {
+                cursor = addMinutes(cursor, reisTijden['addr_t_garage_rit2'] || 60);
+                document.getElementById('time_t_garage_rit2').value = formatTime(cursor);
+            } else {
+                document.getElementById('time_t_garage_rit2').value = '';
+            }
+            if (klantStop) {
+                cursor = addMinutes(cursor, reisTijden['addr_t_retour_klant'] || 60);
+                document.getElementById('time_t_retour_klant').value = formatTime(cursor);
+            } else {
+                document.getElementById('time_t_retour_klant').value = '';
+            }
             
             const ritGarage = reisTijden['addr_t_retour_garage'] || 30;
-            const dGarageTerug = addMinutes(dKlantTerug, ritGarage + BUFFER_NAZORG);
+            const dGarageTerug = addMinutes(cursor, ritGarage + BUFFER_NAZORG);
             document.getElementById('time_t_retour_garage').value = formatTime(dGarageTerug);
         }
     }
     if (typeof window.updateRouteV2HiddenInput === 'function') window.updateRouteV2HiddenInput();
+    if (typeof window.syncTerugSegmentDisplayFromLegacy === 'function') {
+        window.syncTerugSegmentDisplayFromLegacy();
+    }
 }
 
 /** Zone-tags → km_nl / km_de / km_ch / km_ov + km_tussen = som extra-rijdag-km */
