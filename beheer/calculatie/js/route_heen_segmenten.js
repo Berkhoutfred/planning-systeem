@@ -47,7 +47,7 @@
         return src;
     }
 
-    /** Eerste segment: links vertrek garage, rechts vertrek klant. */
+    /** Eerste segment: links vertrek garage, rechts aankomst bij klant. */
     function applyFirstRowKlantTijden(rows) {
         const r0 = rows[0];
         if (!r0 || !r0.classList.contains('heen-seg-first')) return;
@@ -56,7 +56,9 @@
         const tgLegacy = document.getElementById('time_t_garage');
         const tvLegacy = document.getElementById('time_t_vertrek_klant');
         const vt = tgLegacy && tgLegacy.value && tgLegacy.value.trim() ? tgLegacy.value.trim().substring(0, 5) : '';
-        const at = tvLegacy && tvLegacy.value && tvLegacy.value.trim() ? tvLegacy.value.trim().substring(0, 5) : '';
+        const at = tvLegacy && tvLegacy.value && tvLegacy.value.trim()
+            ? hmMinusMinutes(tvLegacy.value.trim().substring(0, 5), KLANT_VOORVERTREK_MIN)
+            : '';
         const naarEl = r0.querySelector('.heen-naar');
         const vlAddr = document.getElementById('addr_t_vertrek_klant');
         if (naarEl && vlAddr && vlAddr.value.trim() && !naarEl.value.trim()) {
@@ -75,15 +77,18 @@
             atEl.readOnly = true;
             atEl.classList.remove('heen-at--auto');
             atEl.dataset.timeEditable = '1';
-            atEl.value = at;
-            atEl.title = 'Vertrek bij klant';
+            if (atEl.dataset.manual !== '1') {
+                atEl.value = at;
+            }
+            atEl.title = 'Aankomst bij klant';
         }
     }
 
     /**
      * Zichtbare tijden volgen de legacy-ketting:
      * rij 1 vertrek = vertrek garage
-     * rij 1 aankomst = vertrek klant (leidend)
+     * rij 1 aankomst = aankomst / voorstaan bij klant
+     * rij 2 vertrek = vertrek klant (leidend)
      * volgende rijen lopen automatisch door tot de eindbestemming.
      */
     function applyAutoSegmentTijden(rows) {
@@ -98,11 +103,11 @@
         const tG2 = document.getElementById('time_t_grens2')?.value.trim() || '';
         const tBest = document.getElementById('time_t_aankomst_best')?.value.trim() || '';
 
-        let stopTijden = [tv, tBest];
+        let stopAankomsten = [tBest];
         if (activeRows.length === 3) {
-            stopTijden = [tv, tVs, tBest];
+            stopAankomsten = [tVs, tBest];
         } else if (activeRows.length >= 4) {
-            stopTijden = [tv, tVs, tG2, tBest];
+            stopAankomsten = [tVs, tG2, tBest];
         }
 
         for (let i = 1; i < activeRows.length; i++) {
@@ -110,17 +115,25 @@
             const atEl = activeRows[i].querySelector('.heen-at');
 
             if (vtEl) {
-                vtEl.readOnly = true;
-                vtEl.classList.add('heen-vt--auto');
-                delete vtEl.dataset.timeEditable;
-                vtEl.value = stopTijden[i - 1] || '';
-                vtEl.title = 'Automatisch vanaf vorige stop';
+                if (i === 1) {
+                    vtEl.readOnly = true;
+                    vtEl.classList.remove('heen-vt--auto');
+                    vtEl.dataset.timeEditable = '1';
+                    vtEl.value = tv;
+                    vtEl.title = 'Vertrek bij klant';
+                } else {
+                    vtEl.readOnly = true;
+                    vtEl.classList.add('heen-vt--auto');
+                    delete vtEl.dataset.timeEditable;
+                    vtEl.value = stopAankomsten[i - 2] || '';
+                    vtEl.title = 'Automatisch vanaf vorige stop';
+                }
             }
             if (atEl) {
                 atEl.readOnly = true;
                 atEl.classList.add('heen-at--auto');
                 delete atEl.dataset.timeEditable;
-                atEl.value = stopTijden[i] || '';
+                atEl.value = stopAankomsten[i - 1] || '';
                 atEl.title = 'Automatische aankomsttijd op deze stop';
             }
         }
@@ -269,8 +282,10 @@
         const tg = document.getElementById('time_t_garage');
         const tv = document.getElementById('time_t_vertrek_klant');
         const r0 = rows[0];
+        const r1 = rows[1];
         const vtEl = r0 ? r0.querySelector('.heen-vt') : null;
         const atEl = r0 ? r0.querySelector('.heen-at') : null;
+        const leadVtEl = r1 ? r1.querySelector('.heen-vt') : null;
         if (tg && vtEl) {
             if (seg[0].vt) {
                 tg.value = seg[0].vt;
@@ -283,15 +298,19 @@
                 vtEl.value = tg.value.trim().substring(0, 5);
             }
         }
-        if (tv && atEl) {
-            if (seg[0].at) {
-                tv.value = seg[0].at;
-                atEl.value = seg[0].at;
-            } else if (atEl.value && atEl.value.trim()) {
-                tv.value = atEl.value.trim().substring(0, 5);
+        if (tv && leadVtEl) {
+            if (seg[1] && seg[1].vt) {
+                tv.value = seg[1].vt;
+                leadVtEl.value = seg[1].vt;
+            } else if (leadVtEl.value && leadVtEl.value.trim()) {
+                tv.value = leadVtEl.value.trim().substring(0, 5);
             } else if (tv.value && tv.value.trim()) {
-                atEl.value = tv.value.trim().substring(0, 5);
+                leadVtEl.value = tv.value.trim().substring(0, 5);
             }
+        }
+        if (atEl && atEl.dataset.manual !== '1') {
+            const lead = tv && tv.value && tv.value.trim() ? tv.value.trim().substring(0, 5) : '';
+            atEl.value = lead ? hmMinusMinutes(lead, KLANT_VOORVERTREK_MIN) : '';
         }
         const chkG2 = document.getElementById('chk_grens2');
         const rowG2El = document.getElementById('row_grens2');
@@ -353,16 +372,22 @@
         });
         if (row.classList.contains('heen-seg-first')) {
             const vtEl = row.querySelector('.heen-vt');
+            const atEl = row.querySelector('.heen-at');
+            const markManual = function (el) {
+                if (!el) return;
+                if (el.value && el.value.trim() !== '') {
+                    el.dataset.manual = '1';
+                } else {
+                    delete el.dataset.manual;
+                }
+            };
             if (vtEl) {
-                const markManualGarage = function () {
-                    if (vtEl.value && vtEl.value.trim() !== '') {
-                        vtEl.dataset.manual = '1';
-                    } else {
-                        delete vtEl.dataset.manual;
-                    }
-                };
-                vtEl.addEventListener('input', markManualGarage);
-                vtEl.addEventListener('change', markManualGarage);
+                vtEl.addEventListener('input', function () { markManual(vtEl); });
+                vtEl.addEventListener('change', function () { markManual(vtEl); });
+            }
+            if (atEl) {
+                atEl.addEventListener('input', function () { markManual(atEl); });
+                atEl.addEventListener('change', function () { markManual(atEl); });
             }
         }
         row.querySelectorAll('.heen-vt, .heen-at').forEach(function (el) {
@@ -412,12 +437,14 @@
             tr.querySelector('.heen-van').placeholder = 'Garage';
             tr.querySelector('.heen-naar').placeholder = 'Klant (vertrek)';
             tr.querySelector('.heen-vt').title = 'Vertrek vanuit garage';
-            tr.querySelector('.heen-at').title = 'Vertrek bij klant';
+            tr.querySelector('.heen-at').title = 'Aankomst bij klant';
             const rm = tr.querySelector('.heen-rm');
             if (rm) {
                 rm.style.visibility = 'hidden';
                 rm.disabled = true;
             }
+        } else if (idx === 1) {
+            tr.querySelector('.heen-vt').title = 'Vertrek bij klant';
         }
 
         tb.appendChild(tr);

@@ -743,10 +743,12 @@ function showMinutes(h) {
                 ) {
                     activeTimeInput.dataset.manual = '1';
                 }
-                if (activeTimeInput.matches('tr.heen-seg-first .heen-vt')) {
+                if (activeTimeInput.matches('tr.heen-seg-first .heen-vt, tr.heen-seg-first .heen-at')) {
                     activeTimeInput.dataset.manual = '1';
-                    const garageLegacy = document.getElementById('time_t_garage');
-                    if (garageLegacy) garageLegacy.dataset.manual = '1';
+                    if (activeTimeInput.matches('tr.heen-seg-first .heen-vt')) {
+                        const garageLegacy = document.getElementById('time_t_garage');
+                        if (garageLegacy) garageLegacy.dataset.manual = '1';
+                    }
                 }
                 const segBody = document.getElementById('heen_segmenten_body');
                 if (

@@ -36,6 +36,8 @@ function route_heen_segments_from_regels(array $data): array
 
     $tGarage = substr((string) ($data['t_garage']['tijd'] ?? ''), 0, 5);
     $tVl = substr((string) ($data['t_vertrek_klant']['tijd'] ?? ''), 0, 5);
+    $tVs = substr((string) ($data['t_voorstaan']['tijd'] ?? ''), 0, 5);
+    $tG2 = substr((string) ($data['t_grens2']['tijd'] ?? ''), 0, 5);
     $tBest = substr((string) ($data['t_aankomst_best']['tijd'] ?? ''), 0, 5);
 
     $segs = [];
@@ -43,7 +45,7 @@ function route_heen_segments_from_regels(array $data): array
     if ($gGarage !== '' || $gVl !== '') {
         $segs[] = [
             'vertrektijd' => $tGarage,
-            'aankomst_tijd' => $tVl,
+            'aankomst_tijd' => $tVl !== '' ? route_heen_time_minus_minutes($tVl, 15) : '',
             'van' => $gGarage !== '' ? $gGarage : $gVl,
             'naar' => $gVl !== '' ? $gVl : $gGarage,
             'km' => $kmVl,
@@ -51,36 +53,36 @@ function route_heen_segments_from_regels(array $data): array
         ];
     }
 
-    if ($gVs !== '') {
+    if ($gBest !== '' || $gVs !== '' || $gG2 !== '') {
         $prevNaar = $gVl !== '' ? $gVl : $gGarage;
         $segs[] = [
-            'vertrektijd' => '',
-            'aankomst_tijd' => '',
+            'vertrektijd' => $tVl,
+            'aankomst_tijd' => $gVs !== '' ? $tVs : ($gG2 !== '' ? $tG2 : $tBest),
             'van' => $prevNaar,
-            'naar' => $gVs,
-            'km' => $kmVs,
-            'zone' => 'nl',
+            'naar' => $gVs !== '' ? $gVs : ($gG2 !== '' ? $gG2 : $gBest),
+            'km' => $gVs !== '' ? $kmVs : ($gG2 !== '' ? $kmG2 : $kmBest),
+            'zone' => $gG2 !== '' && $gVs === '' ? 'de' : 'nl',
         ];
     }
 
-    if ($gG2 !== '') {
-        $prevNaar = $gVs !== '' ? $gVs : ($gVl !== '' ? $gVl : '');
+    if ($gVs !== '' && ($gG2 !== '' || $gBest !== '')) {
+        $prevNaar = $gVs;
         $segs[] = [
-            'vertrektijd' => '',
-            'aankomst_tijd' => '',
-            'van' => $prevNaar !== '' ? $prevNaar : $gVs,
-            'naar' => $gG2,
-            'km' => $kmG2,
-            'zone' => 'de',
+            'vertrektijd' => $tVs,
+            'aankomst_tijd' => $gG2 !== '' ? $tG2 : $tBest,
+            'van' => $prevNaar,
+            'naar' => $gG2 !== '' ? $gG2 : $gBest,
+            'km' => $gG2 !== '' ? $kmG2 : $kmBest,
+            'zone' => $gG2 !== '' ? 'de' : 'nl',
         ];
     }
 
-    if ($gBest !== '') {
-        $prevNaar = $gG2 !== '' ? $gG2 : ($gVs !== '' ? $gVs : ($gVl !== '' ? $gVl : ''));
+    if ($gG2 !== '' && $gBest !== '') {
+        $prevNaar = $gG2;
         $segs[] = [
-            'vertrektijd' => '',
+            'vertrektijd' => $tG2,
             'aankomst_tijd' => $tBest,
-            'van' => $prevNaar !== '' ? $prevNaar : ($gVl !== '' ? $gVl : $gBest),
+            'van' => $prevNaar,
             'naar' => $gBest,
             'km' => $kmBest,
             'zone' => 'nl',
