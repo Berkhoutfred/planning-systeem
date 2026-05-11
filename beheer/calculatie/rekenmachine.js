@@ -442,13 +442,30 @@ function runGoogleRoute(stopMap) {
 }
 
 // --- TIJDMACHINE ---
+function getHeenVoorrijTijd() {
+    const segAt = document.querySelector('#heen_segmenten_body tr.heen-seg-first .heen-at');
+    if (segAt && segAt.value && segAt.value.trim()) {
+        return segAt.value.trim().substring(0, 5);
+    }
+    const tVertrek = document.getElementById('time_t_vertrek_klant').value;
+    if (!tVertrek) {
+        return '';
+    }
+    return formatTime(addMinutes(parseTime(tVertrek), -BUFFER_VOORSTAAN));
+}
+
 function updatePlanning() {
     const tVertrek = document.getElementById('time_t_vertrek_klant').value;
     if(tVertrek) {
         const dVertrek = parseTime(tVertrek);
+        const tVoorrij = getHeenVoorrijTijd();
+        const dVoorrij = tVoorrij ? parseTime(tVoorrij) : addMinutes(dVertrek, -BUFFER_VOORSTAAN);
         const ritGarageNaarVl = reisTijden['addr_t_vertrek_klant'] || 30;
-        const dGarage = addMinutes(dVertrek, -ritGarageNaarVl);
-        document.getElementById('time_t_garage').value = formatTime(dGarage);
+        const dGarage = addMinutes(dVoorrij, -ritGarageNaarVl);
+        const elGarage = document.getElementById('time_t_garage');
+        if (elGarage && elGarage.dataset.manual !== '1') {
+            elGarage.value = formatTime(dGarage);
+        }
 
         const ritVlNaarGrens = reisTijden['addr_t_voorstaan'] || 0;
         const chkG2El = document.getElementById('chk_grens2');
@@ -715,6 +732,15 @@ function showMinutes(h) {
         b.onclick = function () {
             if (activeTimeInput) {
                 activeTimeInput.value = time;
+                if (
+                    activeTimeInput.id === 'time_t_garage' ||
+                    activeTimeInput.id === 'time_t_garage_rit2'
+                ) {
+                    activeTimeInput.dataset.manual = '1';
+                }
+                if (activeTimeInput.matches('tr.heen-seg-first .heen-at')) {
+                    activeTimeInput.dataset.manual = '1';
+                }
                 const segBody = document.getElementById('heen_segmenten_body');
                 if (
                     segBody &&

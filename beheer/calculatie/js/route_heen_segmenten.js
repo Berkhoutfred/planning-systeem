@@ -33,6 +33,24 @@
         return formatHm(p - mins);
     }
 
+    function defaultFirstRowAankomst(vt) {
+        return vt ? hmMinusMinutes(vt, KLANT_VOORVERTREK_MIN) : '';
+    }
+
+    function getEffectiveRows(rows) {
+        const src = Array.isArray(rows) ? rows.slice() : getRows();
+        while (src.length > 2) {
+            const last = src[src.length - 1];
+            const naar = last.querySelector('.heen-naar')?.value.trim() || '';
+            const km = parseFloat(last.querySelector('.heen-km')?.value || '0') || 0;
+            if (naar !== '' || km > 0) {
+                break;
+            }
+            src.pop();
+        }
+        return src;
+    }
+
     /** Eerste segment: aankomst-kolom = vertrek klant − 15 min (readonly). */
     function applyFirstRowKlantTijden(rows) {
         const r0 = rows[0];
@@ -58,10 +76,14 @@
             vtEl.classList.remove('heen-vt--auto');
         }
         if (atEl) {
-            atEl.readOnly = true;
-            atEl.classList.add('heen-at--auto');
-            atEl.value = vt ? hmMinusMinutes(vt, KLANT_VOORVERTREK_MIN) : '';
-            atEl.title = 'Aankomsttijd bij klant (= vertrek − ' + KLANT_VOORVERTREK_MIN + ' min)';
+            const defAt = defaultFirstRowAankomst(vt);
+            const manualAt = atEl.dataset.manual === '1' && atEl.value.trim() !== '';
+            atEl.readOnly = false;
+            atEl.classList.remove('heen-at--auto');
+            if (!manualAt) {
+                atEl.value = defAt;
+            }
+            atEl.title = 'Aankomst / voorrijtijd bij klant';
         }
     }
 
@@ -73,8 +95,10 @@
      */
     function applyAutoSegmentTijden(rows) {
         if (!rows || rows.length < 2) return;
+        const activeRows = getEffectiveRows(rows);
+        if (activeRows.length < 2) return;
 
-        applyFirstRowKlantTijden(rows);
+        applyFirstRowKlantTijden(activeRows);
 
         const tv = document.getElementById('time_t_vertrek_klant')?.value.trim() || '';
         const tVs = document.getElementById('time_t_voorstaan')?.value.trim() || '';
@@ -82,15 +106,15 @@
         const tBest = document.getElementById('time_t_aankomst_best')?.value.trim() || '';
 
         let stopTijden = [tv, tBest];
-        if (rows.length === 3) {
+        if (activeRows.length === 3) {
             stopTijden = [tv, tVs, tBest];
-        } else if (rows.length >= 4) {
+        } else if (activeRows.length >= 4) {
             stopTijden = [tv, tVs, tG2, tBest];
         }
 
-        for (let i = 1; i < rows.length; i++) {
-            const vtEl = rows[i].querySelector('.heen-vt');
-            const atEl = rows[i].querySelector('.heen-at');
+        for (let i = 1; i < activeRows.length; i++) {
+            const vtEl = activeRows[i].querySelector('.heen-vt');
+            const atEl = activeRows[i].querySelector('.heen-at');
 
             if (vtEl) {
                 vtEl.readOnly = true;
@@ -103,6 +127,23 @@
                 atEl.classList.add('heen-at--auto');
                 atEl.value = stopTijden[i] || '';
                 atEl.title = 'Automatische aankomsttijd op deze stop';
+            }
+        }
+
+        for (let i = activeRows.length; i < rows.length; i++) {
+            const vtEl = rows[i].querySelector('.heen-vt');
+            const atEl = rows[i].querySelector('.heen-at');
+            if (vtEl) {
+                vtEl.value = '';
+                vtEl.readOnly = true;
+                vtEl.classList.add('heen-vt--auto');
+                vtEl.title = 'Vul eerst een bestemming in';
+            }
+            if (atEl) {
+                atEl.value = '';
+                atEl.readOnly = true;
+                atEl.classList.add('heen-at--auto');
+                atEl.title = 'Vul eerst een bestemming in';
             }
         }
     }
@@ -192,7 +233,8 @@
      */
     function syncLegacyFromSegments() {
         chainVanNaar();
-        const rows = getRows();
+        const allRows = getRows();
+        const rows = getEffectiveRows(allRows);
         const n = rows.length;
         if (n < 2) return;
 
@@ -286,7 +328,7 @@
             if (tb && last.at) tb.value = last.at;
         }
 
-        applyAutoSegmentTijden(rows);
+        applyAutoSegmentTijden(allRows);
 
         if (typeof window.calculateRoute === 'function') window.calculateRoute();
         if (typeof window.rekenen === 'function') window.rekenen();
@@ -298,6 +340,25 @@
             el.addEventListener('input', syncLegacyFromSegments);
             el.addEventListener('change', syncLegacyFromSegments);
         });
+        if (row.classList.contains('heen-seg-first')) {
+            const atEl = row.querySelector('.heen-at');
+            const vtEl = row.querySelector('.heen-vt');
+            const syncManualState = function () {
+                if (!atEl) return;
+                const vt = vtEl && vtEl.value ? vtEl.value.trim().substring(0, 5) : '';
+                const defAt = defaultFirstRowAankomst(vt);
+                const cur = atEl.value ? atEl.value.trim().substring(0, 5) : '';
+                if (cur !== '' && defAt !== '' && cur !== defAt) {
+                    atEl.dataset.manual = '1';
+                } else {
+                    delete atEl.dataset.manual;
+                }
+            };
+            if (atEl) {
+                atEl.addEventListener('input', syncManualState);
+                atEl.addEventListener('change', syncManualState);
+            }
+        }
         row.querySelectorAll('.heen-van, .heen-naar').forEach(function (el) {
             el.addEventListener('blur', chainVanNaar);
         });
