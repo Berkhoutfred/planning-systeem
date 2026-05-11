@@ -316,6 +316,7 @@ function calculateRoute() {
     const sGrens2 = document.getElementById('addr_t_grens2') ? document.getElementById('addr_t_grens2').value.trim() : '';
     const useGrens2 = chkG2 && chkG2.checked && sGrens2 !== '';
     const s4 = document.getElementById('addr_t_aankomst_best').value;
+    const lastHeenStop = s4 || (useGrens2 ? sGrens2 : '') || sGrens || sVl;
     const sRetKlantHeen = document.getElementById('addr_t_retour_klant')?.value.trim() || '';
     const sEnd1 = document.getElementById('addr_t_retour_garage_heen')?.value.trim() || '';
 
@@ -330,7 +331,7 @@ function calculateRoute() {
         if (sRetKlantHeen) stopsHeen.push({loc: sRetKlantHeen, id: 'addr_t_retour_klant'});
         if (sEnd1) stopsHeen.push({loc: sEnd1, id: 'addr_t_retour_garage_heen'});
     } else if (route1ReturnMode === 'rg') {
-        if ((s4 || sRetKlantHeen) && sEnd1) stopsHeen.push({loc: sEnd1, id: 'addr_t_retour_garage_heen'});
+        if (lastHeenStop && sEnd1) stopsHeen.push({loc: sEnd1, id: 'addr_t_retour_garage_heen'});
     }
     
     if(stopsHeen.length >= 2) runGoogleRoute(stopsHeen);
@@ -872,6 +873,12 @@ function rekenen() {
             uren = eersteDag + tussenliggendeDagen * 8 + laatsteDag;
         }
     }
+    if (typeof window.routePlannerGetHoursSummary === 'function') {
+        const plannerSummary = window.routePlannerGetHoursSummary(type);
+        if (plannerSummary && typeof plannerSummary.hours === 'number') {
+            uren = plannerSummary.hours;
+        }
+    }
     document.getElementById('total_uren').value = uren.toFixed(2);
     
     const LOON = (typeof SERVER_DATA !== 'undefined') ? SERVER_DATA.uurloon : 35.00;
@@ -976,6 +983,16 @@ function showMinutes(h) {
                 }
                 if (activeTimeInput.matches('tr.heen-seg-first .heen-at')) {
                     activeTimeInput.dataset.manual = '1';
+                }
+                if (
+                    activeTimeInput.matches('input.planner-vt') &&
+                    typeof window.routePlannerOnTimePicked === 'function' &&
+                    window.routePlannerOnTimePicked(activeTimeInput)
+                ) {
+                    updatePlanning();
+                    rekenen();
+                    closeTimeModal();
+                    return;
                 }
                 const segBody = document.getElementById('heen_segmenten_body');
                 if (

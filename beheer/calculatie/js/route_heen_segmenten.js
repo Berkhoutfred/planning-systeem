@@ -97,6 +97,170 @@
         return sel ? (sel.value || 'nl') : 'nl';
     }
 
+    function addIsoDays(dateStr, days) {
+        const value = String(dateStr || '').trim();
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return '';
+        const base = new Date(value + 'T00:00:00');
+        if (Number.isNaN(base.getTime())) return value;
+        base.setDate(base.getDate() + days);
+        const year = base.getFullYear();
+        const month = String(base.getMonth() + 1).padStart(2, '0');
+        const day = String(base.getDate()).padStart(2, '0');
+        return year + '-' + month + '-' + day;
+    }
+
+    function assignTimeDayOffsets(times) {
+        const offsets = [];
+        let previousMinutes = null;
+        let dayOffset = 0;
+        times.forEach(function (time) {
+            const minutes = parseHm(time || '');
+            if (minutes !== null && previousMinutes !== null && minutes < (previousMinutes - 180)) {
+                dayOffset += 1;
+            }
+            offsets.push(minutes === null ? null : dayOffset);
+            if (minutes !== null) {
+                previousMinutes = minutes;
+            }
+        });
+        return offsets;
+    }
+
+    function enrichRoute1ForPlanner(route1Payload) {
+        const events = [];
+        const segments = (route1Payload.segments || []).map(function (segment, index) {
+            const next = Object.assign({}, segment, { seq: index + 1 });
+            if (next.depart_at) events.push({ segmentIndex: index, key: 'depart_day_offset', time: next.depart_at });
+            if (next.arrive_at) events.push({ segmentIndex: index, key: 'arrive_day_offset', time: next.arrive_at });
+            return next;
+        });
+        const offsets = assignTimeDayOffsets(events.map(function (event) { return event.time; }));
+        let startOffset = 0;
+        let endOffset = 0;
+        let seenStart = false;
+        events.forEach(function (event, idx) {
+            const offset = offsets[idx];
+            if (offset === null) return;
+            segments[event.segmentIndex][event.key] = offset;
+            if (!seenStart) {
+                startOffset = offset;
+                seenStart = true;
+            }
+            if (offset > endOffset) endOffset = offset;
+        });
+        return {
+            route_index: 1,
+            code: 'R1',
+            label: route1Payload.label || 'Route 1',
+            mode: 'segment_table',
+            enabled: segments.length > 0,
+            return_mode: route1Payload.return_mode || '',
+            start_day_offset: startOffset,
+            end_day_offset: endOffset,
+            segments: segments
+        };
+    }
+
+    function enrichRoute2ForPlanner(route2Payload) {
+        const segments = (route2Payload.segments || []).map(function (segment) {
+            return Object.assign({}, segment);
+        });
+        const offsets = assignTimeDayOffsets(segments.map(function (segment) { return segment.time || ''; }));
+        let startOffset = 0;
+        let endOffset = 0;
+        let seenStart = false;
+        segments.forEach(function (segment, idx) {
+            const offset = offsets[idx];
+            if (offset === null) return;
+            segment.time_day_offset = offset;
+            if (!seenStart) {
+                startOffset = offset;
+                seenStart = true;
+            }
+            if (offset > endOffset) endOffset = offset;
+        });
+        return {
+            route_index: 2,
+            code: 'R2',
+            label: 'Route 2',
+            mode: 'legacy_route',
+            enabled: !!route2Payload.enabled || segments.length > 0,
+            start_day_offset: startOffset,
+            end_day_offset: endOffset,
+            segments: segments
+        };
+    }
+
+    function buildPlannerDays(route1Payload, route2Payload, tussPayload, startDate) {
+        const days = [];
+        const firstDay = {
+            seq: 1,
+            day_index: 0,
+            date: startDate || '',
+            kind: 'travel',
+            label: 'Dag 1',
+            routes: [],
+            events: []
+        };
+        const route1 = enrichRoute1ForPlanner(route1Payload);
+        const route2 = enrichRoute2ForPlanner(route2Payload);
+        if (route1.segments.length > 0) firstDay.routes.push(route1);
+        if (route2.enabled || route2.segments.length > 0) firstDay.routes.push(route2);
+        if (firstDay.date || firstDay.routes.length > 0) {
+            days.push(firstDay);
+        }
+
+        const grouped = {};
+        (tussPayload.items || []).forEach(function (item, idx) {
+            const date = item.datum || addIsoDays(startDate, idx + 1);
+            if (!grouped[date]) grouped[date] = [];
+            grouped[date].push({
+                code: 'XD',
+                label: 'Extra dag',
+                date: date,
+                time: item.tijd || '',
+                from: item.van || '',
+                to: item.naar || '',
+                km: item.km || 0,
+                zone: item.zone || 'nl'
+            });
+        });
+
+        Object.keys(grouped).sort().forEach(function (date) {
+            days.push({
+                seq: days.length + 1,
+                day_index: days.length,
+                date: date,
+                kind: 'extra_drive',
+                label: 'Extra dag',
+                routes: [],
+                events: grouped[date]
+            });
+        });
+
+        return days;
+    }
+
+    function resolvePlannerEndDate(days, fallbackEndDate) {
+        let endDate = fallbackEndDate || '';
+        days.forEach(function (day) {
+            if (!day || !day.date) return;
+            if (!endDate || day.date > endDate) endDate = day.date;
+            (day.routes || []).forEach(function (route) {
+                const candidate = addIsoDays(day.date, route.end_day_offset || 0);
+                if (candidate && (!endDate || candidate > endDate)) {
+                    endDate = candidate;
+                }
+            });
+            (day.events || []).forEach(function (event) {
+                if (event.date && (!endDate || event.date > endDate)) {
+                    endDate = event.date;
+                }
+            });
+        });
+        return endDate;
+    }
+
     function buildRoute1SegmentsPayload() {
         const parts = getRowPartitions(getRows());
         const activeRows = parts.activeRows;
@@ -177,18 +341,37 @@
 
     function buildRouteV2Payload() {
         const startDate = readTrimmedValue('rit_datum');
-        const endDate = readTrimmedValue('rit_datum_eind') || startDate;
+        const route1Payload = {
+            label: 'Route 1',
+            return_mode: isRkChipActive() ? 'rk' : (isRgChipActive() ? 'rg' : ''),
+            segments: buildRoute1SegmentsPayload()
+        };
+        const route2Payload = buildRoute2Payload();
+        const tussPayload = buildTussendagenPayload();
+        const plannerFallbackDays = buildPlannerDays(route1Payload, route2Payload, tussPayload, startDate);
+        const plannerData = typeof window.routePlannerBuildData === 'function'
+            ? window.routePlannerBuildData({
+                startDate: startDate,
+                fallbackEndDate: readTrimmedValue('rit_datum_eind') || startDate,
+                route1: route1Payload,
+                route2: route2Payload,
+                tussendagen: tussPayload,
+                fallbackDays: plannerFallbackDays
+            })
+            : null;
+        const plannerDays = plannerData && Array.isArray(plannerData.days) ? plannerData.days : plannerFallbackDays;
+        const finalTussPayload = plannerData && plannerData.tussendagen ? plannerData.tussendagen : tussPayload;
+        const endDate = plannerData && plannerData.endDate
+            ? plannerData.endDate
+            : resolvePlannerEndDate(plannerDays, readTrimmedValue('rit_datum_eind') || startDate);
         return {
-            schema: 1,
+            schema: 2,
             rittype: ritType(),
             dates: { start: startDate, end: endDate },
-            route1: {
-                label: 'Route 1',
-                return_mode: isRkChipActive() ? 'rk' : (isRgChipActive() ? 'rg' : ''),
-                segments: buildRoute1SegmentsPayload()
-            },
-            route2: buildRoute2Payload(),
-            tussendagen: buildTussendagenPayload(),
+            days: plannerDays,
+            route1: route1Payload,
+            route2: route2Payload,
+            tussendagen: finalTussPayload,
             buitenland: buildBuitenlandPayload()
         };
     }
@@ -197,7 +380,15 @@
         const hidden = document.getElementById('route_v2_json');
         if (!hidden) return;
         try {
-            hidden.value = JSON.stringify(buildRouteV2Payload());
+            const payload = buildRouteV2Payload();
+            hidden.value = JSON.stringify(payload);
+            const endEl = document.getElementById('rit_datum_eind');
+            if (endEl && payload && payload.dates && payload.dates.end && endEl.value !== payload.dates.end) {
+                endEl.value = payload.dates.end;
+                if (typeof window.rebuildDagprogrammaBL === 'function') {
+                    window.rebuildDagprogrammaBL();
+                }
+            }
         } catch (e) {
             hidden.value = '';
         }
@@ -248,12 +439,82 @@
      * volgende rijen lopen automatisch door tot de eindbestemming.
      */
     function applyAutoSegmentTijden(rows) {
-        if (!rows || rows.length < 2) return;
+        if (!rows || rows.length < 1) return;
         const parts = getRowPartitions(rows);
         const activeRows = parts.activeRows;
         const coreRows = parts.coreRows;
         const returnRows = parts.returnRows;
-        if (coreRows.length < 2) return;
+        if (coreRows.length < 1) return;
+
+        if (coreRows.length === 1) {
+            const row0 = coreRows[0];
+            const row0Vt = row0 ? row0.querySelector('.heen-vt') : null;
+            const row0At = row0 ? row0.querySelector('.heen-at') : null;
+            const tBest = document.getElementById('time_t_aankomst_best')?.value.trim() || '';
+            const tRetKlant = document.getElementById('time_t_retour_klant')?.value.trim() || '';
+            const tRetGarage = document.getElementById('time_t_retour_garage_heen')?.value.trim() || '';
+
+            if (row0Vt) {
+                row0Vt.readOnly = true;
+                row0Vt.classList.remove('heen-vt--auto');
+                row0Vt.dataset.timeEditable = '1';
+                row0Vt.title = 'Vertrek vanuit garage';
+            }
+            if (row0At) {
+                row0At.readOnly = true;
+                row0At.classList.remove('heen-at--auto');
+                row0At.dataset.timeEditable = '1';
+                if (row0At.dataset.manual !== '1') {
+                    row0At.value = tBest;
+                }
+                row0At.title = 'Aankomst bij klant';
+            }
+
+            let previousArrival = row0At ? row0At.value.trim() : '';
+            returnRows.forEach(function (row) {
+                const vtEl = row.querySelector('.heen-vt');
+                const atEl = row.querySelector('.heen-at');
+                const kind = row.dataset.returnKind || '';
+                const arrival = kind === 'rk-klant' ? tRetKlant : tRetGarage;
+                if (vtEl) {
+                    vtEl.readOnly = true;
+                    vtEl.classList.remove('heen-vt--auto');
+                    vtEl.dataset.timeEditable = '1';
+                    if (vtEl.dataset.manual !== '1') {
+                        vtEl.value = previousArrival || '';
+                    }
+                    vtEl.title = 'Vertrek voor retourregel';
+                }
+                if (atEl) {
+                    atEl.readOnly = true;
+                    atEl.classList.add('heen-at--auto');
+                    delete atEl.dataset.timeEditable;
+                    atEl.value = arrival || '';
+                    atEl.title = 'Automatische aankomsttijd voor retourregel';
+                }
+                previousArrival = arrival || previousArrival;
+            });
+
+            for (let i = activeRows.length; i < rows.length; i++) {
+                const vtEl = rows[i].querySelector('.heen-vt');
+                const atEl = rows[i].querySelector('.heen-at');
+                if (vtEl) {
+                    vtEl.value = '';
+                    vtEl.readOnly = true;
+                    vtEl.classList.remove('heen-vt--auto');
+                    vtEl.dataset.timeEditable = '1';
+                    vtEl.title = 'Vul eerst een bestemming in';
+                }
+                if (atEl) {
+                    atEl.value = '';
+                    atEl.readOnly = true;
+                    atEl.classList.add('heen-at--auto');
+                    delete atEl.dataset.timeEditable;
+                    atEl.title = 'Vul eerst een bestemming in';
+                }
+            }
+            return;
+        }
 
         applyFirstRowKlantTijden(activeRows);
 
@@ -352,12 +613,23 @@
             .replace(/\s+/g, ' ');
     }
 
+    const DEFAULT_GARAGE_ADDRESS = 'Industrieweg 95a, Zutphen';
+    const LEGACY_GARAGE_ADDRESS = 'Industrieweg 95, Zutphen';
+
+    function normalizeGarageAddress(s) {
+        const value = normalizeAddr(s);
+        if (!value) return '';
+        return value.toLowerCase() === LEGACY_GARAGE_ADDRESS.toLowerCase()
+            ? DEFAULT_GARAGE_ADDRESS
+            : value;
+    }
+
     function getGarageAddress(rows) {
         const list = Array.isArray(rows) ? rows : getRows();
         const row0 = list[0];
-        const fromRow = row0 ? normalizeAddr(row0.querySelector('.heen-van')?.value || '') : '';
+        const fromRow = row0 ? normalizeGarageAddress(row0.querySelector('.heen-van')?.value || '') : '';
         if (fromRow) return fromRow;
-        return normalizeAddr(document.getElementById('addr_t_garage')?.value || '');
+        return normalizeGarageAddress(document.getElementById('addr_t_garage')?.value || '');
     }
 
     function getKlantAddress(rows) {
@@ -400,14 +672,16 @@
         const lastNaar = normalizeAddr(lastCore?.querySelector('.heen-naar')?.value || '');
         const garage = getGarageAddress(beforeRows);
         const klant = getKlantAddress(beforeRows);
-        if (coreRows.length < 2 || !lastNaar || !garage) return;
+        if (!lastNaar || !garage) return;
 
         removeReturnRows();
 
         if (mode === 'rg') {
+            if (coreRows.length < 1) return;
             if (activeCount + 1 > MAX_SEG) return;
             addRow({ van: lastNaar, naar: garage, km: '0', zone: 'nl', return_kind: 'rg' });
         } else if (mode === 'rk') {
+            if (coreRows.length < 2) return;
             if (!klant) return;
             if (activeCount + 2 > MAX_SEG) return;
             addRow({ van: lastNaar, naar: klant, km: '0', zone: 'nl', return_kind: 'rk-klant' });
@@ -470,7 +744,13 @@
         const coreRows = parts.coreRows;
         const returnRows = parts.returnRows;
         const n = coreRows.length;
-        if (n < 2) return;
+        if (n < 1) return;
+
+        const firstVanEl = allRows[0] ? allRows[0].querySelector('.heen-van') : null;
+        const normalizedGarage = getGarageAddress(allRows);
+        if (firstVanEl && normalizedGarage && normalizeAddr(firstVanEl.value) !== normalizedGarage) {
+            firstVanEl.value = normalizedGarage;
+        }
 
         const seg = coreRows.map(function (row) {
             return {
@@ -511,7 +791,7 @@
             if (el) el.value = v;
         };
 
-        setAddr('addr_t_garage', seg[0].van);
+        setAddr('addr_t_garage', normalizeGarageAddress(seg[0].van));
         setAddr('addr_t_vertrek_klant', seg[0].naar);
         setKm('t_vertrek_klant', seg[0].km);
         setZoneSelectInRow('row_vertrek_klant', seg[0].zone);
@@ -519,7 +799,7 @@
         const tg = document.getElementById('time_t_garage');
         const tv = document.getElementById('time_t_vertrek_klant');
         const r0 = rows[0];
-        const r1 = rows[1];
+        const r1 = rows[1] && !rows[1].dataset.returnKind ? rows[1] : null;
         const vtEl = r0 ? r0.querySelector('.heen-vt') : null;
         const atEl = r0 ? r0.querySelector('.heen-at') : null;
         const leadVtEl = r1 ? r1.querySelector('.heen-vt') : null;
@@ -544,8 +824,12 @@
             } else if (tv.value && tv.value.trim()) {
                 leadVtEl.value = tv.value.trim().substring(0, 5);
             }
+        } else if (tv) {
+            tv.value = '';
         }
-        if (atEl && atEl.dataset.manual !== '1') {
+        if (n === 1 && atEl && atEl.dataset.manual !== '1') {
+            atEl.value = seg[0].at || '';
+        } else if (atEl && atEl.dataset.manual !== '1') {
             const lead = tv && tv.value && tv.value.trim() ? tv.value.trim().substring(0, 5) : '';
             atEl.value = lead ? hmMinusMinutes(lead, KLANT_VOORVERTREK_MIN) : '';
         }
@@ -561,7 +845,20 @@
         setZoneSelectInRow('row_retour_garage_heen', 'nl');
         setTime('time_t_retour_garage_heen', '');
 
-        if (n === 2) {
+        if (n === 1) {
+            setAddr('addr_t_voorstaan', '');
+            setKm('t_voorstaan', '0');
+            setTime('time_t_voorstaan', '');
+            if (chkG2) chkG2.checked = false;
+            setAddr('addr_t_grens2', '');
+            setKm('t_grens2', '0');
+            setTime('time_t_grens2', '');
+            if (rowG2El) rowG2El.style.display = 'none';
+            setAddr('addr_t_aankomst_best', '');
+            setKm('t_aankomst_best', '0');
+            setZoneSelectInRow('row_aankomst_best', 'nl');
+            setTime('time_t_aankomst_best', seg[0].at || '');
+        } else if (n === 2) {
             setAddr('addr_t_voorstaan', '');
             setKm('t_voorstaan', '0');
             if (chkG2) chkG2.checked = false;
@@ -726,8 +1023,8 @@
             const remainingCore = getRows().filter(function (row) {
                 return row !== tr && !row.dataset.returnKind;
             }).length;
-            if (!tr.dataset.returnKind && remainingCore < 2) return;
-            if (tb.querySelectorAll('tr.heen-seg-row').length <= 2) return;
+            if (!tr.dataset.returnKind && remainingCore < 1) return;
+            if (tb.querySelectorAll('tr.heen-seg-row').length <= 1) return;
             tr.remove();
             syncLegacyFromSegments();
         });
@@ -756,7 +1053,7 @@
                 addRow({ van: '', naar: '', km: '0', zone: 'nl' });
             }
         } else {
-            addRow({ van: 'Industrieweg 95, Zutphen', naar: '', km: '0', zone: 'nl', vertrektijd: '' });
+            addRow({ van: DEFAULT_GARAGE_ADDRESS, naar: '', km: '0', zone: 'nl', vertrektijd: '' });
             addRow({ van: '', naar: '', km: '0', zone: 'nl' });
         }
         chainVanNaar();
@@ -871,7 +1168,7 @@
         const coreRows = parts.coreRows;
         const returnRows = parts.returnRows;
         const n = coreRows.length;
-        if (n < 2) return;
+        if (n < 1) return;
 
         const legacyKm = function (key) {
             const el = document.querySelector('input[name="km[' + key + ']"]');
