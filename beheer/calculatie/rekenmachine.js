@@ -657,8 +657,8 @@ function syncHeenSegmentPlanning() {
 
     let previousArrival = null;
     let finalArrival = null;
-    let stop1Vertrek = '';
-    let stop2Vertrek = '';
+    let stop1Aankomst = '';
+    let stop2Aankomst = '';
     let retourKlantArrival = '';
     let garageArrival = '';
 
@@ -705,8 +705,8 @@ function syncHeenSegmentPlanning() {
         previousArrival = dAankomst;
         if (i < coreRows.length) {
             finalArrival = dAankomst;
-            if (i === 2) stop1Vertrek = vertrekTime;
-            if (i === 3) stop2Vertrek = vertrekTime;
+            if (i === 1) stop1Aankomst = formatTime(dAankomst);
+            if (i === 2 && coreRows.length >= 4) stop2Aankomst = formatTime(dAankomst);
         } else if (kind === 'rk-klant') {
             retourKlantArrival = formatTime(dAankomst);
         } else if (kind === 'rg' || kind === 'rk-garage') {
@@ -714,8 +714,8 @@ function syncHeenSegmentPlanning() {
         }
     }
 
-    if (legacyVoorstaan) legacyVoorstaan.value = stop1Vertrek;
-    if (legacyGrens2) legacyGrens2.value = stop2Vertrek;
+    if (legacyVoorstaan) legacyVoorstaan.value = stop1Aankomst;
+    if (legacyGrens2) legacyGrens2.value = stop2Aankomst;
     if (legacyBest) legacyBest.value = finalArrival ? formatTime(finalArrival) : '';
     if (legacyRetourKlant) legacyRetourKlant.value = retourKlantArrival;
     if (legacyGarageEnd) legacyGarageEnd.value = garageArrival;
