@@ -11,6 +11,6 @@ declare(strict_types=1);
  * @return array{nr:int,time:string}
  */
 return [
-    'nr' => 10,
-    'time' => '20:15',
+    'nr' => 11,
+    'time' => '21:00',
 ];

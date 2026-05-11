@@ -53,15 +53,57 @@
         if (naarEl && vlAddr && vlAddr.value.trim() && !naarEl.value.trim()) {
             naarEl.value = vlAddr.value.trim();
         }
-        const addrMirror = r0.querySelector('.heen-at-addr');
-        if (addrMirror && naarEl) {
-            addrMirror.value = naarEl.value.trim();
+        if (vtEl) {
+            vtEl.readOnly = false;
+            vtEl.classList.remove('heen-vt--auto');
         }
         if (atEl) {
             atEl.readOnly = true;
             atEl.classList.add('heen-at--auto');
             atEl.value = vt ? hmMinusMinutes(vt, KLANT_VOORVERTREK_MIN) : '';
             atEl.title = 'Aankomsttijd bij klant (= vertrek − ' + KLANT_VOORVERTREK_MIN + ' min)';
+        }
+    }
+
+    /**
+     * Zichtbare tijden volgen de legacy-ketting:
+     * rij 1 vertrek = handmatig "vertrek klant"
+     * rij 1 aankomst = voorstaan bij klant
+     * volgende rijen lopen automatisch door tot de eindbestemming.
+     */
+    function applyAutoSegmentTijden(rows) {
+        if (!rows || rows.length < 2) return;
+
+        applyFirstRowKlantTijden(rows);
+
+        const tv = document.getElementById('time_t_vertrek_klant')?.value.trim() || '';
+        const tVs = document.getElementById('time_t_voorstaan')?.value.trim() || '';
+        const tG2 = document.getElementById('time_t_grens2')?.value.trim() || '';
+        const tBest = document.getElementById('time_t_aankomst_best')?.value.trim() || '';
+
+        let stopTijden = [tv, tBest];
+        if (rows.length === 3) {
+            stopTijden = [tv, tVs, tBest];
+        } else if (rows.length >= 4) {
+            stopTijden = [tv, tVs, tG2, tBest];
+        }
+
+        for (let i = 1; i < rows.length; i++) {
+            const vtEl = rows[i].querySelector('.heen-vt');
+            const atEl = rows[i].querySelector('.heen-at');
+
+            if (vtEl) {
+                vtEl.readOnly = true;
+                vtEl.classList.add('heen-vt--auto');
+                vtEl.value = stopTijden[i - 1] || '';
+                vtEl.title = 'Automatisch vanaf vorige stop';
+            }
+            if (atEl) {
+                atEl.readOnly = true;
+                atEl.classList.add('heen-at--auto');
+                atEl.value = stopTijden[i] || '';
+                atEl.title = 'Automatische aankomsttijd op deze stop';
+            }
         }
     }
 
@@ -198,8 +240,6 @@
                 vtEl.value = tv.value.trim().substring(0, 5);
             }
         }
-        applyFirstRowKlantTijden(rows);
-
         const chkG2 = document.getElementById('chk_grens2');
         const rowG2El = document.getElementById('row_grens2');
 
@@ -246,6 +286,8 @@
             if (tb && last.at) tb.value = last.at;
         }
 
+        applyAutoSegmentTijden(rows);
+
         if (typeof window.calculateRoute === 'function') window.calculateRoute();
         if (typeof window.rekenen === 'function') window.rekenen();
         updateHeenOptChipStates();
@@ -271,13 +313,7 @@
         const tr = document.createElement('tr');
         tr.className = 'heen-seg-row' + (idx === 0 ? ' heen-seg-first' : '');
         const zoneDisplay = showZoneColumn() ? '' : 'display:none';
-        const tdAank =
-            idx === 0
-                ? '<td class="heen-td-t heen-td-aankomst-split">' +
-                  '<input type="text" class="form-control heen-at-addr" readonly tabindex="-1" placeholder="Klant (aankomst)" title="Zelfde adres als Naar op deze rij" />' +
-                  '<input type="time" class="form-control heen-at reken-trigger" step="60" title="Aankomsttijd (vertrek − 15 min)" />' +
-                  '</td>'
-                : '<td class="heen-td-t"><input type="time" class="form-control heen-at reken-trigger" step="60" title="Aankomst bij Naar"></td>';
+        const tdAank = '<td class="heen-td-t"><input type="time" class="form-control heen-at reken-trigger" step="60" title="Aankomst bij Naar"></td>';
         tr.innerHTML =
             '<td class="heen-td-t"><input type="time" class="form-control heen-vt reken-trigger" step="60" title="Vertrek bij klant"></td>' +
             '<td><input type="text" class="form-control google-autocomplete heen-van reken-trigger" placeholder="Van" autocomplete="off"></td>' +
@@ -481,6 +517,8 @@
             setRowKm(2, legacyKm('t_grens2'));
             setRowKm(n - 1, legacyKm('t_aankomst_best'));
         }
+
+        applyAutoSegmentTijden(rows);
     };
 
     /** Na klant/adres uit DB: verborgen velden → eerste segmenten bijwerken */
