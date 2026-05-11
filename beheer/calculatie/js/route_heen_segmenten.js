@@ -579,6 +579,15 @@
         return t === 'meerdaags' || t === 'buitenland';
     }
 
+    function getBootReturnMode() {
+        const payload = window.ROUTE_V2_BOOT;
+        if (!payload || typeof payload !== 'object') return '';
+        const mode = payload.route1 && typeof payload.route1 === 'object'
+            ? String(payload.route1.return_mode || '').trim().toLowerCase()
+            : '';
+        return mode === 'rg' || mode === 'rk' ? mode : '';
+    }
+
     function syncZoneColumnVisibility() {
         const on = showZoneColumn();
         document.querySelectorAll('.heen-zone-col').forEach(function (c) {
@@ -1098,10 +1107,15 @@
         if (!tb) return;
         tb.innerHTML = '';
         if (rows && rows.length >= 1) {
-            rows.forEach(function (r) {
+            const bootReturnMode = getBootReturnMode();
+            const filteredRows = rows.filter(function (r) {
+                if (!r || !r.return_kind) return true;
+                return bootReturnMode === 'rg' || bootReturnMode === 'rk';
+            });
+            filteredRows.forEach(function (r) {
                 addRow(r);
             });
-            let coreCount = rows.filter(function (r) {
+            let coreCount = filteredRows.filter(function (r) {
                 return !r || !r.return_kind;
             }).length;
             while (coreCount < 2) {
