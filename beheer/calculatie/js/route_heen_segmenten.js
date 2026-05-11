@@ -927,10 +927,23 @@
         updateRouteV2HiddenInput();
     }
 
+    function syncAddressDraftState() {
+        const rows = getRows();
+        syncReturnRowTargets(rows);
+        chainVanNaar();
+        updateHeenOptChipStates();
+        updateRouteV2HiddenInput();
+    }
+
     function bindRow(row) {
-        row.querySelectorAll('.heen-van, .heen-naar, .heen-km, .heen-zone, .heen-vt, .heen-at').forEach(function (el) {
+        row.querySelectorAll('.heen-km, .heen-zone, .heen-vt, .heen-at').forEach(function (el) {
             el.addEventListener('input', syncLegacyFromSegments);
             el.addEventListener('change', syncLegacyFromSegments);
+        });
+        row.querySelectorAll('.heen-van, .heen-naar').forEach(function (el) {
+            el.addEventListener('input', syncAddressDraftState);
+            el.addEventListener('change', syncLegacyFromSegments);
+            el.addEventListener('blur', syncLegacyFromSegments);
         });
         const markManual = function (el) {
             if (!el) return;
@@ -1142,6 +1155,7 @@
             form.addEventListener('input', syncRouteV2, true);
             form.addEventListener('change', syncRouteV2, true);
             form.addEventListener('submit', function () {
+                syncLegacyFromSegments();
                 updateRouteV2HiddenInput();
             });
         }
