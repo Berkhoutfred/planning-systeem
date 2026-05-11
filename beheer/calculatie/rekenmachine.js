@@ -494,7 +494,8 @@ function getHeenSegmentLegMinutes(rows) {
     const ritG2 = reisTijden['addr_t_grens2'] || 0;
     const ritBest = reisTijden['addr_t_aankomst_best'] || 0;
     let legs = [];
-    if (activeCount > 1) {
+    if (activeCount === 1) legs = [ritVl];
+    else if (activeCount > 1) {
         if (activeCount === 2) legs = [ritVl, ritBest];
         else if (activeCount === 3) legs = [ritVl, ritVs, ritBest];
         else legs = [ritVl, ritVs, ritG2, ritBest];
@@ -512,7 +513,10 @@ function getHeenSegmentLegMinutes(rows) {
 function syncHeenSegmentPlanning() {
     const rows = getHeenSegmentRowsForPlanning();
     const coreRows = getHeenSegmentCoreRows(rows);
-    if (coreRows.length < 2) {
+    const leadRowIndex = coreRows.length > 1
+        ? 1
+        : rows.findIndex(function (row, idx) { return idx > 0 && !!row.dataset.returnKind; });
+    if (coreRows.length < 1 || leadRowIndex < 1) {
         return false;
     }
 
@@ -527,7 +531,7 @@ function syncHeenSegmentPlanning() {
 
     const row0Vt = rows[0].querySelector('.heen-vt');
     const row0At = rows[0].querySelector('.heen-at');
-    const leadVt = rows[1].querySelector('.heen-vt');
+    const leadVt = rows[leadRowIndex].querySelector('.heen-vt');
 
     if (!leadVt || !legacyVertrekKlant) {
         return false;
@@ -570,8 +574,8 @@ function syncHeenSegmentPlanning() {
                 vtEl.readOnly = true;
                 vtEl.dataset.timeEditable = '1';
                 vtEl.classList.remove('heen-vt--auto');
-                vtEl.title = i === 1 ? 'Vertrek bij klant' : (kind ? 'Vertrek voor retourregel' : 'Vertrek vanaf deze stop');
-                if (i > 1 && vtEl.dataset.manual !== '1') {
+                vtEl.title = i === leadRowIndex ? 'Vertrek bij klant' : (kind ? 'Vertrek voor retourregel' : 'Vertrek vanaf deze stop');
+                if (vtEl.dataset.manual !== '1') {
                     vtEl.value = '';
                 }
             }
@@ -621,10 +625,10 @@ function syncHeenSegmentPlanning() {
         vtEl.readOnly = true;
         vtEl.dataset.timeEditable = '1';
         vtEl.classList.remove('heen-vt--auto');
-        vtEl.title = i === 1 ? 'Vertrek bij klant' : (kind ? 'Vertrek voor retourregel' : 'Vertrek vanaf deze stop');
+        vtEl.title = i === leadRowIndex ? 'Vertrek bij klant' : (kind ? 'Vertrek voor retourregel' : 'Vertrek vanaf deze stop');
 
         let vertrekTime = '';
-        if (i === 1) {
+        if (i === leadRowIndex) {
             vertrekTime = leadTime;
         } else if (vtEl.dataset.manual === '1' && vtEl.value.trim()) {
             vertrekTime = vtEl.value.trim().substring(0, 5);

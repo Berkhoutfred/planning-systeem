@@ -428,7 +428,8 @@
             const row0 = coreRows[0];
             const row0Vt = row0 ? row0.querySelector('.heen-vt') : null;
             const row0At = row0 ? row0.querySelector('.heen-at') : null;
-            const tBest = document.getElementById('time_t_aankomst_best')?.value.trim() || '';
+            const tLead = document.getElementById('time_t_vertrek_klant')?.value.trim() || '';
+            const tGarage = document.getElementById('time_t_garage')?.value.trim() || '';
             const tRetKlant = document.getElementById('time_t_retour_klant')?.value.trim() || '';
             const tRetGarage = document.getElementById('time_t_retour_garage_heen')?.value.trim() || '';
 
@@ -436,6 +437,9 @@
                 row0Vt.readOnly = true;
                 row0Vt.classList.remove('heen-vt--auto');
                 row0Vt.dataset.timeEditable = '1';
+                if (row0Vt.dataset.manual !== '1') {
+                    row0Vt.value = tLead ? tGarage : '';
+                }
                 row0Vt.title = 'Vertrek vanuit garage';
             }
             if (row0At) {
@@ -443,13 +447,13 @@
                 row0At.classList.remove('heen-at--auto');
                 row0At.dataset.timeEditable = '1';
                 if (row0At.dataset.manual !== '1') {
-                    row0At.value = tBest;
+                    row0At.value = tLead ? hmMinusMinutes(tLead, KLANT_VOORVERTREK_MIN) : '';
                 }
                 row0At.title = 'Aankomst bij klant';
             }
 
             let previousArrival = row0At ? row0At.value.trim() : '';
-            returnRows.forEach(function (row) {
+            returnRows.forEach(function (row, idx) {
                 const vtEl = row.querySelector('.heen-vt');
                 const atEl = row.querySelector('.heen-at');
                 const kind = row.dataset.returnKind || '';
@@ -459,9 +463,9 @@
                     vtEl.classList.remove('heen-vt--auto');
                     vtEl.dataset.timeEditable = '1';
                     if (vtEl.dataset.manual !== '1') {
-                        vtEl.value = previousArrival || '';
+                        vtEl.value = idx === 0 && tLead ? tLead : (previousArrival || '');
                     }
-                    vtEl.title = 'Vertrek voor retourregel';
+                    vtEl.title = idx === 0 ? 'Vertrek bij klant' : 'Vertrek voor retourregel';
                 }
                 if (atEl) {
                     atEl.readOnly = true;
@@ -777,12 +781,31 @@
         const tg = document.getElementById('time_t_garage');
         const tv = document.getElementById('time_t_vertrek_klant');
         const r0 = rows[0];
-        const r1 = rows[1] && !rows[1].dataset.returnKind ? rows[1] : null;
+        const leadRow = n > 1
+            ? (rows[1] && !rows[1].dataset.returnKind ? rows[1] : null)
+            : (returnRows[0] || null);
         const vtEl = r0 ? r0.querySelector('.heen-vt') : null;
         const atEl = r0 ? r0.querySelector('.heen-at') : null;
-        const leadVtEl = r1 ? r1.querySelector('.heen-vt') : null;
+        const leadVtEl = leadRow ? leadRow.querySelector('.heen-vt') : null;
+        const leadCandidate = leadVtEl && leadVtEl.value && leadVtEl.value.trim()
+            ? leadVtEl.value.trim().substring(0, 5)
+            : '';
         if (tg && vtEl) {
-            if (seg[0].vt) {
+            if (n === 1) {
+                if (!leadCandidate) {
+                    if (tg.dataset.manual !== '1') tg.value = '';
+                    if (vtEl.dataset.manual !== '1') vtEl.value = '';
+                } else if (tg.dataset.manual === '1' && tg.value && tg.value.trim()) {
+                    if (vtEl.dataset.manual !== '1') {
+                        vtEl.value = tg.value.trim().substring(0, 5);
+                    }
+                } else if (vtEl.dataset.manual === '1' && vtEl.value && vtEl.value.trim()) {
+                    tg.value = vtEl.value.trim().substring(0, 5);
+                } else {
+                    if (tg.dataset.manual !== '1') tg.value = '';
+                    if (vtEl.dataset.manual !== '1') vtEl.value = '';
+                }
+            } else if (seg[0].vt) {
                 tg.value = seg[0].vt;
                 if (vtEl.dataset.manual !== '1') {
                     vtEl.value = seg[0].vt;
@@ -794,19 +817,20 @@
             }
         }
         if (tv && leadVtEl) {
-            if (seg[1] && seg[1].vt) {
+            if (n > 1 && seg[1] && seg[1].vt) {
                 tv.value = seg[1].vt;
                 leadVtEl.value = seg[1].vt;
-            } else if (leadVtEl.value && leadVtEl.value.trim()) {
-                tv.value = leadVtEl.value.trim().substring(0, 5);
-            } else if (tv.value && tv.value.trim()) {
+            } else if (leadCandidate) {
+                tv.value = leadCandidate;
+            } else if (tv.value && tv.value.trim() && leadVtEl.dataset.manual !== '1') {
                 leadVtEl.value = tv.value.trim().substring(0, 5);
             }
         } else if (tv) {
             tv.value = '';
         }
         if (n === 1 && atEl && atEl.dataset.manual !== '1') {
-            atEl.value = seg[0].at || '';
+            const lead = tv && tv.value && tv.value.trim() ? tv.value.trim().substring(0, 5) : '';
+            atEl.value = lead ? hmMinusMinutes(lead, KLANT_VOORVERTREK_MIN) : '';
         } else if (atEl && atEl.dataset.manual !== '1') {
             const lead = tv && tv.value && tv.value.trim() ? tv.value.trim().substring(0, 5) : '';
             atEl.value = lead ? hmMinusMinutes(lead, KLANT_VOORVERTREK_MIN) : '';
