@@ -927,21 +927,12 @@
         updateRouteV2HiddenInput();
     }
 
-    function syncAddressDraftState() {
-        const rows = getRows();
-        syncReturnRowTargets(rows);
-        chainVanNaar();
-        updateHeenOptChipStates();
-        updateRouteV2HiddenInput();
-    }
-
     function bindRow(row) {
         row.querySelectorAll('.heen-km, .heen-zone, .heen-vt, .heen-at').forEach(function (el) {
             el.addEventListener('input', syncLegacyFromSegments);
             el.addEventListener('change', syncLegacyFromSegments);
         });
         row.querySelectorAll('.heen-van, .heen-naar').forEach(function (el) {
-            el.addEventListener('input', syncAddressDraftState);
             el.addEventListener('change', syncLegacyFromSegments);
             el.addEventListener('blur', syncLegacyFromSegments);
         });
