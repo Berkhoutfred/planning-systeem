@@ -281,6 +281,8 @@ function val($data, $rij, $veld, $default = '') {
     #block_terug { display: none !important; }
     .heen-vt--auto,
     .heen-at--auto { background: #f8fafc !important; color: #475569; font-size: 11px !important; }
+    .heen-seg-table input.heen-van[readonly],
+    .heen-seg-table input.heen-naar[readonly] { background: #f8fafc !important; color: #475569; }
     .heen-seg-table input.heen-vt,
     .heen-seg-table input.heen-at:not([readonly]) { cursor: pointer; }
     .calculatie-ui-build {

@@ -952,7 +952,7 @@
             el.addEventListener('input', syncLegacyFromSegments);
             el.addEventListener('change', syncLegacyFromSegments);
         });
-        row.querySelectorAll('.heen-van, .heen-naar').forEach(function (el) {
+        row.querySelectorAll('.heen-naar').forEach(function (el) {
             el.addEventListener('input', function () {
                 if (addressSyncTimer) {
                     clearTimeout(addressSyncTimer);
@@ -995,7 +995,7 @@
                 if (typeof window.openTimeModal === 'function') window.openTimeModal(el);
             });
         });
-        row.querySelectorAll('.heen-van, .heen-naar').forEach(function (el) {
+        row.querySelectorAll('.heen-naar').forEach(function (el) {
             el.addEventListener('blur', chainVanNaar);
         });
     }
@@ -1039,9 +1039,9 @@
 
         const vanInput = tr.querySelector('.heen-van');
         const naarInput = tr.querySelector('.heen-naar');
-        if (idx > 0 && vanInput) {
+        if (vanInput) {
             vanInput.readOnly = true;
-            vanInput.title = 'Automatisch vanaf vorige locatie';
+            vanInput.title = idx === 0 ? 'Automatische garage/startlocatie' : 'Automatisch vanaf vorige locatie';
         }
         if (p.return_kind && naarInput) {
             naarInput.readOnly = true;
