@@ -7,9 +7,11 @@ let activeTimeInput = null;
 let userManuallyChangedPrice = false; 
 let directionsService; 
 let reisTijden = {}; 
+window.reisTijden = reisTijden;
 const BUS_FACTOR = 1.15;      
 const BUFFER_VOORSTAAN = 15;  
 const BUFFER_NAZORG = 15;     
+const ROUTE2_DEPART_TIME_IDS = ['time_t_garage_rit2', 'time_t_vertrek_best', 'time_t_voorstaan_rit2', 'time_t_retour_klant'];
 
 /** Zichtbare route-Km / zones (segment-tabel); niet de verborgen legacy POST-spiegel (#legacy_heen_mirror). */
 function isRouteKmInputForTotals(el) {
@@ -363,23 +365,13 @@ function calculateRoute() {
              
              if(stopsRit2.length >= 2) runGoogleRoute(stopsRit2);
         } else {
-             const s5 = document.getElementById('addr_t_vertrek_best').value; 
-             const s5mid = document.getElementById('addr_t_voorstaan_rit2')?.value.trim() || '';
-             const s5mid2 = document.getElementById('addr_t_garage_rit2')?.value.trim() || '';
-             const s6 = document.getElementById('addr_t_retour_klant').value; 
-             const s7 = document.getElementById('addr_t_retour_garage').value || s1; 
              const terugOpen = window.__calcTerugreisUserShow === true || terugreisSectionHasData();
-             let stopsTerug = [];
-             // Gap logic: Start berekening vanaf Aankomst Heen
-             if(s4) stopsTerug.push({loc: s4, id: 'dummy_start_terug'}); 
-             
-             if(s5) stopsTerug.push({loc: s5, id: 'addr_t_vertrek_best'});
-             if(s5mid) stopsTerug.push({loc: s5mid, id: 'addr_t_voorstaan_rit2'});
-             if(s5mid2 && s5mid2 !== s7) stopsTerug.push({loc: s5mid2, id: 'addr_t_garage_rit2'});
-             if(s6) stopsTerug.push({loc: s6, id: 'addr_t_retour_klant'});
-             stopsTerug.push({loc: s7, id: 'addr_t_retour_garage'});
-
-             if(terugOpen && s5 && stopsTerug.length >= 2) runGoogleRoute(stopsTerug);
+             const route2Points = getRoute2PlanningPoints();
+             if (terugOpen && route2Points.length >= 2) {
+                runGoogleRoute(route2Points.map(function (point) {
+                    return { loc: point.address, id: point.addrId };
+                }));
+             }
         }
     }
 
@@ -567,6 +559,34 @@ function getHeenSegmentLegMinutes(rows) {
         }
     });
     return legs;
+}
+
+function getRoute2PlanningPoints() {
+    const raw = [
+        { addrId: 'addr_t_garage_rit2', timeId: 'time_t_garage_rit2', isFinal: false },
+        { addrId: 'addr_t_vertrek_best', timeId: 'time_t_vertrek_best', isFinal: false },
+        { addrId: 'addr_t_voorstaan_rit2', timeId: 'time_t_voorstaan_rit2', isFinal: false },
+        { addrId: 'addr_t_retour_klant', timeId: 'time_t_retour_klant', isFinal: false },
+        { addrId: 'addr_t_retour_garage', timeId: 'time_t_retour_garage', isFinal: true }
+    ].map(function (cfg) {
+        const el = document.getElementById(cfg.addrId);
+        return {
+            addrId: cfg.addrId,
+            timeId: cfg.timeId,
+            isFinal: cfg.isFinal,
+            address: el && typeof el.value === 'string' ? el.value.trim() : ''
+        };
+    }).filter(function (point) {
+        return point.address !== '';
+    });
+    const nonGarage = raw.filter(function (point) {
+        const lower = point.address.toLowerCase();
+        return lower !== 'industrieweg 95a, zutphen' && lower !== 'industrieweg 95, zutphen';
+    });
+    if (raw.length < 2 || nonGarage.length === 0) {
+        return [];
+    }
+    return raw;
 }
 
 function syncHeenSegmentPlanning() {
@@ -809,36 +829,49 @@ function updatePlanning() {
         }
     } 
     else if (type === 'dagtocht' || type === 'schoolreis' || type === 'meerdaags' || type === 'buitenland' || type === 'trein') {
-        const tVertrekTerug = document.getElementById('time_t_vertrek_best').value;
-        if(tVertrekTerug) {
-            let cursor = parseTime(tVertrekTerug);
-            const mid1 = document.getElementById('addr_t_voorstaan_rit2')?.value.trim() || '';
-            const mid2 = document.getElementById('addr_t_garage_rit2')?.value.trim() || '';
-            const klantStop = document.getElementById('addr_t_retour_klant')?.value.trim() || '';
-            const finalGarage = document.getElementById('addr_t_retour_garage')?.value.trim() || '';
-
-            if (mid1) {
-                cursor = addMinutes(cursor, reisTijden['addr_t_voorstaan_rit2'] || 60);
-                document.getElementById('time_t_voorstaan_rit2').value = formatTime(cursor);
-            } else {
-                document.getElementById('time_t_voorstaan_rit2').value = '';
+        const route2Points = getRoute2PlanningPoints();
+        const route2TimeIds = ['time_t_garage_rit2', 'time_t_vertrek_best', 'time_t_voorstaan_rit2', 'time_t_retour_klant', 'time_t_retour_garage'];
+        if (route2Points.length >= 2) {
+            let previousArrival = null;
+            route2Points.forEach(function (point, idx) {
+                const timeEl = document.getElementById(point.timeId);
+                if (!timeEl) return;
+                if (idx === route2Points.length - 1) {
+                    delete timeEl.dataset.manual;
+                    return;
+                }
+                let vertrek = '';
+                if (idx === 0) {
+                    vertrek = (timeEl.value || '').trim().substring(0, 5);
+                } else if (timeEl.dataset.manual === '1' && timeEl.value.trim()) {
+                    vertrek = timeEl.value.trim().substring(0, 5);
+                } else if (previousArrival) {
+                    vertrek = formatTime(previousArrival);
+                    timeEl.value = vertrek;
+                } else {
+                    timeEl.value = '';
+                }
+                if (!vertrek) {
+                    previousArrival = null;
+                    return;
+                }
+                const nextPoint = route2Points[idx + 1];
+                const travelMin = reisTijden[nextPoint.addrId] || 60;
+                previousArrival = addMinutes(parseTime(vertrek), travelMin + (idx === route2Points.length - 2 ? BUFFER_NAZORG : 0));
+            });
+            const finalPoint = route2Points[route2Points.length - 1];
+            const finalTimeEl = document.getElementById(finalPoint.timeId);
+            if (finalTimeEl) {
+                finalTimeEl.value = previousArrival ? formatTime(previousArrival) : '';
+                delete finalTimeEl.dataset.manual;
             }
-            if (mid2 && (!finalGarage || mid2 !== finalGarage)) {
-                cursor = addMinutes(cursor, reisTijden['addr_t_garage_rit2'] || 60);
-                document.getElementById('time_t_garage_rit2').value = formatTime(cursor);
-            } else {
-                document.getElementById('time_t_garage_rit2').value = '';
-            }
-            if (klantStop) {
-                cursor = addMinutes(cursor, reisTijden['addr_t_retour_klant'] || 60);
-                document.getElementById('time_t_retour_klant').value = formatTime(cursor);
-            } else {
-                document.getElementById('time_t_retour_klant').value = '';
-            }
-            
-            const ritGarage = reisTijden['addr_t_retour_garage'] || 30;
-            const dGarageTerug = addMinutes(cursor, ritGarage + BUFFER_NAZORG);
-            document.getElementById('time_t_retour_garage').value = formatTime(dGarageTerug);
+        } else {
+            route2TimeIds.forEach(function (id) {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.value = '';
+                if (id === 'time_t_retour_garage') delete el.dataset.manual;
+            });
         }
     }
     if (typeof window.updateRouteV2HiddenInput === 'function') window.updateRouteV2HiddenInput();
@@ -1053,6 +1086,9 @@ function showMinutes(h) {
                     activeTimeInput.id === 'time_t_garage' ||
                     activeTimeInput.id === 'time_t_garage_rit2'
                 ) {
+                    activeTimeInput.dataset.manual = '1';
+                }
+                if (ROUTE2_DEPART_TIME_IDS.includes(activeTimeInput.id)) {
                     activeTimeInput.dataset.manual = '1';
                 }
                 if (activeTimeInput.matches('input.heen-vt')) {

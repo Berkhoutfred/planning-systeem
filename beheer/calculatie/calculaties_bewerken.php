@@ -422,9 +422,6 @@ function val($data, $rij, $veld, $default = '') {
             <div class="box-body">
 
                 <div class="route-compact heen-segment-wrap" style="background: #fdfdfd; padding: 8px 10px; border: 1px solid #eee; border-radius: 4px;">
-                    <div style="font-weight:bold; color:#003366; margin-bottom:6px; border-bottom:1px solid #ddd; padding-bottom:5px;">
-                        Route 1
-                    </div>
                     <table class="heen-seg-table">
                         <thead>
                             <tr>
@@ -509,9 +506,6 @@ function val($data, $rij, $veld, $default = '') {
                 <div id="block_terug" style="display:none;">
                     <div class="header-rit-2" id="header_terug">TERUGREIS / RIT 2</div>
                     <div class="route-compact heen-segment-wrap" style="background: #fdfdfd; padding: 8px 10px; border: 1px solid #eee; border-top:none;">
-                        <div style="font-weight:bold; color:#003366; margin-bottom:6px; border-bottom:1px solid #ddd; padding-bottom:5px;">
-                            Route 2
-                        </div>
                         <table class="heen-seg-table">
                             <thead>
                                 <tr>

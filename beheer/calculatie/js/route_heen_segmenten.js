@@ -294,8 +294,8 @@
         }
         const rows = [
             { type: 't_garage_rit2', kind: 'garage_start', time: readTrimmedValue('time_t_garage_rit2'), address: readTrimmedValue('addr_t_garage_rit2'), km: readKmInput('t_garage_rit2'), zone: readZoneInRow('row_garage_rit2') },
-            { type: 't_voorstaan_rit2', kind: 'preposition', time: readTrimmedValue('time_t_voorstaan_rit2'), address: readTrimmedValue('addr_t_voorstaan_rit2'), km: readKmInput('t_voorstaan_rit2'), zone: readZoneInRow('row_voorstaan_rit2') },
             { type: 't_vertrek_best', kind: 'route2_depart', time: readTrimmedValue('time_t_vertrek_best'), address: readTrimmedValue('addr_t_vertrek_best'), km: readKmInput('t_vertrek_best'), zone: readZoneInRow('row_vertrek_best') },
+            { type: 't_voorstaan_rit2', kind: 'preposition', time: readTrimmedValue('time_t_voorstaan_rit2'), address: readTrimmedValue('addr_t_voorstaan_rit2'), km: readKmInput('t_voorstaan_rit2'), zone: readZoneInRow('row_voorstaan_rit2') },
             { type: 't_retour_klant', kind: 'route2_customer', time: readTrimmedValue('time_t_retour_klant'), address: readTrimmedValue('addr_t_retour_klant'), km: readKmInput('t_retour_klant'), zone: readZoneInRow('row_retour_klant') },
             { type: 't_retour_garage', kind: 'route2_garage_end', time: readTrimmedValue('time_t_retour_garage'), address: readTrimmedValue('addr_t_retour_garage'), km: readKmInput('t_retour_garage'), zone: readZoneInRow('row_garage_terug') }
         ].filter(function (row) {
@@ -595,125 +595,6 @@
         });
     }
 
-    function getTerugVisiblePoints() {
-        const type = ritType();
-        const finalGarage = normalizeGarageAddress(readTrimmedValue('addr_t_retour_garage') || readTrimmedValue('addr_t_garage'));
-        const points = [];
-        const pushPoint = function (cfg) {
-            const address = cfg.normalizeGarage
-                ? normalizeGarageAddress(readTrimmedValue(cfg.addrId))
-                : normalizeAddr(readTrimmedValue(cfg.addrId));
-            if (!address) return;
-            if (cfg.skipIfFinalGarage && finalGarage && address === finalGarage) return;
-            points.push({
-                addrId: cfg.addrId,
-                timeId: cfg.timeId,
-                kmKey: cfg.kmKey || '',
-                rowId: cfg.rowId || '',
-                address: address,
-                time: readTrimmedValue(cfg.timeId),
-                km: cfg.kmKey ? readKmInput(cfg.kmKey) : 0,
-                zone: cfg.rowId ? readZoneInRow(cfg.rowId) : 'nl'
-            });
-        };
-
-        if (type === 'brenghaal') {
-            pushPoint({ addrId: 'addr_t_garage_rit2', timeId: 'time_t_garage_rit2', kmKey: 't_garage_rit2', rowId: 'row_garage_rit2', normalizeGarage: true });
-            pushPoint({ addrId: 'addr_t_voorstaan_rit2', timeId: 'time_t_voorstaan_rit2', kmKey: 't_voorstaan_rit2', rowId: 'row_voorstaan_rit2' });
-        } else {
-            pushPoint({ addrId: 'addr_t_vertrek_best', timeId: 'time_t_vertrek_best', rowId: 'row_vertrek_best' });
-            pushPoint({ addrId: 'addr_t_voorstaan_rit2', timeId: 'time_t_voorstaan_rit2', kmKey: 't_voorstaan_rit2', rowId: 'row_voorstaan_rit2' });
-            pushPoint({ addrId: 'addr_t_garage_rit2', timeId: 'time_t_garage_rit2', kmKey: 't_garage_rit2', rowId: 'row_garage_rit2', skipIfFinalGarage: true, normalizeGarage: true });
-        }
-
-        pushPoint({ addrId: 'addr_t_retour_klant', timeId: 'time_t_retour_klant', kmKey: 't_retour_klant', rowId: 'row_retour_klant' });
-        pushPoint({ addrId: 'addr_t_retour_garage', timeId: 'time_t_retour_garage', kmKey: 't_retour_garage', rowId: 'row_garage_terug', normalizeGarage: true });
-
-        return points;
-    }
-
-    function getTerugVisibleSegments() {
-        const points = getTerugVisiblePoints();
-        const segments = [];
-        for (let i = 0; i < points.length - 1; i++) {
-            const fromPoint = points[i];
-            const toPoint = points[i + 1];
-            segments.push({
-                from: fromPoint.address,
-                to: toPoint.address,
-                vt: fromPoint.time,
-                at: toPoint.time,
-                km: toPoint.km,
-                zone: toPoint.zone,
-                startAddrId: fromPoint.addrId,
-                endAddrId: toPoint.addrId,
-                startTimeId: fromPoint.timeId
-            });
-        }
-        return segments;
-    }
-
-    function renderTerugSegmentTable() {
-        const tbody = document.getElementById('terug_segmenten_body');
-        if (!tbody) return;
-        const segments = getTerugVisibleSegments();
-        tbody.innerHTML = '';
-
-        segments.forEach(function (segment, idx) {
-            const tr = document.createElement('tr');
-            tr.className = 'terug-seg-row';
-            tr.innerHTML =
-                '<td class="heen-td-t"><input type="text" class="form-control heen-vt" readonly></td>' +
-                '<td><input type="text" class="form-control heen-van" readonly></td>' +
-                '<td><input type="text" class="form-control heen-naar"></td>' +
-                '<td class="heen-td-t"><input type="text" class="form-control heen-at" readonly></td>' +
-                '<td class="heen-zone-col"><input type="text" class="form-control heen-zone-view" readonly></td>' +
-                '<td class="heen-td-km"><input type="number" class="form-control heen-km" readonly></td>' +
-                '<td class="heen-td-rm"></td>';
-
-            const fromEl = tr.querySelector('.heen-van');
-            const toEl = tr.querySelector('.heen-naar');
-            const vtEl = tr.querySelector('.heen-vt');
-            const atEl = tr.querySelector('.heen-at');
-            const zoneEl = tr.querySelector('.heen-zone-view');
-            const kmEl = tr.querySelector('.heen-km');
-
-            fromEl.value = segment.from;
-            toEl.value = segment.to;
-            vtEl.value = segment.vt || '';
-            atEl.value = segment.at || '';
-            zoneEl.value = (segment.zone || 'nl').toUpperCase();
-            kmEl.value = String(segment.km || 0);
-            atEl.classList.add('heen-at--auto');
-            if (idx > 0) vtEl.classList.add('heen-vt--auto');
-
-            toEl.addEventListener('change', function () {
-                const target = document.getElementById(segment.endAddrId);
-                if (target) target.value = toEl.value.trim();
-                if (typeof window.calculateRoute === 'function') window.calculateRoute();
-                if (typeof window.rekenen === 'function') window.rekenen();
-                if (typeof window.updateRouteV2HiddenInput === 'function') window.updateRouteV2HiddenInput();
-                renderTerugSegmentTable();
-            });
-
-            if (idx === 0) {
-                vtEl.readOnly = false;
-                vtEl.dataset.timeEditable = '1';
-                vtEl.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    const target = document.getElementById(segment.startTimeId);
-                    if (target && typeof window.openTimeModal === 'function') {
-                        window.openTimeModal(target);
-                    }
-                });
-            }
-
-            tbody.appendChild(tr);
-        });
-
-        syncZoneColumnVisibility();
-    }
-
     function getRows() {
         const tb = document.getElementById('heen_segmenten_body');
         return tb ? Array.from(tb.querySelectorAll('tr.heen-seg-row')) : [];
@@ -727,6 +608,14 @@
 
     const DEFAULT_GARAGE_ADDRESS = 'Industrieweg 95a, Zutphen';
     const LEGACY_GARAGE_ADDRESS = 'Industrieweg 95, Zutphen';
+    const ROUTE2_FINAL_BUFFER_MIN = 15;
+    const ROUTE2_SLOT_CONFIG = [
+        { addrId: 'addr_t_garage_rit2', timeId: 'time_t_garage_rit2', kmKey: 't_garage_rit2', rowId: 'row_garage_rit2', normalizeGarage: true },
+        { addrId: 'addr_t_vertrek_best', timeId: 'time_t_vertrek_best', kmKey: 't_vertrek_best', rowId: 'row_vertrek_best' },
+        { addrId: 'addr_t_voorstaan_rit2', timeId: 'time_t_voorstaan_rit2', kmKey: 't_voorstaan_rit2', rowId: 'row_voorstaan_rit2' },
+        { addrId: 'addr_t_retour_klant', timeId: 'time_t_retour_klant', kmKey: 't_retour_klant', rowId: 'row_retour_klant' },
+        { addrId: 'addr_t_retour_garage', timeId: 'time_t_retour_garage', kmKey: 't_retour_garage', rowId: 'row_garage_terug', normalizeGarage: true, isFinal: true }
+    ];
 
     function normalizeGarageAddress(s) {
         const value = normalizeAddr(s);
@@ -734,6 +623,201 @@
         return value.toLowerCase() === LEGACY_GARAGE_ADDRESS.toLowerCase()
             ? DEFAULT_GARAGE_ADDRESS
             : value;
+    }
+
+    function getRoute2SlotState(cfg) {
+        const address = cfg.normalizeGarage
+            ? normalizeGarageAddress(readTrimmedValue(cfg.addrId))
+            : normalizeAddr(readTrimmedValue(cfg.addrId));
+        return {
+            addrId: cfg.addrId,
+            timeId: cfg.timeId,
+            kmKey: cfg.kmKey,
+            rowId: cfg.rowId,
+            isFinal: !!cfg.isFinal,
+            address: address,
+            time: readTrimmedValue(cfg.timeId),
+            km: readKmInput(cfg.kmKey),
+            zone: readZoneInRow(cfg.rowId)
+        };
+    }
+
+    function getRoute2VisiblePoints() {
+        const raw = ROUTE2_SLOT_CONFIG.map(getRoute2SlotState).filter(function (point) {
+            return point.address !== '';
+        });
+        const nonGarageCount = raw.filter(function (point) {
+            return normalizeGarageAddress(point.address) !== DEFAULT_GARAGE_ADDRESS;
+        }).length;
+        if (raw.length < 2 || nonGarageCount === 0) {
+            return [];
+        }
+        return raw;
+    }
+
+    function setRoute2SlotValue(pointIdx, field, value) {
+        const cfg = ROUTE2_SLOT_CONFIG[pointIdx];
+        if (!cfg) return;
+        if (field === 'address') {
+            const el = document.getElementById(cfg.addrId);
+            if (el) el.value = value;
+            return;
+        }
+        if (field === 'time') {
+            const el = document.getElementById(cfg.timeId);
+            if (el) el.value = value;
+            return;
+        }
+        if (field === 'km') {
+            const el = document.querySelector('input[name="km[' + cfg.kmKey + ']"]');
+            if (el) el.value = value;
+            return;
+        }
+        if (field === 'zone') {
+            const row = document.getElementById(cfg.rowId);
+            const sel = row ? row.querySelector('.km-zone-select') : null;
+            if (sel) sel.value = value;
+        }
+    }
+
+    function setRoute2SlotManual(pointIdx, isManual) {
+        const cfg = ROUTE2_SLOT_CONFIG[pointIdx];
+        const el = cfg ? document.getElementById(cfg.timeId) : null;
+        if (!el) return;
+        if (isManual) {
+            el.dataset.manual = '1';
+        } else {
+            delete el.dataset.manual;
+        }
+    }
+
+    function writeRoute2Points(points) {
+        ROUTE2_SLOT_CONFIG.forEach(function (cfg, idx) {
+            const point = points[idx] || null;
+            setRoute2SlotValue(idx, 'address', point ? point.address : '');
+            setRoute2SlotValue(idx, 'time', point ? (point.time || '') : '');
+            setRoute2SlotValue(idx, 'km', point ? String(point.km || 0) : '0');
+            setRoute2SlotValue(idx, 'zone', point ? (point.zone || 'nl') : 'nl');
+            setRoute2SlotManual(idx, !!(point && point.manual));
+        });
+    }
+
+    function getRoute2VisibleSegments() {
+        const points = getRoute2VisiblePoints();
+        const segments = [];
+        for (let i = 0; i < points.length - 1; i++) {
+            const fromPoint = points[i];
+            const toPoint = points[i + 1];
+            const depart = fromPoint.time;
+            let arrive = '';
+            const departMin = parseHm(depart);
+            const rideMin = (window.reisTijden && window.reisTijden[toPoint.addrId]) || 0;
+            if (departMin !== null && rideMin > 0) {
+                const totalMin = departMin + rideMin + (i === points.length - 2 ? ROUTE2_FINAL_BUFFER_MIN : 0);
+                arrive = formatHm(totalMin);
+            }
+            segments.push({
+                from: fromPoint.address,
+                to: toPoint.address,
+                vt: depart,
+                at: arrive,
+                km: toPoint.km,
+                zone: toPoint.zone,
+                startPointIdx: i,
+                endPointIdx: i + 1,
+                startTimeId: fromPoint.timeId
+            });
+        }
+        return segments;
+    }
+
+    function removeRoute2Row(rowIdx) {
+        const points = getRoute2VisiblePoints().map(function (point) {
+            return {
+                address: point.address,
+                time: point.time,
+                km: point.km,
+                zone: point.zone,
+                manual: !!document.getElementById(point.timeId)?.dataset.manual
+            };
+        });
+        if (points.length < 2) return;
+        const removePointIdx = rowIdx + 1;
+        if (removePointIdx <= 0 || removePointIdx >= points.length) return;
+        points.splice(removePointIdx, 1);
+        writeRoute2Points(points);
+        if (typeof window.calculateRoute === 'function') window.calculateRoute();
+        if (typeof window.rekenen === 'function') window.rekenen();
+        if (typeof window.updateRouteV2HiddenInput === 'function') window.updateRouteV2HiddenInput();
+        renderTerugSegmentTable();
+    }
+
+    function renderTerugSegmentTable() {
+        const tbody = document.getElementById('terug_segmenten_body');
+        if (!tbody) return;
+        const segments = getRoute2VisibleSegments();
+        tbody.innerHTML = '';
+
+        segments.forEach(function (segment, idx) {
+            const tr = document.createElement('tr');
+            tr.className = 'terug-seg-row';
+            const zoneDisplay = showZoneColumn() ? '' : 'display:none';
+            tr.innerHTML =
+                '<td class="heen-td-t"><input type="text" class="form-control custom-time-input heen-vt" placeholder="--:--" readonly></td>' +
+                '<td><input type="text" class="form-control heen-van" readonly></td>' +
+                '<td><input type="text" class="form-control google-autocomplete heen-naar" placeholder="Naar" autocomplete="off"></td>' +
+                '<td class="heen-td-t"><input type="text" class="form-control custom-time-input heen-at" placeholder="--:--" readonly></td>' +
+                '<td class="heen-zone-col" style="' + zoneDisplay + '"><select class="form-control km-zone-select heen-zone" title="Zone">' +
+                '<option value="nl">NL</option><option value="de">DE</option><option value="ch">CH</option><option value="ov">0%</option></select></td>' +
+                '<td class="heen-td-km"><input type="number" class="form-control km-calc heen-km" step="0.1" min="0" readonly></td>' +
+                '<td class="heen-td-rm"><button type="button" class="btn-remove-bus heen-rm" title="Verwijder">&times;</button></td>';
+
+            const fromEl = tr.querySelector('.heen-van');
+            const toEl = tr.querySelector('.heen-naar');
+            const vtEl = tr.querySelector('.heen-vt');
+            const atEl = tr.querySelector('.heen-at');
+            const zoneEl = tr.querySelector('.heen-zone');
+            const kmEl = tr.querySelector('.heen-km');
+            const rmEl = tr.querySelector('.heen-rm');
+
+            fromEl.value = segment.from;
+            toEl.value = segment.to;
+            vtEl.value = segment.vt || '';
+            atEl.value = segment.at || '';
+            zoneEl.value = segment.zone || 'nl';
+            kmEl.value = String(segment.km || 0);
+            vtEl.dataset.timeEditable = '1';
+            atEl.classList.add('heen-at--auto');
+
+            vtEl.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.getElementById(segment.startTimeId);
+                if (target && typeof window.openTimeModal === 'function') {
+                    window.openTimeModal(target);
+                }
+            });
+            toEl.addEventListener('input', function () {
+                setRoute2SlotValue(segment.endPointIdx, 'address', toEl.value.trim());
+            });
+            toEl.addEventListener('change', function () {
+                if (typeof window.calculateRoute === 'function') window.calculateRoute();
+                if (typeof window.rekenen === 'function') window.rekenen();
+                if (typeof window.updateRouteV2HiddenInput === 'function') window.updateRouteV2HiddenInput();
+                renderTerugSegmentTable();
+            });
+            zoneEl.addEventListener('change', function () {
+                setRoute2SlotValue(segment.endPointIdx, 'zone', zoneEl.value);
+                if (typeof window.rekenen === 'function') window.rekenen();
+                if (typeof window.updateRouteV2HiddenInput === 'function') window.updateRouteV2HiddenInput();
+            });
+            rmEl.addEventListener('click', function () {
+                removeRoute2Row(idx);
+            });
+
+            tbody.appendChild(tr);
+        });
+
+        syncZoneColumnVisibility();
     }
 
     function getGarageAddress(rows) {
@@ -832,52 +916,25 @@
 
         const rows = getRows();
         const parts = getRowPartitions(rows);
-        const coreRows = parts.coreRows;
-        const coreStops = coreRows.map(function (row) {
-            return normalizeAddr(row.querySelector('.heen-naar')?.value || '');
-        }).filter(function (value) {
-            return value !== '';
+        const activeRows = parts.activeRows;
+        if (!activeRows.length) return;
+        const pathPoints = [];
+        const pushPoint = function (value) {
+            const next = normalizeAddr(value);
+            if (!next) return;
+            if (pathPoints.length && pathPoints[pathPoints.length - 1] === next) return;
+            pathPoints.push(next);
+        };
+        pushPoint(activeRows[0].querySelector('.heen-van')?.value || '');
+        activeRows.forEach(function (row) {
+            pushPoint(row.querySelector('.heen-naar')?.value || '');
         });
-        const lastCore = coreRows[coreRows.length - 1];
-        const lastNaar = normalizeAddr(lastCore?.querySelector('.heen-naar')?.value || '');
-        const reverseMids = coreStops.slice(1, -1).reverse();
-        const klant = getKlantAddress(rows);
-        const garage = getGarageAddress(rows);
+        if (pathPoints.length < 2) return;
 
-        const voorstaanRit2 = document.getElementById('addr_t_voorstaan_rit2');
-        const vertrekBest = document.getElementById('addr_t_vertrek_best');
-        const retourKlant = document.getElementById('addr_t_retour_klant');
-        const retourGarage = document.getElementById('addr_t_retour_garage');
-        const garageRit2 = document.getElementById('addr_t_garage_rit2');
-
-        if (vertrekBest && lastNaar) vertrekBest.value = lastNaar;
-        if (voorstaanRit2) voorstaanRit2.value = reverseMids[0] || '';
-        if (retourKlant && klant) retourKlant.value = klant;
-        if (retourGarage && garage) retourGarage.value = garage;
-        if (garageRit2) garageRit2.value = reverseMids[1] || '';
-
-        if (!wasActive) {
-            [
-                'time_t_vertrek_best',
-                'time_t_retour_klant',
-                'time_t_retour_garage',
-                'time_t_garage_rit2',
-                'time_t_voorstaan_rit2'
-            ].forEach(function (id) {
-                const el = document.getElementById(id);
-                if (el) el.value = '';
-            });
-            [
-                't_garage_rit2',
-                't_voorstaan_rit2',
-                't_vertrek_best',
-                't_retour_klant',
-                't_retour_garage'
-            ].forEach(function (key) {
-                const el = document.querySelector('input[name="km[' + key + ']"]');
-                if (el) el.value = '0';
-            });
-        }
+        const reversePoints = pathPoints.slice().reverse().slice(0, ROUTE2_SLOT_CONFIG.length).map(function (address) {
+            return { address: address, time: '', km: 0, zone: 'nl', manual: false };
+        });
+        writeRoute2Points(reversePoints);
 
         window.__calcTerugreisUserShow = true;
         if (typeof window.updateVisibility === 'function') window.updateVisibility();
