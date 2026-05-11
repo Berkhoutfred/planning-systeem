@@ -928,13 +928,30 @@
     }
 
     function bindRow(row) {
+        let addressSyncTimer = null;
+        const flushAddressSync = function () {
+            if (addressSyncTimer) {
+                clearTimeout(addressSyncTimer);
+                addressSyncTimer = null;
+            }
+            syncLegacyFromSegments();
+        };
         row.querySelectorAll('.heen-km, .heen-zone, .heen-vt, .heen-at').forEach(function (el) {
             el.addEventListener('input', syncLegacyFromSegments);
             el.addEventListener('change', syncLegacyFromSegments);
         });
         row.querySelectorAll('.heen-van, .heen-naar').forEach(function (el) {
-            el.addEventListener('change', syncLegacyFromSegments);
-            el.addEventListener('blur', syncLegacyFromSegments);
+            el.addEventListener('input', function () {
+                if (addressSyncTimer) {
+                    clearTimeout(addressSyncTimer);
+                }
+                addressSyncTimer = setTimeout(function () {
+                    addressSyncTimer = null;
+                    syncLegacyFromSegments();
+                }, 450);
+            });
+            el.addEventListener('change', flushAddressSync);
+            el.addEventListener('blur', flushAddressSync);
         });
         const markManual = function (el) {
             if (!el) return;
