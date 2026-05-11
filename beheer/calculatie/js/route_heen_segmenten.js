@@ -191,6 +191,52 @@
         };
     }
 
+    function getRoute1PlannerEndAnchor(route1) {
+        if (!route1 || !Array.isArray(route1.segments) || route1.segments.length === 0) return null;
+        let endTime = '';
+        for (let i = route1.segments.length - 1; i >= 0; i--) {
+            const segment = route1.segments[i];
+            endTime = String(segment.arrive_at || segment.depart_at || '').trim();
+            if (endTime) break;
+        }
+        if (!endTime) return null;
+        return {
+            time: endTime,
+            dayOffset: route1.end_day_offset || 0
+        };
+    }
+
+    function getRoute2PlannerStartTime(route2) {
+        if (!route2 || !Array.isArray(route2.segments)) return '';
+        for (let i = 0; i < route2.segments.length; i++) {
+            const time = String(route2.segments[i].time || '').trim();
+            if (time) return time;
+        }
+        return '';
+    }
+
+    function shiftRoute2PlannerAfterRoute1(route1, route2) {
+        if (!route2 || !route2.segments || route2.segments.length === 0) return route2;
+        const route1End = getRoute1PlannerEndAnchor(route1);
+        const route2StartTime = getRoute2PlannerStartTime(route2);
+        if (!route1End || !route2StartTime) return route2;
+        let shift = route1End.dayOffset || 0;
+        const route1EndMin = parseHm(route1End.time);
+        const route2StartMin = parseHm(route2StartTime);
+        if (route1EndMin !== null && route2StartMin !== null && route2StartMin < route1EndMin) {
+            shift += 1;
+        }
+        if (shift <= 0) return route2;
+        route2.start_day_offset = (route2.start_day_offset || 0) + shift;
+        route2.end_day_offset = (route2.end_day_offset || 0) + shift;
+        route2.segments.forEach(function (segment) {
+            if (typeof segment.time_day_offset === 'number') {
+                segment.time_day_offset += shift;
+            }
+        });
+        return route2;
+    }
+
     function buildPlannerDays(route1Payload, route2Payload, tussPayload, startDate) {
         const days = [];
         const firstDay = {
@@ -203,7 +249,7 @@
             events: []
         };
         const route1 = enrichRoute1ForPlanner(route1Payload);
-        const route2 = enrichRoute2ForPlanner(route2Payload);
+        const route2 = shiftRoute2PlannerAfterRoute1(route1, enrichRoute2ForPlanner(route2Payload));
         if (route1.segments.length > 0) firstDay.routes.push(route1);
         if (route2.enabled || route2.segments.length > 0) firstDay.routes.push(route2);
         if (firstDay.date || firstDay.routes.length > 0) {
@@ -366,7 +412,12 @@
         const hidden = document.getElementById('route_v2_json');
         if (!hidden) return;
         try {
-            hidden.value = JSON.stringify(buildRouteV2Payload());
+            const payload = buildRouteV2Payload();
+            hidden.value = JSON.stringify(payload);
+            const endEl = document.getElementById('rit_datum_eind');
+            if (endEl && payload && payload.dates && payload.dates.end) {
+                endEl.value = payload.dates.end;
+            }
         } catch (e) {
             hidden.value = '';
         }

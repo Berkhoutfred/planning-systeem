@@ -977,10 +977,17 @@ function rekenen() {
     let uren = 0;
     const t1 = document.getElementById('time_t_garage').value;
     const tRoute1End = document.getElementById('time_t_retour_garage_heen')?.value || '';
+    const tHeenEind = tRoute1End || document.getElementById('time_t_aankomst_best')?.value || '';
+    const tRoute2Start = document.getElementById('time_t_garage_rit2')?.value || document.getElementById('time_t_vertrek_best')?.value || '';
+    const tRoute2End = document.getElementById('time_t_retour_garage')?.value || '';
     
     if(type === 'dagtocht' || type === 'schoolreis' || type === 'trein') {
-        const tEnd = tRoute1End || document.getElementById('time_t_retour_garage').value;
-        if(t1 && tEnd) uren = calcDiff(t1, tEnd);
+        if (t1 && tHeenEind && tRoute2Start && tRoute2End) {
+            uren = calcChronologicalSpan([t1, tHeenEind, tRoute2Start, tRoute2End]);
+        } else {
+            const tEnd = tRoute1End || document.getElementById('time_t_retour_garage').value;
+            if(t1 && tEnd) uren = calcDiff(t1, tEnd);
+        }
     } 
     else if (type === 'enkel') {
         const tEnd = tRoute1End;
@@ -1079,6 +1086,27 @@ function calcDiff(tStart, tEnd) {
     let diff = (d2 - d1) / 1000 / 60 / 60;
     if(diff < 0) diff += 24; 
     return diff;
+}
+function calcChronologicalSpan(times) {
+    const values = (Array.isArray(times) ? times : []).filter(function (time) {
+        return !!time;
+    });
+    if (values.length < 2) return 0;
+    const toMinutes = function (time) {
+        const parts = String(time).split(':').map(Number);
+        if (parts.length < 2 || Number.isNaN(parts[0]) || Number.isNaN(parts[1])) return null;
+        return (parts[0] * 60) + parts[1];
+    };
+    let previous = toMinutes(values[0]);
+    if (previous === null) return 0;
+    const start = previous;
+    for (let i = 1; i < values.length; i++) {
+        let current = toMinutes(values[i]);
+        if (current === null) continue;
+        while (current < previous) current += 24 * 60;
+        previous = current;
+    }
+    return (previous - start) / 60;
 }
 function parseTime(str) {
     if(!str) return new Date();
