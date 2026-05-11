@@ -1101,8 +1101,12 @@
             rows.forEach(function (r) {
                 addRow(r);
             });
-            if (rows.length === 1) {
+            let coreCount = rows.filter(function (r) {
+                return !r || !r.return_kind;
+            }).length;
+            while (coreCount < 2) {
                 addRow({ van: '', naar: '', km: '0', zone: 'nl' });
+                coreCount += 1;
             }
         } else {
             addRow({ van: DEFAULT_GARAGE_ADDRESS, naar: '', km: '0', zone: 'nl', vertrektijd: '' });
