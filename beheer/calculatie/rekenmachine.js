@@ -228,9 +228,6 @@ function terugreisSectionHasData() {
     const typeEl = document.getElementById('rittype_select');
     const type = typeEl ? typeEl.value : '';
     const tb = document.getElementById('time_t_vertrek_best');
-    if (window.__calcRetourRitMode === true) {
-        return true;
-    }
     if (tb && tb.value.trim() !== '') {
         return true;
     }
@@ -259,14 +256,6 @@ function updateVisibility() {
     const rowGarageRit2 = document.getElementById('row_garage_rit2');
     const rowVoorstaanRit2 = document.getElementById('row_voorstaan_rit2');
     const rowRetourGarageHeen = document.getElementById('row_retour_garage_heen');
-    const rrMode = window.__calcRetourRitMode === true;
-    const labelVoorstaanTijd = rowVoorstaanRit2 ? rowVoorstaanRit2.querySelector('.col-tijd label') : null;
-    const labelVoorstaanAdres = rowVoorstaanRit2 ? rowVoorstaanRit2.querySelector('.col-adres label') : null;
-    const labelGarageRit2Tijd = rowGarageRit2 ? rowGarageRit2.querySelector('.col-tijd label') : null;
-    const labelGarageRit2Adres = rowGarageRit2 ? rowGarageRit2.querySelector('.col-adres label') : null;
-    const labelRetourKlant = document.querySelector('#row_retour_klant .col-adres label');
-    const valueVoorstaanRit2 = document.getElementById('addr_t_voorstaan_rit2')?.value.trim() || '';
-    const valueGarageRit2 = document.getElementById('addr_t_garage_rit2')?.value.trim() || '';
 
     if (!blockTerug) return;
 
@@ -287,17 +276,9 @@ function updateVisibility() {
     if (blockMeerdaags) blockMeerdaags.style.display = 'none';
     if(headerTerug) headerTerug.innerText = "TERUGREIS";
     if(labelVertrekTerug) labelVertrekTerug.innerText = "Vertrek Bestemming";
-    if(labelVoorstaanTijd) labelVoorstaanTijd.innerText = "Voorstaan";
-    if(labelVoorstaanAdres) labelVoorstaanAdres.innerText = "Voorrijden Retour (Leeg)";
-    if(labelGarageRit2Tijd) labelGarageRit2Tijd.innerText = "Start Rit 2";
-    if(labelGarageRit2Adres) labelGarageRit2Adres.innerText = "Garage Start (Rit 2)";
-    if(labelRetourKlant) labelRetourKlant.innerText = "Uitstap Klant";
     if(rowGarageRit2) rowGarageRit2.style.display = 'none';
     if(rowVoorstaanRit2) rowVoorstaanRit2.style.display = 'none';
     if(rowRetourGarageHeen) rowRetourGarageHeen.style.display = 'none';
-    document.querySelectorAll('#block_terug .col-zone').forEach(function (col) {
-        col.style.display = (type === 'meerdaags' || type === 'buitenland') ? '' : 'none';
-    });
 
     if (type === 'enkel') {
         if(rowRetourGarageHeen) rowRetourGarageHeen.style.display = 'flex'; 
@@ -317,17 +298,6 @@ function updateVisibility() {
         if(g1 && g2 && !g2.value) g2.value = g1.value;
         const g1end = document.getElementById('addr_t_retour_garage_heen');
         if(g1 && g1end && !g1end.value) g1end.value = g1.value;
-    }
-    if (showTerugBlock && rrMode) {
-        if(headerTerug) headerTerug.innerText = "RIT 2 / RETOURRIT";
-        if(labelVertrekTerug) labelVertrekTerug.innerText = "Vertrek laatste locatie";
-        if(labelVoorstaanTijd) labelVoorstaanTijd.innerText = "Aankomst";
-        if(labelVoorstaanAdres) labelVoorstaanAdres.innerText = "Tussenstop retour 1";
-        if(labelGarageRit2Tijd) labelGarageRit2Tijd.innerText = "Aankomst";
-        if(labelGarageRit2Adres) labelGarageRit2Adres.innerText = "Tussenstop retour 2";
-        if(labelRetourKlant) labelRetourKlant.innerText = "Aankomst klant";
-        if(rowGarageRit2) rowGarageRit2.style.display = valueGarageRit2 !== '' ? 'flex' : 'none';
-        if(rowVoorstaanRit2) rowVoorstaanRit2.style.display = valueVoorstaanRit2 !== '' ? 'flex' : 'none';
     }
 }
 
@@ -390,9 +360,6 @@ function calculateRoute() {
              
              if(stopsRit2.length >= 2) runGoogleRoute(stopsRit2);
         } else {
-             const rrMode = window.__calcRetourRitMode === true;
-             const s5mid = document.getElementById('addr_t_voorstaan_rit2')?.value.trim() || '';
-             const s5mid2 = document.getElementById('addr_t_garage_rit2')?.value.trim() || '';
              const s5 = document.getElementById('addr_t_vertrek_best').value; 
              const s6 = document.getElementById('addr_t_retour_klant').value; 
              const s7 = document.getElementById('addr_t_retour_garage').value || s1; 
@@ -402,8 +369,6 @@ function calculateRoute() {
              if(s4) stopsTerug.push({loc: s4, id: 'dummy_start_terug'}); 
              
              if(s5) stopsTerug.push({loc: s5, id: 'addr_t_vertrek_best'});
-             if(rrMode && s5mid) stopsTerug.push({loc: s5mid, id: 'addr_t_voorstaan_rit2'});
-             if(rrMode && s5mid2) stopsTerug.push({loc: s5mid2, id: 'addr_t_garage_rit2'});
              if(s6) stopsTerug.push({loc: s6, id: 'addr_t_retour_klant'});
              stopsTerug.push({loc: s7, id: 'addr_t_retour_garage'});
 
@@ -834,30 +799,9 @@ function updatePlanning() {
         const tVertrekTerug = document.getElementById('time_t_vertrek_best').value;
         if(tVertrekTerug) {
             const dTerug = parseTime(tVertrekTerug);
-            const rrMode = window.__calcRetourRitMode === true;
-            const hasMidStop1 = rrMode && (document.getElementById('addr_t_voorstaan_rit2')?.value.trim() || '') !== '';
-            const hasMidStop2 = rrMode && (document.getElementById('addr_t_garage_rit2')?.value.trim() || '') !== '';
-            const hasCustomerStop = (document.getElementById('addr_t_retour_klant')?.value.trim() || '') !== '';
-            let cursor = dTerug;
-            if (hasMidStop1) {
-                cursor = addMinutes(cursor, reisTijden['addr_t_voorstaan_rit2'] || 60);
-                document.getElementById('time_t_voorstaan_rit2').value = formatTime(cursor);
-            } else {
-                document.getElementById('time_t_voorstaan_rit2').value = '';
-            }
-            if (hasMidStop2) {
-                cursor = addMinutes(cursor, reisTijden['addr_t_garage_rit2'] || 60);
-                document.getElementById('time_t_garage_rit2').value = formatTime(cursor);
-            } else if (rrMode) {
-                document.getElementById('time_t_garage_rit2').value = '';
-            }
-            let dKlantTerug = cursor;
-            if (hasCustomerStop) {
-                dKlantTerug = addMinutes(cursor, reisTijden['addr_t_retour_klant'] || 60);
-                document.getElementById('time_t_retour_klant').value = formatTime(dKlantTerug);
-            } else {
-                document.getElementById('time_t_retour_klant').value = '';
-            }
+            const ritTerug = reisTijden['addr_t_retour_klant'] || 60;
+            const dKlantTerug = addMinutes(dTerug, ritTerug);
+            document.getElementById('time_t_retour_klant').value = formatTime(dKlantTerug);
             
             const ritGarage = reisTijden['addr_t_retour_garage'] || 30;
             const dGarageTerug = addMinutes(dKlantTerug, ritGarage + BUFFER_NAZORG);

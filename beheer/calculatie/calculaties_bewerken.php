@@ -513,8 +513,6 @@ function val($data, $rij, $veld, $default = '') {
                         <div class="rit-row" id="row_garage_rit2" style="display:none; background:#f9f9f9; padding:5px; margin-bottom:10px; border-radius:4px;">
                             <div class="col-tijd"><label>Start Rit 2</label><input type="text" name="time[t_garage_rit2]" id="time_t_garage_rit2" class="form-control custom-time-input reken-trigger" value="<?= val($data, 't_garage_rit2', 'tijd') ?>" placeholder="--:--" readonly></div>
                             <div class="col-adres"><label>Garage Start (Rit 2)</label><input type="text" name="addr[t_garage_rit2]" id="addr_t_garage_rit2" class="form-control google-autocomplete" value="<?= val($data, 't_garage_rit2', 'adres') ?>" placeholder="Garage..."></div>
-                            <div class="col-km"><label>Km</label><input type="number" name="km[t_garage_rit2]" class="form-control km-calc reken-trigger" value="<?= val($data, 't_garage_rit2', 'km') ?>"></div>
-                            <div class="col-zone"><label>Zone</label><select class="form-control km-zone-select reken-trigger" title="Fiscale zone"><option value="nl" <?= sel($data, 't_garage_rit2', 'soort_km', 'nl') ?>>NL</option><option value="de" <?= sel($data, 't_garage_rit2', 'soort_km', 'de') ?>>DE</option><option value="ch" <?= sel($data, 't_garage_rit2', 'soort_km', 'ch') ?>>CH</option><option value="ov" <?= sel($data, 't_garage_rit2', 'soort_km', 'ov') ?>>0%</option></select></div>
                         </div>
 
                         <div class="rit-row" id="row_voorstaan_rit2" style="display:none;">
