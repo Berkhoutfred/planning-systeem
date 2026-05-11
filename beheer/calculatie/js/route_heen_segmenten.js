@@ -1183,7 +1183,9 @@
         };
 
         setRowKm(coreRows[0], legacyKm('t_vertrek_klant'));
-        if (n === 2) {
+        if (n === 1) {
+            // Enkele heenregel: regel 1 is al gekoppeld aan t_vertrek_klant.
+        } else if (n === 2) {
             setRowKm(coreRows[1], legacyKm('t_aankomst_best'));
         } else if (n === 3) {
             setRowKm(coreRows[1], legacyKm('t_voorstaan'));
