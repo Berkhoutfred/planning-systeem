@@ -878,13 +878,14 @@ function rekenen() {
 
     let uren = 0;
     const t1 = document.getElementById('time_t_garage').value;
+    const tRoute1End = document.getElementById('time_t_retour_garage_heen')?.value || '';
     
     if(type === 'dagtocht' || type === 'schoolreis' || type === 'trein') {
-        const tEnd = document.getElementById('time_t_retour_garage').value;
+        const tEnd = tRoute1End || document.getElementById('time_t_retour_garage').value;
         if(t1 && tEnd) uren = calcDiff(t1, tEnd);
     } 
     else if (type === 'enkel') {
-        const tEnd = document.getElementById('time_t_retour_garage_heen').value;
+        const tEnd = tRoute1End;
         if(t1 && tEnd) uren = calcDiff(t1, tEnd);
     }
     else if (type === 'brenghaal') {
