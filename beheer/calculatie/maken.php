@@ -160,14 +160,14 @@ function val($data, $rij, $veld, $default = '') {
     .heen-opt-mini:hover { border-color: #003366; background: #f1f5f9; }
     .heen-opt-mini:focus { outline: none; box-shadow: 0 0 0 2px rgba(0,51,102,.2); }
     .heen-opt-mini.is-active { border-color: #003366; background: #e8eef5; }
-    .terugreis-gate-bar { margin-top: 14px; align-items: center; gap: 10px; display: none !important; }
+    .terugreis-gate-bar { margin-top: 14px; align-items: center; gap: 10px; display: none; }
     .btn-terugreis-open {
         font-size: 11px; font-weight: 700; color: #003366;
         padding: 5px 12px; border: 1px dashed #003366; border-radius: 6px;
         background: #fff; cursor: pointer;
     }
     .btn-terugreis-open:hover { background: #f8fafc; }
-    #block_terug { display: none !important; }
+    #block_terug { display: none; }
     .heen-vt--auto,
     .heen-at--auto { background: #f8fafc !important; color: #475569; font-size: 11px !important; }
     .heen-seg-table input.heen-van[readonly],
