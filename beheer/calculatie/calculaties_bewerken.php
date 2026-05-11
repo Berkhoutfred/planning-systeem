@@ -835,6 +835,7 @@ function val($data, $rij, $veld, $default = '') {
                 document.getElementById('c_email').innerText = data.klant.email ? ' | ' + data.klant.email : '';
                 
                 document.getElementById('klant_info_card').style.display = 'block';
+                syncKlantAdresNaarRoute(data.klant.adres, data.klant.plaats);
                 form.reset();
                 
                 let contactSelect = document.getElementById('contact_select');
@@ -864,6 +865,16 @@ function val($data, $rij, $veld, $default = '') {
             document.getElementById('contact_select').innerHTML = '<option value="0">-- Algemeen --</option>';
             document.getElementById('afdeling_select').innerHTML = '<option value="0">-- Geen afdeling --</option>';
         }
+    }
+
+    function syncKlantAdresNaarRoute(adres, plaats) {
+        let volledigAdres = (adres || '') + ', ' + (plaats || '');
+        if (volledigAdres.length <= 2 || volledigAdres === ', ') return;
+        let veldVertrek = document.getElementById('addr_t_vertrek_klant');
+        let veldRetour = document.getElementById('addr_t_retour_klant');
+        if(veldVertrek) veldVertrek.value = volledigAdres;
+        if(veldRetour) veldRetour.value = volledigAdres;
+        if (typeof window.routeHeenRefreshFromLegacy === 'function') window.routeHeenRefreshFromLegacy();
     }
 
     document.addEventListener('DOMContentLoaded', function() {
@@ -1007,17 +1018,7 @@ function val($data, $rij, $veld, $default = '') {
                                     });
                                 }
 
-                                let volledigAdres = (klant.adres || '') + ', ' + (klant.plaats || '');
-                                if (volledigAdres.length > 2 && volledigAdres !== ', ') {
-                                    let veldVertrek = document.getElementById('addr_t_vertrek_klant');
-                                    let veldVoorstaan = document.getElementById('addr_t_voorstaan');
-                                    let veldRetour = document.getElementById('addr_t_retour_klant');
-
-                                    if(veldVertrek && veldVertrek.value === '') veldVertrek.value = volledigAdres;
-                                    if(veldVoorstaan && veldVoorstaan.value === '') veldVoorstaan.value = volledigAdres;
-                                    if(veldRetour && veldRetour.value === '') veldRetour.value = volledigAdres;
-                                }
-                                if (typeof window.routeHeenRefreshFromLegacy === 'function') window.routeHeenRefreshFromLegacy();
+                                syncKlantAdresNaarRoute(klant.adres, klant.plaats);
                             };
                             list.appendChild(div);
                         });
