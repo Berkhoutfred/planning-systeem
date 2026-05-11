@@ -720,7 +720,16 @@ window.HTML_BUS_TUSSENDAG = <?= json_encode($busOptiesTussendagHTML ?? '', JSON_
 <script src="rekenmachine.js?v=<?= time() ?>"></script> 
 
 <script>
+window.HEEN_SEGMENTS_BOOT = [];
 window.ROUTE_V2_BOOT = null;
+window.CALC_ROUTE_FORCE_FRESH = true;
+window.addEventListener('pageshow', function (event) {
+    if (!event.persisted) return;
+    window.CALC_ROUTE_FORCE_FRESH = true;
+    if (typeof window.resetNieuweCalculatieRoute === 'function') {
+        window.resetNieuweCalculatieRoute();
+    }
+});
 setTimeout(() => {
     if(typeof window.rekenen === 'function') {
         window.oudeRekenen = window.rekenen;

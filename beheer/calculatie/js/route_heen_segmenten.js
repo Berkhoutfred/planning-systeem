@@ -1190,6 +1190,75 @@
         // Volledige legacy-sync gebeurt aan het eind van routeHeenSegmentenInit via routeHeenRefreshFromLegacy().
     }
 
+    function clearFreshNewRouteState() {
+        const setById = function (id, value) {
+            const el = document.getElementById(id);
+            if (el) el.value = value;
+        };
+        const setKm = function (nameKey, value) {
+            const el = document.querySelector('input[name="km[' + nameKey + ']"]');
+            if (el) el.value = value;
+        };
+
+        setById('addr_t_garage', DEFAULT_GARAGE_ADDRESS);
+        setById('time_t_garage', '');
+        setById('addr_t_vertrek_klant', '');
+        setById('time_t_vertrek_klant', '');
+        setById('addr_t_voorstaan', '');
+        setById('time_t_voorstaan', '');
+        setById('addr_t_grens2', '');
+        setById('time_t_grens2', '');
+        setById('addr_t_aankomst_best', '');
+        setById('time_t_aankomst_best', '');
+        setById('addr_t_retour_klant', '');
+        setById('time_t_retour_klant', '');
+        setById('addr_t_retour_garage_heen', '');
+        setById('time_t_retour_garage_heen', '');
+        setById('addr_t_garage_rit2', DEFAULT_GARAGE_ADDRESS);
+        setById('time_t_garage_rit2', '');
+        setById('addr_t_voorstaan_rit2', '');
+        setById('time_t_voorstaan_rit2', '');
+        setById('addr_t_vertrek_best', '');
+        setById('time_t_vertrek_best', '');
+        setById('addr_t_retour_garage', DEFAULT_GARAGE_ADDRESS);
+        setById('time_t_retour_garage', '');
+
+        [
+            't_vertrek_klant',
+            't_voorstaan',
+            't_grens2',
+            't_aankomst_best',
+            't_retour_klant',
+            't_retour_garage_heen',
+            't_voorstaan_rit2',
+            't_vertrek_best',
+            't_retour_garage'
+        ].forEach(function (key) {
+            setKm(key, '0');
+        });
+
+        const chkG2 = document.getElementById('chk_grens2');
+        const rowG2 = document.getElementById('row_grens2');
+        if (chkG2) chkG2.checked = false;
+        if (rowG2) rowG2.style.display = 'none';
+
+        window.__calcTerugreisUserShow = false;
+    }
+
+    window.resetNieuweCalculatieRoute = function () {
+        clearFreshNewRouteState();
+        bootFromData(null);
+        syncZoneColumnVisibility();
+        syncLegacyFromSegments({
+            skipRoute: true,
+            skipRekenen: true
+        });
+        if (typeof window.updateVisibility === 'function') window.updateVisibility();
+        updateHeenOptChipStates();
+        updateRouteV2HiddenInput();
+        window.CALC_ROUTE_FORCE_FRESH = false;
+    };
+
     function wireOptieKnopen() {
         const btnRg = document.getElementById('btn_heen_opt_rg');
         const btnRk = document.getElementById('btn_heen_opt_rk');
@@ -1278,7 +1347,9 @@
                 updateRouteV2HiddenInput();
             });
         }
-        if (typeof window.routeHeenRefreshFromLegacy === 'function') {
+        if (window.CALC_ROUTE_FORCE_FRESH === true && typeof window.resetNieuweCalculatieRoute === 'function') {
+            window.resetNieuweCalculatieRoute();
+        } else if (typeof window.routeHeenRefreshFromLegacy === 'function') {
             window.routeHeenRefreshFromLegacy();
         }
         if (typeof window.updateVisibility === 'function') window.updateVisibility();
