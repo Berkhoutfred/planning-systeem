@@ -305,6 +305,7 @@ function val($data, $rij, $veld, $default = '') {
         <input type="hidden" name="id" value="<?= $rit['id'] ?>"> 
         <input type="hidden" name="naar_dashboard" value="1"> 
         <input type="hidden" name="route_v2_json" id="route_v2_json" value="<?= htmlspecialchars((string) ($rit['route_v2_json'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+        <input type="hidden" name="verkoopprijs_is_inclusief_btw" value="1">
 
         <div class="section-box" style="border-top: 4px solid #003366;"> 
             <div class="box-header"><h3 class="box-title"><i class="fas fa-user"></i> Klantgegevens</h3></div> 
@@ -657,7 +658,7 @@ function val($data, $rij, $veld, $default = '') {
                     <div class="profit-box" style="background:#e3f2fd; border:1px solid #90caf9;"> 
                         <div style="font-size:12px; color:#0056b3;">TOTAAL VERKOOPPRIJS (Incl. BTW)</div> 
                         <input type="number" step="0.01" name="verkoopprijs" id="verkoopprijs" class="form-control" style="font-size:20px; text-align:center; margin-top:5px;" value="<?= $rit['prijs'] ?>"> 
-                        <div id="display_ex_btw" style="font-size:11px; margin-top:5px;">Excl: € 0,00</div>
+                        <div id="display_btw_bedrag" style="font-size:11px; margin-top:5px;">BTW-bedrag: € 0,00</div>
                     </div> 
                     <div class="profit-box"> 
                         <div style="font-size:12px; color:#666;">WINST MARGE</div> 
@@ -1320,10 +1321,11 @@ function customFinancieleBerekening() {
     }
     
     let prijsEx = prijsIn / 1.09; 
+    let btwBedrag = prijsIn - prijsEx;
     let winst = prijsEx - totaleKostprijs;
     
-    if(document.getElementById('display_ex_btw'))
-        document.getElementById('display_ex_btw').innerText = "Excl: € " + prijsEx.toLocaleString('nl-NL', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    if(document.getElementById('display_btw_bedrag'))
+        document.getElementById('display_btw_bedrag').innerText = "BTW-bedrag: € " + btwBedrag.toLocaleString('nl-NL', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     
     const dWinst = document.getElementById('display_winst');
     if(dWinst) {

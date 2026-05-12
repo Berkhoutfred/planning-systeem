@@ -1057,8 +1057,9 @@ function rekenen() {
     
     let prijsEx = prijsIn / 1.09; 
     let winst = prijsEx - kostTotaal;
-    if(document.getElementById('display_ex_btw'))
-        document.getElementById('display_ex_btw').innerText = "Excl: € " + prijsEx.toLocaleString('nl-NL', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    const btwBedrag = prijsIn - prijsEx;
+    if(document.getElementById('display_btw_bedrag'))
+        document.getElementById('display_btw_bedrag').innerText = "BTW-bedrag: € " + btwBedrag.toLocaleString('nl-NL', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     const dWinst = document.getElementById('display_winst');
     if(dWinst) {
         dWinst.innerText = "€ " + winst.toLocaleString('nl-NL', {minimumFractionDigits: 2, maximumFractionDigits: 2});

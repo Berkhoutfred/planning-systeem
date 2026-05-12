@@ -78,9 +78,12 @@ try {
     $totaalUren = isset($_POST['total_uren']) && $_POST['total_uren'] !== ''
         ? (float) str_replace(',', '.', (string) $_POST['total_uren'])
         : 0.0;
-    $prijsExcl = isset($_POST['verkoopprijs']) && $_POST['verkoopprijs'] !== ''
+    $formPrijsRaw = isset($_POST['verkoopprijs']) && $_POST['verkoopprijs'] !== ''
         ? (float) str_replace(',', '.', (string) $_POST['verkoopprijs'])
         : 0.0;
+    $btwMul = 1 + ((float) ($instellingen['btw_nl'] ?? 9) / 100.0);
+    $prijsIsInclusiefBtw = isset($_POST['verkoopprijs_is_inclusief_btw']) && $_POST['verkoopprijs_is_inclusief_btw'] === '1';
+    $prijsExcl = $prijsIsInclusiefBtw ? ($btwMul > 0.0 ? $formPrijsRaw / $btwMul : $formPrijsRaw) : $formPrijsRaw;
 
     $kmTussen = isset($_POST['km_tussen']) && $_POST['km_tussen'] !== ''
         ? (float) str_replace(',', '.', (string) $_POST['km_tussen'])

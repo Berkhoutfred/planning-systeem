@@ -188,6 +188,7 @@ function val($data, $rij, $veld, $default = '') {
         
         <input type="hidden" name="naar_dashboard" value="1"> 
         <input type="hidden" name="route_v2_json" id="route_v2_json" value="">
+        <input type="hidden" name="verkoopprijs_is_inclusief_btw" value="1">
         
         <div class="section-box" style="border-top: 4px solid #003366;"> 
             <div class="box-header"><h3 class="box-title"><i class="fas fa-user"></i> Klantgegevens</h3></div> 
@@ -461,9 +462,9 @@ function val($data, $rij, $veld, $default = '') {
                         <div id="display_kost" class="profit-value">€ 0,00</div> 
                     </div> 
                     <div class="profit-box" style="background:#e3f2fd; border:1px solid #90caf9;"> 
-                        <div style="font-size:12px; color:#0056b3; font-weight:bold;">VERKOOPPRIJS (EXCL. BTW)</div> 
+                        <div style="font-size:12px; color:#0056b3; font-weight:bold;">VERKOOPPRIJS (INCL. BTW)</div> 
                         <input type="number" step="0.01" name="verkoopprijs" id="verkoopprijs" class="form-control" style="font-size:20px; text-align:center; margin-top:5px; border:2px solid #0056b3;" value="0"> 
-                        <div id="display_incl_btw" style="font-size:12px; margin-top:5px; font-weight:bold; color:#d97706;">Incl. 9% BTW: € 0,00</div>
+                        <div id="display_btw_bedrag" style="font-size:12px; margin-top:5px; font-weight:bold; color:#d97706;">BTW-bedrag: € 0,00</div>
                     </div> 
                     <div class="profit-box"> 
                         <div style="font-size:12px; color:#666;">WINST MARGE</div> 
@@ -801,22 +802,19 @@ function customFinancieleBerekening() {
         let berekendEx = totaleKostprijs * marge;
         let berekendIn = berekendEx * 1.09; 
         
-        // Afronden op 5 euro inclusief BTW (Zoals je origineel had)
         prijsIn = Math.ceil(berekendIn / 5) * 5; 
-        
-        // Reken strak terug naar Excl. BTW voor de database
         prijsEx = prijsIn / 1.09; 
-        prijsInVeld.value = prijsEx.toFixed(2);
+        prijsInVeld.value = prijsIn.toFixed(2);
     } else {
-        // Gebruiker heeft zelf een EXCLUSIEF bedrag getypt
-        prijsEx = parseFloat(prijsInVeld.value) || 0;
-        prijsIn = prijsEx * 1.09;
+        prijsIn = parseFloat(prijsInVeld.value) || 0;
+        prijsEx = prijsIn / 1.09;
     }
     
+    let btwBedrag = prijsIn - prijsEx;
     let winst = prijsEx - totaleKostprijs;
     
-    if(document.getElementById('display_incl_btw'))
-        document.getElementById('display_incl_btw').innerText = "Incl. 9% BTW: € " + prijsIn.toLocaleString('nl-NL', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    if(document.getElementById('display_btw_bedrag'))
+        document.getElementById('display_btw_bedrag').innerText = "BTW-bedrag: € " + btwBedrag.toLocaleString('nl-NL', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     
     const dWinst = document.getElementById('display_winst');
     if(dWinst) {

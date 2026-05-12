@@ -95,9 +95,8 @@ try {
     $formPrijsRaw = isset($_POST['verkoopprijs']) && $_POST['verkoopprijs'] !== ''
         ? (float) str_replace(',', '.', (string) $_POST['verkoopprijs'])
         : 0.0;
-    // maken.js vult verkoopprijs als exclusief BTW; merged btw_nl gebruiken als ooit incl. wordt gepost (hidden vlag).
-    $prijsIsExcl = !isset($_POST['verkoopprijs_is_inclusief_btw']) || $_POST['verkoopprijs_is_inclusief_btw'] !== '1';
-    $prijsExcl = $prijsIsExcl ? $formPrijsRaw : ($btwMul > 0.0 ? $formPrijsRaw / $btwMul : $formPrijsRaw);
+    $prijsIsInclusiefBtw = isset($_POST['verkoopprijs_is_inclusief_btw']) && $_POST['verkoopprijs_is_inclusief_btw'] === '1';
+    $prijsExcl = $prijsIsInclusiefBtw ? ($btwMul > 0.0 ? $formPrijsRaw / $btwMul : $formPrijsRaw) : $formPrijsRaw;
 
     $kmTussen = isset($_POST['km_tussen']) && $_POST['km_tussen'] !== ''
         ? (float) str_replace(',', '.', (string) $_POST['km_tussen'])
