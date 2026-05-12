@@ -307,7 +307,7 @@ function val($data, $rij, $veld, $default = '') {
         <input type="hidden" name="route_v2_json" id="route_v2_json" value="<?= htmlspecialchars((string) ($rit['route_v2_json'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
         <input type="hidden" name="verkoopprijs_is_inclusief_btw" value="1">
 
-        <div class="section-box" style="border-top: 4px solid #003366;"> 
+        <div class="section-box" style="border-top: 4px solid #90caf9;"> 
             <div class="box-header"><h3 class="box-title"><i class="fas fa-user"></i> Klantgegevens</h3></div> 
             <div class="box-body">
                 <div class="form-grid-3"> 
@@ -395,7 +395,7 @@ function val($data, $rij, $veld, $default = '') {
             </div>
         </div> 
 
-        <div class="section-box" style="border-top: 4px solid #17a2b8;"> 
+        <div class="section-box" style="border-top: 4px solid #90caf9;"> 
             <div class="box-header"><h3 class="box-title"><i class="fas fa-info-circle"></i> Ritgegevens</h3></div> 
             <div class="box-body">
                 <div class="form-grid-4"> 
@@ -418,7 +418,7 @@ function val($data, $rij, $veld, $default = '') {
             </div>
         </div> 
 
-        <div class="section-box" style="border-top: 4px solid #28a745;"> 
+        <div class="section-box" style="border-top: 4px solid #90caf9;"> 
             <div class="box-header"><h3 class="box-title"><i class="fas fa-route"></i> Routeplanning</h3></div> 
             <div class="box-body">
 
@@ -596,24 +596,24 @@ function val($data, $rij, $veld, $default = '') {
             </div>
         </div>
 
-        <div class="section-box" style="border-top: 4px solid #ffc107; background-color: #fffdf5;"> 
-            <div class="box-header" style="background-color: transparent; border-bottom: 1px dashed #ffeeba;">
-                <h3 class="box-title" style="color:#856404;"><i class="fas fa-exclamation-triangle"></i> Bijzonderheden / Instructies</h3>
-                <span style="font-size: 11px; color: #856404; font-weight: bold;">(Zichtbaar op Offerte & Chauffeurs App)</span>
+        <div class="section-box" style="border-top: 4px solid #90caf9;"> 
+            <div class="box-header">
+                <h3 class="box-title"><i class="fas fa-exclamation-triangle"></i> Bijzonderheden / Instructies</h3>
+                <span style="font-size: 11px; color: #64748b; font-weight: bold;">(Zichtbaar op Offerte & Chauffeurs App)</span>
             </div> 
             <div class="box-body" style="padding-top: 10px;">
-                <label style="color: #856404;">Heeft de klant speciale wensen? (Bijv: Rolstoel, parkeren, extra bagage, verrassingsrit)</label>
-                <textarea name="instructie_kantoor" class="form-control" rows="3" style="height: auto; border-color: #ffc107;" placeholder="Typ hier de instructies of wensen van de klant..."><?= htmlspecialchars($rit['instructie_kantoor'] ?? '') ?></textarea>
+                <label style="color: #003366;">Heeft de klant speciale wensen? (Bijv: Rolstoel, parkeren, extra bagage, verrassingsrit)</label>
+                <textarea name="instructie_kantoor" class="form-control" rows="3" style="height: auto; border-color: #90caf9;" placeholder="Typ hier de instructies of wensen van de klant..."><?= htmlspecialchars($rit['instructie_kantoor'] ?? '') ?></textarea>
             </div>
         </div>
 
-        <div class="section-box" style="border-top: 4px solid #dc3545;"> 
-            <div class="box-header" style="background: #fcf1f2;"><h3 class="box-title" style="color:#dc3545;"><i class="fas fa-euro-sign"></i> Financieel & Vervoer</h3></div> 
+        <div class="section-box" style="border-top: 4px solid #90caf9;"> 
+            <div class="box-header"><h3 class="box-title"><i class="fas fa-euro-sign"></i> Financieel & Vervoer</h3></div> 
             <div class="box-body">
                 <div style="display:flex; gap:20px; align-items: flex-end;"> 
                     <div style="flex:2;"> 
-                        <label style="color:#dc3545;">1. Hoofdvoertuig (Prijs per KM)</label> 
-                        <select name="voertuig_id" id="bus_select" class="form-control reken-trigger bus-select-class" style="font-weight:bold; border-color:#dc3545;"> 
+                        <label style="color:#003366;">1. Hoofdvoertuig (Prijs per KM)</label> 
+                        <select name="voertuig_id" id="bus_select" class="form-control reken-trigger bus-select-class" style="font-weight:bold; border-color:#90caf9;"> 
                             <option value="">-- Kies prijscategorie --</option>
                             <?php foreach($bussen as $b): ?> 
                                 <option value="<?= $b['id'] ?>" data-km="<?= $b['km_kostprijs'] ?>" <?= $b['id']==$rit['voertuig_id']?'selected':'' ?>><?= htmlspecialchars($b['naam']) ?> (€<?= number_format($b['km_kostprijs'], 2, ',', '.') ?>/km)</option> 
@@ -671,7 +671,7 @@ function val($data, $rij, $veld, $default = '') {
         </div> 
 
         <?php if(!$is_nieuw): ?> 
-        <div class="section-box" style="border-top: 4px solid #6c757d;">
+        <div class="section-box" style="border-top: 4px solid #90caf9;">
             <div class="box-header"><h3 class="box-title"><i class="fas fa-history"></i> Status Documenten</h3></div>
             <div class="box-body">
                 <div class="status-grid">
