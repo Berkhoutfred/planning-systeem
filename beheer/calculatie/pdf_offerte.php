@@ -1,398 +1,436 @@
 <?php
-// Bestand: beheer/calculatie/pdf_offerte.php
-// VERSIE: De "Perfecte" Ultra-Strakke Offerte (Met Contactpersoon Fix & Strakke Voorstaan-tijden)
+declare(strict_types=1);
 
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
+ini_set('display_errors', '1');
+ini_set('display_startup_errors', '1');
 error_reporting(E_ALL);
-
-if (!file_exists('../includes/db.php')) die("Fout: Kan db.php niet vinden.");
-if (!file_exists('../includes/fpdf/fpdf.php')) die("Fout: Kan fpdf.php niet vinden.");
 
 require '../includes/db.php';
 require '../includes/fpdf/fpdf.php';
-require '../includes/pdf_instructie_klant.php';
-require '../includes/tenant_instellingen_db.php';
+require_once __DIR__ . '/includes/offerte_presentatie.php';
 
-// Veiligheidsfilter voor speciale tekens
-function safe_iconv($text) {
-    return iconv('UTF-8', 'windows-1252//TRANSLIT', (string)($text ?? ''));
+function safe_iconv($text): string
+{
+    return iconv('UTF-8', 'windows-1252//TRANSLIT', (string) ($text ?? ''));
 }
 
-if (!isset($_GET['id']) || $_GET['id'] === '' || $_GET['id'] === '0') {
-    die("Geen ID opgegeven.");
-}
-$id = (int) $_GET['id'];
-if ($id <= 0) {
-    die("Geen ID opgegeven.");
-}
-
-$publicToken = isset($_GET['token']) ? preg_replace('/[^a-zA-Z0-9]/', '', (string) $_GET['token']) : '';
-
-// --- DE MAGISCHE FIX: Haal nu óók de contactpersoon op! ---
-// Publieke weergave: id + token (zelfde als offerte.php). Beheer: sessie-tenant + id.
-if ($publicToken !== '') {
-    $stmt = $pdo->prepare("
-        SELECT c.*,
-               k.bedrijfsnaam, k.voornaam AS klant_vn, k.achternaam AS klant_an, k.adres, k.postcode, k.plaats, k.email, k.telefoon,
-               cp.naam AS contactpersoon_naam
-        FROM calculaties c
-        LEFT JOIN klanten k ON c.klant_id = k.id AND k.tenant_id = c.tenant_id
-        LEFT JOIN klant_contactpersonen cp ON c.contact_id = cp.id AND cp.tenant_id = c.tenant_id
-        WHERE c.id = ? AND c.token = ? AND c.tenant_id IS NOT NULL
-        LIMIT 1
-    ");
-    $stmt->execute([$id, $publicToken]);
-} else {
-    $sessionTenantId = current_tenant_id();
-    if ($sessionTenantId <= 0) {
-        die("Tenant context ontbreekt.");
+function offerte_pdf_logo_path(string $logoPad): string
+{
+    $logoPad = trim($logoPad);
+    if ($logoPad === '') {
+        return '';
     }
-    $stmt = $pdo->prepare("
-        SELECT c.*,
-               k.bedrijfsnaam, k.voornaam AS klant_vn, k.achternaam AS klant_an, k.adres, k.postcode, k.plaats, k.email, k.telefoon,
-               cp.naam AS contactpersoon_naam
-        FROM calculaties c
-        LEFT JOIN klanten k ON c.klant_id = k.id AND k.tenant_id = c.tenant_id
-        LEFT JOIN klant_contactpersonen cp ON c.contact_id = cp.id AND cp.tenant_id = c.tenant_id
-        WHERE c.id = ? AND c.tenant_id = ?
-        LIMIT 1
-    ");
-    $stmt->execute([$id, $sessionTenantId]);
-}
 
-$rit = $stmt->fetch(PDO::FETCH_ASSOC);
+    $clean = ltrim($logoPad, '/');
+    $candidates = [
+        dirname(__DIR__) . '/' . $clean,
+        dirname(__DIR__, 2) . '/' . $clean,
+    ];
 
-if (!$rit) {
-    die("Rit niet gevonden in database.");
-}
-
-$tenantId = (int) ($rit['tenant_id'] ?? 0);
-if ($tenantId <= 0) {
-    die("Rit niet gevonden in database.");
-}
-
-$tenantInst = tenant_instellingen_get($pdo, $tenantId);
-$mijn_bedrijfsnaam = trim((string) ($tenantInst['bedrijfsnaam'] ?? 'BusAI'));
-$mijn_adres = trim((string) ($tenantInst['adres'] ?? ''));
-$mijn_postcode_plaats = trim((string) ($tenantInst['postcode'] ?? '') . ' ' . (string) ($tenantInst['plaats'] ?? ''));
-$mijn_telefoon = trim((string) ($tenantInst['telefoon'] ?? ''));
-$mijn_email = trim((string) ($tenantInst['email'] ?? ''));
-$mijn_logo = trim((string) ($tenantInst['logo_pad'] ?? ''));
-
-// Slim ordernummer (Jaar + 3-cijferig ID)
-$jaar_rit = !empty($rit['rit_datum']) ? date('y', strtotime($rit['rit_datum'])) : date('y');
-$orderNummer = $jaar_rit . str_pad($rit['id'], 3, '0', STR_PAD_LEFT);
-
-// Klantnaam en T.a.v. samenstellen
-$bedrijf = !empty($rit['bedrijfsnaam']) ? $rit['bedrijfsnaam'] : '';
-
-// Bepaal wie we moeten aanschrijven (Specifiek contact, of anders de algemene klant)
-if (!empty($rit['contactpersoon_naam'])) {
-    $persoon = trim($rit['contactpersoon_naam']);
-} else {
-    $persoon = trim(($rit['klant_vn'] ?? '') . ' ' . ($rit['klant_an'] ?? ''));
-}
-
-$klantNaamWeergave = !empty($bedrijf) ? $bedrijf : $persoon;
-$aanhefNaam = !empty($persoon) ? $persoon : 'relatie';
-
-// Regels ophalen
-$stmtRegels = $pdo->prepare("SELECT * FROM calculatie_regels WHERE calculatie_id = ? AND tenant_id = ?");
-$stmtRegels->execute([$id, $tenantId]);
-$alleRegels = $stmtRegels->fetchAll(PDO::FETCH_ASSOC);
-
-function getRegel($regels, $type) {
-    foreach($regels as $r) {
-        if($r['type'] == $type) return $r;
+    foreach ($candidates as $candidate) {
+        if (is_file($candidate) && filesize($candidate) > 0 && @getimagesize($candidate)) {
+            return $candidate;
+        }
     }
-    return null;
+
+    return '';
 }
 
-$voorstaanHeen = getRegel($alleRegels, 't_voorstaan');
-$vertrekKlant  = getRegel($alleRegels, 't_vertrek_klant');
-$aankomstBest  = getRegel($alleRegels, 't_aankomst_best');
-$voorstaanRet  = getRegel($alleRegels, 't_voorstaan_rit2');
-$vertrekBest   = getRegel($alleRegels, 't_vertrek_best');
-$retourKlant   = getRegel($alleRegels, 't_retour_klant');
+function offerte_pdf_section_header(FPDF $pdf, string $title): void
+{
+    $pdf->Ln(6);
+    $pdf->SetFillColor(0, 51, 102);
+    $pdf->SetTextColor(255, 255, 255);
+    $pdf->SetFont('Arial', 'B', 10);
+    $pdf->Cell(190, 7, safe_iconv('  ' . strtoupper($title)), 0, 1, 'L', true);
+    $pdf->SetTextColor(0, 0, 0);
+}
 
-// --- DE PDF OPBOUWEN ---
+function offerte_pdf_meta_row(FPDF $pdf, string $label, string $value): void
+{
+    $pdf->SetFont('Arial', 'B', 9);
+    $pdf->SetTextColor(90, 102, 118);
+    $pdf->Cell(38, 6, safe_iconv($label), 0, 0, 'L');
+    $pdf->SetFont('Arial', '', 9);
+    $pdf->SetTextColor(0, 0, 0);
+    $pdf->Cell(52, 6, safe_iconv($value), 0, 1, 'L');
+}
 
-class PDF extends FPDF {
-    function Header() {
-        global $mijn_bedrijfsnaam, $mijn_logo;
-        $blauw  = [0, 51, 102];
-        $oranje = [255, 94, 20];
+function offerte_pdf_kv_row(FPDF $pdf, string $label, string $value, bool $fill = false): void
+{
+    if ($fill) {
+        $pdf->SetFillColor(248, 251, 254);
+    }
+    $pdf->SetFont('Arial', 'B', 9);
+    $pdf->Cell(45, 7, safe_iconv('  ' . $label), 0, 0, 'L', $fill);
+    $pdf->SetFont('Arial', '', 9);
+    $pdf->Cell(145, 7, safe_iconv($value), 0, 1, 'L', $fill);
+    $pdf->SetDrawColor(235, 235, 235);
+    $pdf->Line(10, $pdf->GetY(), 200, $pdf->GetY());
+}
 
-        $logoPad = $mijn_logo !== '' ? ('../' . ltrim($mijn_logo, '/')) : '../images/berkhout_logo.png';
-        if(file_exists($logoPad) && filesize($logoPad) > 0 && @getimagesize($logoPad)) {
-            $this->Image($logoPad, 10, 10, 55); 
+class OffertePDF extends FPDF
+{
+    public array $vm = [];
+    private array $widths = [];
+    private array $aligns = [];
+
+    public function Header(): void
+    {
+        $company = $this->vm['company'] ?? [];
+        $logoPath = offerte_pdf_logo_path((string) ($company['logo_pad'] ?? ''));
+
+        if ($logoPath !== '') {
+            $this->Image($logoPath, 10, 10, 52);
         } else {
-            $this->SetXY(10, 10);
-            $this->SetFont('Arial','B',22);
-            $this->SetTextColor($blauw[0], $blauw[1], $blauw[2]);
-            $this->Cell(60, 10, safe_iconv($mijn_bedrijfsnaam), 0, 0, 'L');
+            $this->SetXY(10, 12);
+            $this->SetFont('Arial', 'B', 20);
+            $this->SetTextColor(0, 51, 102);
+            $this->Cell(95, 8, safe_iconv((string) ($company['name'] ?? 'Offerte')), 0, 0, 'L');
         }
 
-        // --- LUXE HEADER ---
-        $this->SetXY(120, 14); 
-        $this->SetFont('Arial','I',12);
-        $this->SetTextColor($oranje[0], $oranje[1], $oranje[2]);
-        $this->Cell(80, 5, 'Snel, veilig & vertrouwd', 0, 1, 'R'); 
-        
+        $this->SetXY(120, 14);
+        $this->SetFont('Arial', 'I', 12);
+        $this->SetTextColor(217, 119, 6);
+        $this->Cell(80, 5, safe_iconv('Offerteoverzicht'), 0, 1, 'R');
+
         $this->Ln(8);
-        $this->SetDrawColor($oranje[0], $oranje[1], $oranje[2]);
+        $this->SetDrawColor(217, 119, 6);
         $this->SetLineWidth(0.6);
-        $this->Line(10, 32, 200, 32); 
+        $this->Line(10, 32, 200, 32);
     }
 
-    function Footer() {
-        global $mijn_bedrijfsnaam, $mijn_adres, $mijn_postcode_plaats, $mijn_telefoon, $mijn_email;
-        $blauw  = [0, 51, 102];
+    public function Footer(): void
+    {
+        $company = $this->vm['company'] ?? [];
+        $chunks = [];
+        if (!empty($company['address'])) {
+            $chunks[] = (string) $company['address'];
+        }
+        $postcodeCity = trim((string) ($company['postcode'] ?? '') . ' ' . (string) ($company['city'] ?? ''));
+        if ($postcodeCity !== '') {
+            $chunks[] = $postcodeCity;
+        }
+        if (!empty($company['phone'])) {
+            $chunks[] = 'T: ' . (string) $company['phone'];
+        }
+        if (!empty($company['email'])) {
+            $chunks[] = 'E: ' . (string) $company['email'];
+        }
+
         $this->SetY(-22);
-        
         $this->SetDrawColor(200, 200, 200);
         $this->SetLineWidth(0.2);
         $this->Line(10, 275, 200, 275);
-        
-        $this->SetFont('Arial','',8.5);
+        $this->SetFont('Arial', '', 8.5);
         $this->SetTextColor(80, 80, 80);
-        $chunks = [];
-        if ($mijn_adres !== '') { $chunks[] = $mijn_adres; }
-        if ($mijn_postcode_plaats !== '') { $chunks[] = $mijn_postcode_plaats; }
-        if ($mijn_telefoon !== '') { $chunks[] = 'T: ' . $mijn_telefoon; }
-        if ($mijn_email !== '') { $chunks[] = 'E: ' . $mijn_email; }
-        $bedrijfsInfo = $chunks !== [] ? implode('  |  ', $chunks) : $mijn_bedrijfsnaam;
-        $this->Cell(0, 5, safe_iconv($bedrijfsInfo), 0, 1, 'C');
-        
-        $this->SetFont('Arial','I',8);
+        $this->Cell(0, 5, safe_iconv($chunks !== [] ? implode('  |  ', $chunks) : (string) ($company['name'] ?? '')), 0, 1, 'C');
+        $this->SetFont('Arial', 'I', 8);
         $this->SetTextColor(150);
-        $this->Cell(0, 5, safe_iconv('Offerte ' . $mijn_bedrijfsnaam), 0, 0, 'C');
+        $this->Cell(0, 5, safe_iconv('Offerte ' . (string) ($company['name'] ?? '')), 0, 0, 'C');
+    }
+
+    public function SetWidths(array $widths): void
+    {
+        $this->widths = $widths;
+    }
+
+    public function SetAligns(array $aligns): void
+    {
+        $this->aligns = $aligns;
+    }
+
+    public function Row(array $data, bool $header = false): void
+    {
+        $nb = 0;
+        foreach ($data as $i => $txt) {
+            $nb = max($nb, $this->NbLines($this->widths[$i] ?? 20, (string) $txt));
+        }
+        $h = 5 * max(1, $nb);
+        $this->CheckPageBreak($h);
+
+        foreach ($data as $i => $txt) {
+            $w = $this->widths[$i] ?? 20;
+            $a = $this->aligns[$i] ?? 'L';
+            $x = $this->GetX();
+            $y = $this->GetY();
+
+            $this->SetDrawColor(230, 236, 243);
+            if ($header) {
+                $this->SetFillColor(0, 51, 102);
+                $this->SetTextColor(255, 255, 255);
+                $this->SetFont('Arial', 'B', 8);
+                $this->Rect($x, $y, $w, $h, 'FD');
+            } else {
+                $this->SetFillColor(255, 255, 255);
+                $this->SetTextColor(0, 0, 0);
+                $this->SetFont('Arial', '', 8.5);
+                $this->Rect($x, $y, $w, $h);
+            }
+
+            $this->MultiCell($w, 5, safe_iconv((string) $txt), 0, $a, false);
+            $this->SetXY($x + $w, $y);
+        }
+
+        $this->Ln($h);
+    }
+
+    private function CheckPageBreak(float $h): void
+    {
+        if ($this->GetY() + $h > $this->PageBreakTrigger) {
+            $this->AddPage($this->CurOrientation);
+        }
+    }
+
+    private function NbLines(float $w, string $txt): int
+    {
+        $cw = $this->CurrentFont['cw'] ?? [];
+        if ($w === 0.0) {
+            $w = $this->w - $this->rMargin - $this->x;
+        }
+        $wmax = ($w - 2 * $this->cMargin) * 1000 / $this->FontSize;
+        $s = str_replace("\r", '', $txt);
+        $nb = strlen($s);
+        if ($nb > 0 && $s[$nb - 1] === "\n") {
+            $nb--;
+        }
+        $sep = -1;
+        $i = 0;
+        $j = 0;
+        $l = 0;
+        $nl = 1;
+        while ($i < $nb) {
+            $c = $s[$i];
+            if ($c === "\n") {
+                $i++;
+                $sep = -1;
+                $j = $i;
+                $l = 0;
+                $nl++;
+                continue;
+            }
+            if ($c === ' ') {
+                $sep = $i;
+            }
+            $l += $cw[$c] ?? 500;
+            if ($l > $wmax) {
+                if ($sep === -1) {
+                    if ($i === $j) {
+                        $i++;
+                    }
+                } else {
+                    $i = $sep + 1;
+                }
+                $sep = -1;
+                $j = $i;
+                $l = 0;
+                $nl++;
+            } else {
+                $i++;
+            }
+        }
+        return $nl;
     }
 }
 
-$pdf = new PDF();
+function offerte_pdf_render_route_table(OffertePDF $pdf, array $route, bool $showZone): void
+{
+    if (($route['rows'] ?? []) === []) {
+        return;
+    }
+
+    $routeLabel = trim((string) ($route['label'] ?? ''));
+    if ($routeLabel !== '') {
+        $pdf->SetFont('Arial', 'B', 9);
+        $pdf->SetTextColor(0, 51, 102);
+        $pdf->Cell(190, 6, safe_iconv($routeLabel), 0, 1, 'L');
+    }
+
+    if (($route['table_type'] ?? 'segment_table') === 'legacy_route') {
+        $widths = $showZone ? [26, 112, 16, 24] : [26, 128, 24];
+        $header = $showZone ? ['Tijd', 'Locatie', 'Zone', 'Km'] : ['Tijd', 'Locatie', 'Km'];
+        $aligns = $showZone ? ['L', 'L', 'C', 'R'] : ['L', 'L', 'R'];
+        $pdf->SetWidths($widths);
+        $pdf->SetAligns($aligns);
+        $pdf->Row($header, true);
+
+        foreach ($route['rows'] as $row) {
+            $cells = $showZone
+                ? [(string) $row['time_display'], (string) $row['location'], (string) $row['zone_display'], (string) $row['km_display']]
+                : [(string) $row['time_display'], (string) $row['location'], (string) $row['km_display']];
+            $pdf->Row($cells);
+        }
+        $pdf->Ln(2);
+        return;
+    }
+
+    $widths = $showZone ? [22, 44, 58, 24, 16, 26] : [22, 50, 66, 24, 28];
+    $header = $showZone ? ['Vertrek', 'Van', 'Naar', 'Aankomst', 'Zone', 'Km'] : ['Vertrek', 'Van', 'Naar', 'Aankomst', 'Km'];
+    $aligns = $showZone ? ['L', 'L', 'L', 'L', 'C', 'R'] : ['L', 'L', 'L', 'L', 'R'];
+    $pdf->SetWidths($widths);
+    $pdf->SetAligns($aligns);
+    $pdf->Row($header, true);
+
+    foreach ($route['rows'] as $row) {
+        $cells = $showZone
+            ? [(string) $row['depart_display'], (string) $row['from'], (string) $row['to'], (string) $row['arrive_display'], (string) $row['zone_display'], (string) $row['km_display']]
+            : [(string) $row['depart_display'], (string) $row['from'], (string) $row['to'], (string) $row['arrive_display'], (string) $row['km_display']];
+        $pdf->Row($cells);
+    }
+    $pdf->Ln(2);
+}
+
+function offerte_pdf_render_event_table(OffertePDF $pdf, array $day): void
+{
+    if (($day['events'] ?? []) === []) {
+        return;
+    }
+
+    $pdf->SetFont('Arial', 'B', 9);
+    $pdf->SetTextColor(0, 51, 102);
+    $pdf->Cell(190, 6, safe_iconv('Dagactiviteiten'), 0, 1, 'L');
+
+    $showZone = !empty($day['show_zone']);
+    $widths = $showZone ? [22, 38, 18, 40, 40, 14, 18] : [22, 44, 20, 46, 46, 20];
+    $header = $showZone ? ['Type', 'Datum', 'Tijd', 'Van', 'Naar', 'Zone', 'Km'] : ['Type', 'Datum', 'Tijd', 'Van', 'Naar', 'Km'];
+    $aligns = $showZone ? ['L', 'L', 'L', 'L', 'L', 'C', 'R'] : ['L', 'L', 'L', 'L', 'L', 'R'];
+    $pdf->SetWidths($widths);
+    $pdf->SetAligns($aligns);
+    $pdf->Row($header, true);
+
+    foreach ($day['events'] as $row) {
+        $cells = $showZone
+            ? [(string) $row['label'], (string) $row['date_display'], (string) $row['time_display'], (string) $row['from'], (string) $row['to'], (string) $row['zone_display'], (string) $row['km_display']]
+            : [(string) $row['label'], (string) $row['date_display'], (string) $row['time_display'], (string) $row['from'], (string) $row['to'], (string) $row['km_display']];
+        $pdf->Row($cells);
+    }
+    $pdf->Ln(2);
+}
+
+if (!isset($_GET['id']) || $_GET['id'] === '' || $_GET['id'] === '0') {
+    die('Geen ID opgegeven.');
+}
+
+$id = (int) $_GET['id'];
+if ($id <= 0) {
+    die('Geen ID opgegeven.');
+}
+
+$publicToken = isset($_GET['token']) ? preg_replace('/[^a-zA-Z0-9]/', '', (string) $_GET['token']) : '';
+$tenantId = $publicToken !== '' ? 0 : (int) current_tenant_id();
+
+$rit = offerte_presentatie_fetch_by_id($pdo, $id, $publicToken, $tenantId > 0 ? $tenantId : null);
+if (!$rit) {
+    die('Rit niet gevonden in database.');
+}
+
+$view = offerte_presentatie_build($pdo, $rit);
+$pdf = new OffertePDF();
+$pdf->vm = $view;
 $pdf->SetMargins(10, 10, 10);
 $pdf->SetAutoPageBreak(true, 25);
 $pdf->AddPage();
 
-$blauw  = [0, 51, 102];
-$oranje = [255, 94, 20]; 
-
-// --- ADRESSERING ---
-$pdf->SetY(48); 
-$pdf->SetFont('Arial','B',11);
-$pdf->SetTextColor(0); 
-$pdf->Cell(0, 5, safe_iconv($bedrijf), 0, 1);
-
-if (!empty($persoon)) {
-    $pdf->SetFont('Arial','',11);
-    $pdf->Cell(0, 5, safe_iconv('t.a.v. ' . $persoon), 0, 1); 
+$pdf->SetY(42);
+$pdf->SetFont('Arial', 'B', 11);
+$pdf->SetTextColor(0, 0, 0);
+$pdf->Cell(100, 5, safe_iconv((string) ($view['customer']['display_name'] ?? '')), 0, 1, 'L');
+if (!empty($view['customer']['company_name']) && !empty($view['customer']['contact_name'])) {
+    $pdf->SetFont('Arial', '', 11);
+    $pdf->Cell(100, 5, safe_iconv('t.a.v. ' . (string) $view['customer']['contact_name']), 0, 1, 'L');
+}
+if (!empty($view['customer']['address'])) {
+    $pdf->SetFont('Arial', '', 11);
+    $pdf->Cell(100, 5, safe_iconv((string) $view['customer']['address']), 0, 1, 'L');
+}
+if (!empty($view['customer']['postcode_city'])) {
+    $pdf->Cell(100, 5, safe_iconv((string) $view['customer']['postcode_city']), 0, 1, 'L');
 }
 
-$pdf->SetFont('Arial','',11);
-$pdf->Cell(0, 5, safe_iconv($rit['adres']), 0, 1);
-$pdf->Cell(0, 5, safe_iconv(($rit['postcode'] ?? '') . ' ' . $rit['plaats']), 0, 1); 
+$pdf->SetXY(120, 44);
+$pdf->SetFillColor(248, 251, 254);
+$pdf->SetDrawColor(220, 228, 236);
+$pdf->Rect(120, 42, 80, 24, 'FD');
+$pdf->SetXY(125, 45);
+offerte_pdf_meta_row($pdf, 'Offertenummer', '#' . (string) ($view['offer']['order_nummer'] ?? ''));
+$pdf->SetX(125);
+offerte_pdf_meta_row($pdf, 'Offertedatum', (string) ($view['offer']['date_display'] ?? ''));
+$pdf->SetX(125);
+offerte_pdf_meta_row($pdf, 'Vervaldatum', (string) ($view['offer']['expiry_date_display'] ?? ''));
 
-// --- META INFO BLOK ---
-$pdf->SetXY(120, 48);
-$pdf->SetFillColor(245, 248, 250);
-$pdf->SetDrawColor(220, 220, 220);
-$pdf->Rect(120, 46, 80, 22, 'F'); 
-
-$pdf->SetXY(125, 48);
-$pdf->SetFont('Arial','',10);
-$pdf->SetTextColor(100, 100, 100);
-$pdf->Cell(30, 5, 'Offertenummer:', 0, 0);
-$pdf->SetFont('Arial','B',10);
-$pdf->SetTextColor($blauw[0], $blauw[1], $blauw[2]);
-$pdf->Cell(40, 5, '#' . $orderNummer, 0, 1, 'R');
-
-$pdf->SetXY(125, 54);
-$pdf->SetFont('Arial','',10);
-$pdf->SetTextColor(100, 100, 100);
-$pdf->Cell(30, 5, 'Datum:', 0, 0);
-$pdf->SetFont('Arial','B',10);
-$pdf->SetTextColor(0);
-$pdf->Cell(40, 5, date('d-m-Y'), 0, 1, 'R');
-
-$pdf->SetXY(125, 60);
-$pdf->SetFont('Arial','',10);
-$pdf->SetTextColor(100, 100, 100);
-$pdf->Cell(30, 5, 'Vervaldatum:', 0, 0);
-$pdf->SetFont('Arial','',10);
-$pdf->SetTextColor(0);
-$pdf->Cell(40, 5, date('d-m-Y', strtotime('+14 days')), 0, 1, 'R');
-
-// --- INTRODUCTIE ---
-$pdf->SetY(72);
-$pdf->SetFont('Arial','B',10);
-$pdf->SetTextColor(0);
-$pdf->Cell(0, 5, safe_iconv('Geachte ' . $aanhefNaam . ','), 0, 1); 
-$pdf->Ln(2);
-
-$pdf->SetFont('Arial','',10);
-$pdf->MultiCell(0, 5.5, safe_iconv("Hartelijk dank voor uw aanvraag. Wij doen u hierbij graag onze vrijblijvende offerte, op basis van actuele beschikbaarheid, toekomen. Hieronder volgt het besproken programma en de kostenspecificatie.")); 
-
-// --- PROGRAMMA TABEL ---
-$pdf->Ln(8);
-$pdf->SetFillColor($blauw[0], $blauw[1], $blauw[2]); 
-$pdf->SetTextColor(255, 255, 255); 
-$pdf->SetFont('Arial','B',10);
-$pdf->Cell(0, 7, '  PROGRAMMA', 0, 1, 'L', true);
-
-$pdf->SetTextColor(0);
-
-function chic_row($pdf, $label, $waarde, $fill = false) {
-    if ($fill) $pdf->SetFillColor(248, 249, 250); 
-    $pdf->SetFont('Arial','B',9);
-    $pdf->Cell(45, 7, '  ' . safe_iconv($label), 0, 0, 'L', $fill);
-    $pdf->SetFont('Arial','',9);
-    $pdf->Cell(0, 7, safe_iconv($waarde), 0, 1, 'L', $fill);
-    $pdf->SetDrawColor(235, 235, 235);
-    $pdf->Line(10, $pdf->GetY(), 200, $pdf->GetY());
-}
-
-function formatLijn($tijd, $adres) {
-    $t = substr($tijd ?? '00:00', 0, 5);
-    $a = trim($adres ?? '');
-    
-    if ($t != '00:00' && $a != '') return $t . ' uur - ' . $a;
-    if ($t != '00:00') return $t . ' uur';
-    if ($a != '') return $a;
-    return '';
-}
-
-$dagen = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag'];
-$dagNummer = date('w', strtotime($rit['rit_datum']));
-$datumTekst = $dagen[$dagNummer] . ' ' . date('d-m-Y', strtotime($rit['rit_datum']));
-
-$fillToggle = false;
-
-chic_row($pdf, 'Reisdatum:', $datumTekst, $fillToggle); $fillToggle = !$fillToggle;
-chic_row($pdf, 'Aantal passagiers:', ($rit['passagiers'] ?? '0') . ' personen', $fillToggle); $fillToggle = !$fillToggle;
-
-// --- HEENREIS ---
-$vhTijd  = substr($voorstaanHeen['tijd'] ?? '00:00', 0, 5);
-$vkTijd  = substr($vertrekKlant['tijd'] ?? '00:00', 0, 5);
-
-// Voorstaan Heen (Alleen tijd!)
-if ($vhTijd != '00:00') {
-    chic_row($pdf, 'Voorstaan:', $vhTijd . ' uur', $fillToggle); $fillToggle = !$fillToggle;
-} elseif ($vkTijd != '00:00') {
-    $str = date('H:i', strtotime('-15 minutes', strtotime($vkTijd))) . ' uur';
-    chic_row($pdf, 'Voorstaan:', $str, $fillToggle); $fillToggle = !$fillToggle;
-}
-
-// Vertrek Heen
-$vkStr = formatLijn($vertrekKlant['tijd'] ?? '', $vertrekKlant['adres'] ?? '');
-if ($vkStr) {
-    chic_row($pdf, 'Vertrek:', $vkStr, $fillToggle); $fillToggle = !$fillToggle;
-}
-
-// Aankomst Bestemming
-$abStr = formatLijn($aankomstBest['tijd'] ?? '', $aankomstBest['adres'] ?? '');
-if ($abStr) {
-    chic_row($pdf, 'Geplande aankomst:', $abStr, $fillToggle); $fillToggle = !$fillToggle;
-}
-
-// --- RETOURREIS ---
-$vrTijd  = substr($voorstaanRet['tijd'] ?? '00:00', 0, 5);
-$vbTijd  = substr($vertrekBest['tijd'] ?? '00:00', 0, 5);
-
-// Voorstaan Retour (Alleen tijd!)
-if ($vrTijd != '00:00') {
-    chic_row($pdf, 'Voorstaan retour:', $vrTijd . ' uur', $fillToggle); $fillToggle = !$fillToggle;
-} elseif ($vbTijd != '00:00') {
-    $str = date('H:i', strtotime('-15 minutes', strtotime($vbTijd))) . ' uur';
-    chic_row($pdf, 'Voorstaan retour:', $str, $fillToggle); $fillToggle = !$fillToggle;
-}
-
-// Vertrek Retour
-$vbStr = formatLijn($vertrekBest['tijd'] ?? '', $vertrekBest['adres'] ?? '');
-if ($vbStr) {
-    chic_row($pdf, 'Vertrek retour:', $vbStr, $fillToggle); $fillToggle = !$fillToggle;
-}
-
-// Verwachte Thuiskomst
-$rkStr = formatLijn($retourKlant['tijd'] ?? '', $retourKlant['adres'] ?? '');
-if ($rkStr) {
-    chic_row($pdf, 'Verwachte thuiskomst:', $rkStr, $fillToggle); $fillToggle = !$fillToggle;
-}
-
-// Bijzonderheden in de tabel (Onderaan) — alleen echte klanttekst, geen interne wizard-dump
-$instructie = pdf_filter_instructie_voor_klant(isset($rit['instructie_kantoor']) ? (string) $rit['instructie_kantoor'] : null);
-if ($instructie !== '') {
-    $startY = $pdf->GetY();
-    if ($fillToggle) $pdf->SetFillColor(248, 249, 250); 
-    $pdf->SetFont('Arial','B',9);
-    $pdf->Cell(45, 6, '  Bijzonderheden:', 0, 0, 'L', $fillToggle);
-    
-    $pdf->SetXY(55, $startY); 
-    $pdf->SetFont('Arial','',9);
-    $pdf->MultiCell(0, 6, safe_iconv($instructie), 0, 'L', $fillToggle); 
-    $pdf->SetDrawColor(235, 235, 235);
-    $pdf->Line(10, $pdf->GetY(), 200, $pdf->GetY());
-}
-
-
-// --- STRAKKE PRIJS SPECIFICATIE ---
-$pdf->Ln(10);
-$pdf->SetFillColor($blauw[0], $blauw[1], $blauw[2]);
-$pdf->SetTextColor(255, 255, 255);
-$pdf->SetFont('Arial','B',10);
-$pdf->Cell(150, 7, '  OMSCHRIJVING', 0, 0, 'L', true);
-$pdf->Cell(40, 7, 'BEDRAG', 0, 1, 'R', true);
-
-$pdf->SetTextColor(0);
-$pdf->SetFont('Arial','',10);
-
-$prijsExcl = $rit['prijs'] ?? 0; 
-$btw = $prijsExcl * 0.09;
-$totaal = round(($prijsExcl + $btw) / 5) * 5; 
-
-$pdf->Ln(2);
-$pdf->Cell(150, 6, '  Vervoerskosten (1 touringcar) - Excl. BTW', 0, 0);
-$pdf->Cell(40, 6, chr(128).' '.number_format($prijsExcl, 2, ',', '.'), 0, 1, 'R');
-
-$pdf->SetFont('Arial','I',9);
-$pdf->SetTextColor(100, 100, 100);
-$pdf->Cell(150, 5, '  Nederland 9% BTW over ' . chr(128).' '.number_format($prijsExcl, 2, ',', '.'), 0, 0);
-$pdf->Cell(40, 5, chr(128).' '.number_format($btw, 2, ',', '.'), 0, 1, 'R');
-
-$pdf->Ln(3);
-$pdf->SetDrawColor($oranje[0], $oranje[1], $oranje[2]);
-$pdf->SetLineWidth(0.5);
-$pdf->Line(160, $pdf->GetY(), 200, $pdf->GetY()); 
-$pdf->Ln(2);
-
-$pdf->SetTextColor($blauw[0], $blauw[1], $blauw[2]);
-$pdf->SetFont('Arial','B',11);
-$pdf->Cell(150, 8, 'TOTAALPRIJS INCL. BTW:  ', 0, 0, 'R');
-$pdf->SetTextColor($oranje[0], $oranje[1], $oranje[2]);
-$pdf->SetFont('Arial','B',13);
-$pdf->Cell(40, 8, chr(128).' '.number_format($totaal, 2, ',', '.'), 0, 1, 'R');
-
-
-// --- DE COMPACTE "KLEINE LETTERTJES" ---
-$pdf->Ln(10);
-$pdf->SetTextColor(100, 100, 100); 
-$pdf->SetFont('Arial','',8); 
-
-$voorwaardenTekst = "Indien van het bovenstaande programma wordt afgeweken, kan er een prijsaanpassing volgen. Wij vertrouwen erop u met deze offerte een passende aanbieding te hebben gedaan en zien uw reactie gaarne tegemoet via het online portaal. De aanbieding is exclusief eventuele parkeer-, tol- en/of verblijfskosten. Wij behouden ons het recht voor onze reissommen te wijzigen, indien daartoe aanleiding bestaat door prijs en/of brandstofverhogingen door derden.";
-$pdf->MultiCell(0, 4, safe_iconv($voorwaardenTekst)); 
-
-// --- AFSLUITING ---
-$pdf->Ln(6);
-$pdf->SetTextColor(0);
-$pdf->SetFont('Arial','',10);
-$pdf->Cell(0, 5, safe_iconv('Met vriendelijke groeten,'), 0, 1);
+offerte_pdf_section_header($pdf, 'Aanhef');
+$pdf->SetFont('Arial', 'B', 10);
+$pdf->Cell(190, 5, safe_iconv((string) ($view['salutation'] ?? '')), 0, 1, 'L');
 $pdf->Ln(1);
-$pdf->SetFont('Arial','B',10);
-$pdf->Cell(0, 5, safe_iconv($mijn_bedrijfsnaam), 0, 1); 
-$pdf->SetFont('Arial','',10);
-$pdf->Cell(0, 5, safe_iconv('Fred Stravers'), 0, 1); 
+$pdf->SetFont('Arial', '', 10);
+$pdf->MultiCell(190, 5.5, safe_iconv((string) ($view['intro'] ?? '')));
 
-$slug = preg_replace('/[^A-Za-z0-9_-]/', '_', $mijn_bedrijfsnaam);
-$pdf->Output('I', 'Offerte-' . $slug . '-' . $orderNummer . '.pdf');
-?>
+offerte_pdf_section_header($pdf, 'Ritgegevens');
+$fill = false;
+offerte_pdf_kv_row($pdf, 'Soort reis', (string) ($view['trip']['rittype_label'] ?? ''), $fill); $fill = !$fill;
+offerte_pdf_kv_row($pdf, 'Aantal passagiers', (string) ($view['trip']['passagiers'] ?? 0) . ' personen', $fill); $fill = !$fill;
+offerte_pdf_kv_row($pdf, 'Vertrekdatum', (string) ($view['trip']['start_date_display'] ?? ''), $fill); $fill = !$fill;
+offerte_pdf_kv_row($pdf, 'Einddatum', (string) ($view['trip']['end_date_display'] ?? ''), $fill);
+
+offerte_pdf_section_header($pdf, 'Routeplanning');
+if (($view['route_days'] ?? []) === []) {
+    $pdf->SetFont('Arial', '', 9);
+    $pdf->Cell(190, 6, safe_iconv('Er zijn nog geen routegegevens beschikbaar.'), 0, 1, 'L');
+} else {
+    foreach ($view['route_days'] as $day) {
+        $pdf->SetFillColor(248, 251, 254);
+        $pdf->SetDrawColor(226, 234, 242);
+        $pdf->Rect(10, $pdf->GetY(), 190, 8, 'FD');
+        $pdf->SetFont('Arial', 'B', 9);
+        $pdf->SetTextColor(0, 51, 102);
+        $pdf->Cell(95, 8, safe_iconv((string) ($day['heading_label'] ?? $day['label'] ?? 'Dag')), 0, 0, 'L');
+        $pdf->SetFont('Arial', '', 9);
+        $pdf->Cell(95, 8, safe_iconv((string) ($day['date_display'] ?? '')), 0, 1, 'R');
+        $pdf->SetTextColor(0, 0, 0);
+        $pdf->Ln(2);
+
+        foreach ($day['routes'] as $route) {
+            if (!empty($route['inline_with_day_heading'])) {
+                $route['label'] = '';
+            }
+            offerte_pdf_render_route_table($pdf, $route, !empty($route['show_zone']));
+        }
+        offerte_pdf_render_event_table($pdf, $day);
+    }
+}
+
+if (!empty($view['notes'])) {
+    offerte_pdf_section_header($pdf, 'Bijzonderheden');
+    $pdf->SetFont('Arial', '', 9.5);
+    $pdf->MultiCell(190, 5.5, safe_iconv((string) $view['notes']));
+}
+
+offerte_pdf_section_header($pdf, 'Prijs');
+$pdf->SetFont('Arial', 'B', 9);
+$pdf->SetFillColor(248, 251, 254);
+$pdf->Cell(120, 7, safe_iconv('  Omschrijving'), 0, 0, 'L', true);
+$pdf->Cell(70, 7, safe_iconv('Bedrag'), 0, 1, 'R', true);
+$pdf->SetDrawColor(235, 235, 235);
+$pdf->SetFont('Arial', '', 10);
+$pdf->Cell(120, 7, safe_iconv('  Totaalprijs incl. btw'), 0, 0, 'L');
+$pdf->SetFont('Arial', 'B', 11);
+$pdf->SetTextColor(217, 119, 6);
+$pdf->Cell(70, 7, safe_iconv((string) ($view['price']['incl_display'] ?? '')), 0, 1, 'R');
+$pdf->SetTextColor(0, 0, 0);
+$pdf->SetFont('Arial', '', 9);
+$pdf->Cell(120, 6, safe_iconv('  Excl. btw'), 0, 0, 'L');
+$pdf->Cell(70, 6, safe_iconv((string) ($view['price']['excl_display'] ?? '')), 0, 1, 'R');
+$pdf->Cell(120, 6, safe_iconv('  BTW-bedrag'), 0, 0, 'L');
+$pdf->Cell(70, 6, safe_iconv((string) ($view['price']['btw_display'] ?? '')), 0, 1, 'R');
+
+$pdf->Ln(8);
+$pdf->SetFont('Arial', '', 10);
+$pdf->MultiCell(190, 5.2, safe_iconv('Wij vertrouwen erop u hiermee een passende aanbieding te hebben gedaan en zien uw reactie graag tegemoet.'));
+$pdf->Ln(5);
+$pdf->Cell(190, 5, safe_iconv('Met vriendelijke groet,'), 0, 1, 'L');
+$pdf->Ln(1);
+$pdf->SetFont('Arial', 'B', 10);
+$pdf->Cell(190, 5, safe_iconv((string) ($view['company']['name'] ?? '')), 0, 1, 'L');
+
+$slug = preg_replace('/[^A-Za-z0-9_-]/', '_', (string) ($view['company']['name'] ?? 'Offerte'));
+$pdf->Output('I', 'Offerte-' . $slug . '-' . (string) ($view['offer']['order_nummer'] ?? '000') . '.pdf');
