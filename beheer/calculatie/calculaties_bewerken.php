@@ -658,6 +658,7 @@ function val($data, $rij, $veld, $default = '') {
                     <div class="profit-box" style="background:#e3f2fd; border:1px solid #90caf9;"> 
                         <div style="font-size:12px; color:#0056b3;">TOTAAL VERKOOPPRIJS (Incl. BTW)</div> 
                         <input type="number" step="0.01" name="verkoopprijs" id="verkoopprijs" class="form-control" style="font-size:20px; text-align:center; margin-top:5px;" value="<?= $rit['prijs'] ?>"> 
+                        <div id="display_excl_btw" style="font-size:11px; margin-top:5px;">Excl. BTW: € 0,00</div>
                         <div id="display_btw_bedrag" style="font-size:11px; margin-top:5px;">BTW-bedrag: € 0,00</div>
                     </div> 
                     <div class="profit-box"> 
@@ -1324,6 +1325,8 @@ function customFinancieleBerekening() {
     let btwBedrag = prijsIn - prijsEx;
     let winst = prijsEx - totaleKostprijs;
     
+    if(document.getElementById('display_excl_btw'))
+        document.getElementById('display_excl_btw').innerText = "Excl. BTW: € " + prijsEx.toLocaleString('nl-NL', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     if(document.getElementById('display_btw_bedrag'))
         document.getElementById('display_btw_bedrag').innerText = "BTW-bedrag: € " + btwBedrag.toLocaleString('nl-NL', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     
