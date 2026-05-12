@@ -980,12 +980,13 @@ function rekenen() {
     const tHeenEind = tRoute1End || document.getElementById('time_t_aankomst_best')?.value || '';
     const tRoute2Start = document.getElementById('time_t_garage_rit2')?.value || document.getElementById('time_t_vertrek_best')?.value || '';
     const tRoute2End = document.getElementById('time_t_retour_garage')?.value || '';
+    const route2Visible = isVisibleRoute2Active();
     
     if(type === 'dagtocht' || type === 'schoolreis' || type === 'trein') {
-        if (t1 && tHeenEind && tRoute2Start && tRoute2End) {
+        if (route2Visible && t1 && tHeenEind && tRoute2Start && tRoute2End) {
             uren = calcChronologicalSpan([t1, tHeenEind, tRoute2Start, tRoute2End]);
         } else {
-            const tEnd = tRoute1End || document.getElementById('time_t_retour_garage').value;
+            const tEnd = tHeenEind;
             if(t1 && tEnd) uren = calcDiff(t1, tEnd);
         }
     } 
@@ -1107,6 +1108,15 @@ function calcChronologicalSpan(times) {
         previous = current;
     }
     return (previous - start) / 60;
+}
+function isVisibleRoute2Active() {
+    const block = document.getElementById('block_terug');
+    if (!block || block.style.display === 'none') return false;
+    const start = document.getElementById('time_t_garage_rit2')?.value
+        || document.getElementById('time_t_vertrek_best')?.value
+        || '';
+    const end = document.getElementById('time_t_retour_garage')?.value || '';
+    return !!(String(start).trim() && String(end).trim());
 }
 function parseTime(str) {
     if(!str) return new Date();
