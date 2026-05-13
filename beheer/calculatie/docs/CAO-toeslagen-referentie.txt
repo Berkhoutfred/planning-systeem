@@ -53,6 +53,10 @@ PROJECT-AFSPRAKEN (conform opdrachtgever; o.a. 2026-05-13, aangevuld 2026-05-14)
   feestdag voor onregelmatigheidstarieven modelleren (geen lustrum-logica tot
   nadere beslissing).
 
+• **Tijdzone en kalender (2026-05-14):** voor weekdag/zon/feestdag-classificatie
+  uitgaan van **Europe/Amsterdam** en de **Nederlandse kalender** (conform
+  `rit_datum` / tijden in het formulier).
+
 --------------------------------------------------------------------------------
 BRONTEKST (ingevoerd / geplakt)
 --------------------------------------------------------------------------------
