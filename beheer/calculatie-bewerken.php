@@ -78,6 +78,7 @@ $kmTussen = (float) ($rit['km_tussen'] ?? 0);
 $kmNl = (float) ($rit['km_nl'] ?? 0);
 $kmDe = (float) ($rit['km_de'] ?? 0);
 $instructie = (string) ($rit['instructie_kantoor'] ?? '');
+$opmerkingenChfHidden = (string) ($rit['opmerkingen_chauffeur'] ?? '');
 $contactId = (int) ($rit['contact_id'] ?? 0);
 $afdelingId = (int) ($rit['afdeling_id'] ?? 0);
 ?>
@@ -119,6 +120,7 @@ $afdelingId = (int) ($rit['afdeling_id'] ?? 0);
         <input type="hidden" name="km_nl" value="<?= htmlspecialchars((string) $kmNl, ENT_QUOTES, 'UTF-8') ?>">
         <input type="hidden" name="km_de" value="<?= htmlspecialchars((string) $kmDe, ENT_QUOTES, 'UTF-8') ?>">
         <input type="hidden" name="instructie_kantoor" value="<?= htmlspecialchars($instructie, ENT_QUOTES, 'UTF-8') ?>">
+        <input type="hidden" name="opmerkingen_chauffeur" value="<?= htmlspecialchars($opmerkingenChfHidden, ENT_QUOTES, 'UTF-8') ?>">
 
         <div style="background:#fff; padding:15px; border:1px solid #ddd; margin-bottom:20px; border-radius:5px;">
             <div style="display:flex; gap:20px;">

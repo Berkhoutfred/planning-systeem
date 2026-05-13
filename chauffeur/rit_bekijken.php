@@ -130,7 +130,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && $actieve_dienst && !isset($_POST['aj
 try {
     $stmt = $pdo->prepare("
         SELECT 
-            r.*, c.titel, c.opmerkingen_chauffeur AS instructie_kantoor,
+            r.*, c.titel,
+            c.instructie_kantoor AS calc_bericht_gezamenlijk,
+            c.opmerkingen_chauffeur AS calc_bericht_chauffeur_intern,
             k.bedrijfsnaam, k.voornaam, k.achternaam, k.telefoon as klant_tel, k.mobiel,
             v.voertuig_nummer, v.naam as bus_naam,
             (SELECT omschrijving FROM ritregels WHERE rit_id = r.id AND tenant_id = r.tenant_id LIMIT 1) as vaste_rit_naam
@@ -160,6 +162,10 @@ try {
 }
 
 $is_vaste_rit = empty($rit['calculatie_id']) && (strpos($rit['werk_notities'] ?? '', '⚡ EXTRA RIT') === false);
+
+$calcBerichtGk = trim((string) ($rit['calc_bericht_gezamenlijk'] ?? ''));
+$calcBerichtIntern = trim((string) ($rit['calc_bericht_chauffeur_intern'] ?? ''));
+$heeftKantoorBerichten = !empty($rit['calculatie_id']) && ($calcBerichtGk !== '' || $calcBerichtIntern !== '');
 
 if(strpos($rit['werk_notities'] ?? '', '⚡ EXTRA RIT') !== false) {
     if (strpos($rit['werk_notities'] ?? '', 'Klant: Losse rit') !== false) {
@@ -251,6 +257,13 @@ $is_volgens_plan = (empty($zichtbare_notities));
         .betaal-btn.actief-ideal { background: #e0f2fe; border-color: #0284c7; color: #0369a1; }
         .betaal-btn.actief-ideal i { color: #0284c7; }
 
+        .chf-kantoor-msg details { border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; margin-top: 0; }
+        .chf-kantoor-msg summary { cursor: pointer; font-size: 13px; font-weight: 700; color: #003366; padding: 10px 12px; list-style-position: outside; }
+        .chf-kantoor-msg .msg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 12px 12px; }
+        @media (max-width: 520px) { .chf-kantoor-msg .msg-grid { grid-template-columns: 1fr; } }
+        .chf-kantoor-msg .msg-block { font-size: 13px; line-height: 1.45; color: #334155; background: #fff; border-radius: 6px; padding: 10px; border: 1px solid #e5e7eb; }
+        .chf-kantoor-msg .msg-block h4 { margin: 0 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; color: #64748b; }
+        .chf-kantoor-msg .msg-block.intern { border-color: #fecaca; background: #fffafa; }
         #contant_bedrag_div, #ideal_div, #notities_div { display: none; margin-top: 10px; padding: 12px; border-radius: 8px; }
         #contant_bedrag_div { background: #e6f2ff; border: 2px solid #b8daff; }
         #notities_div { background: #fff3cd; border: 2px solid #ffeeba; }
@@ -296,6 +309,28 @@ $is_volgens_plan = (empty($zichtbare_notities));
                 <div class="info-regel">Geen specifieke adresgegevens ingevoerd.</div>
             <?php endif; ?>
         </div>
+
+        <?php if ($heeftKantoorBerichten): ?>
+        <div class="card chf-kantoor-msg">
+            <details>
+                <summary><i class="fas fa-envelope-open-text"></i> Berichten kantoor</summary>
+                <div class="msg-grid">
+                    <?php if ($calcBerichtGk !== ''): ?>
+                    <div class="msg-block">
+                        <h4>Voor jou en de klant</h4>
+                        <div><?php echo nl2br(htmlspecialchars($calcBerichtGk, ENT_QUOTES, 'UTF-8')); ?></div>
+                    </div>
+                    <?php endif; ?>
+                    <?php if ($calcBerichtIntern !== ''): ?>
+                    <div class="msg-block intern">
+                        <h4>Alleen voor chauffeur</h4>
+                        <div><?php echo nl2br(htmlspecialchars($calcBerichtIntern, ENT_QUOTES, 'UTF-8')); ?></div>
+                    </div>
+                    <?php endif; ?>
+                </div>
+            </details>
+        </div>
+        <?php endif; ?>
 
         <?php if(!$actieve_dienst): ?>
             <div class="blokkade-msg">

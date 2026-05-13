@@ -79,6 +79,21 @@ function val($data, $rij, $veld, $default = '') {
     }
     .btn-clear-rit-twee-icon:hover { background: #fef2f2; color: #b91c1c; }
     .btn-clear-rit-twee-icon:focus-visible { outline: 2px solid #dc2626; outline-offset: 2px; }
+    .calc-berichten-details { margin-top: 0; border: 1px solid #e2e8f0; border-radius: 6px; background: #fafafa; }
+    .calc-berichten-details > summary {
+        cursor: pointer; font-size: 12px; font-weight: 700; color: #003366;
+        padding: 8px 10px; list-style-position: outside; user-select: none;
+    }
+    .calc-berichten-details > summary::-webkit-details-marker { color: #64748b; }
+    .calc-berichten-grid {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+        padding: 0 12px 12px;
+    }
+    @media (max-width: 720px) {
+        .calc-berichten-grid { grid-template-columns: 1fr; }
+    }
+    .calc-berichten-grid label { font-size: 11px; color: #334155; font-weight: 600; display: block; margin-bottom: 4px; }
+    .calc-berichten-grid textarea { min-height: 72px; font-size: 13px; resize: vertical; }
     .box-body { padding: 20px; }
     .form-grid-4 { display:grid; grid-template-columns: repeat(4, 1fr); gap: 15px; align-items: end; }
     .form-grid-3 { display:grid; grid-template-columns: 2fr 1fr 1fr; gap: 20px; }
@@ -461,12 +476,24 @@ function val($data, $rij, $veld, $default = '') {
 
         <div class="section-box" style="border-top: 4px solid #90caf9;"> 
             <div class="box-header">
-                <h3 class="box-title"><i class="fas fa-exclamation-triangle"></i> Bijzonderheden / Instructies</h3>
-                <span style="font-size: 11px; color: #64748b; font-weight: bold;">(Zichtbaar op Offerte & Chauffeurs App)</span>
+                <h3 class="box-title"><i class="fas fa-comments"></i> Berichten voor de rit</h3>
             </div> 
-            <div class="box-body" style="padding-top: 10px;">
-                <label style="color: #003366;">Heeft de klant speciale wensen? (Bijv: Rolstoel, parkeren, extra bagage, verrassingsrit)</label>
-                <textarea name="instructie_kantoor" class="form-control" rows="3" style="height: auto; border-color: #90caf9;" placeholder="Typ hier de instructies of wensen van de klant..."></textarea>
+            <div class="box-body" style="padding-top: 8px;">
+                <details class="calc-berichten-details">
+                    <summary>Klant + chauffeur · alleen chauffeur — uitklappen om te bewerken</summary>
+                    <div class="calc-berichten-grid">
+                        <div>
+                            <label for="instructie_kantoor">Voor klant én chauffeur</label>
+                            <span style="display:block;font-size:10px;color:#64748b;margin:-2px 0 6px;">Zichtbaar op offerte/PDF naar de klant en in de chauffeurs-app.</span>
+                            <textarea id="instructie_kantoor" name="instructie_kantoor" class="form-control" rows="4" maxlength="8000" style="border-color: #90caf9;" placeholder="Bijv. rolstoel, opstapplek, contact ter plaatse…"></textarea>
+                        </div>
+                        <div>
+                            <label for="opmerkingen_chauffeur">Alleen chauffeur</label>
+                            <span style="display:block;font-size:10px;color:#64748b;margin:-2px 0 6px;">Niet op de klantofferte; wel in de chauffeurs-app.</span>
+                            <textarea id="opmerkingen_chauffeur" name="opmerkingen_chauffeur" class="form-control" rows="4" maxlength="8000" style="border-color: #fca5a5;" placeholder="Intern: route, parkeercode, contact kantoor…"></textarea>
+                        </div>
+                    </div>
+                </details>
             </div>
         </div>
 

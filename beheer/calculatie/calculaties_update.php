@@ -101,6 +101,12 @@ try {
         ? (float) str_replace(',', '.', (string) $_POST['km_ov'])
         : 0.0;
     $instructie = (string) ($_POST['instructie_kantoor'] ?? '');
+    $opmerkingenChauffeur = trim((string) ($_POST['opmerkingen_chauffeur'] ?? ''));
+    if (function_exists('mb_strlen') && mb_strlen($opmerkingenChauffeur, 'UTF-8') > 8000) {
+        $opmerkingenChauffeur = mb_substr($opmerkingenChauffeur, 0, 8000, 'UTF-8');
+    } elseif (strlen($opmerkingenChauffeur) > 8000) {
+        $opmerkingenChauffeur = substr($opmerkingenChauffeur, 0, 8000);
+    }
 
     require_once __DIR__ . '/includes/calculatie_meta.php';
     $metaPack = calculatie_parse_meta_from_post($_POST, $rittype);
@@ -199,7 +205,7 @@ try {
                 klant_id = ?, contact_id = ?, afdeling_id = ?, rittype = ?, passagiers = ?,
                 rit_datum = ?, rit_datum_eind = ?, voertuig_id = ?, extra_voertuigen = ?,
                 totaal_km = ?, totaal_uren = ?, prijs = ?, km_tussen = ?, km_nl = ?, km_de = ?, km_ch = ?, km_ov = ?,
-                instructie_kantoor = ?
+                instructie_kantoor = ?, opmerkingen_chauffeur = ?
                 WHERE id = ? AND tenant_id = ?';
 
         $stmt = $pdo->prepare($sql);
@@ -222,6 +228,7 @@ try {
             $kmCh,
             $kmOv,
             $instructie,
+            $opmerkingenChauffeur,
             $id,
             $tenantId,
         ]);
@@ -230,7 +237,7 @@ try {
                 klant_id = ?, contact_id = ?, afdeling_id = ?, rittype = ?, passagiers = ?,
                 rit_datum = ?, rit_datum_eind = ?, voertuig_id = ?, extra_voertuigen = ?,
                 totaal_km = ?, totaal_uren = ?, prijs = ?, km_tussen = ?, km_nl = ?, km_de = ?,
-                instructie_kantoor = ?
+                instructie_kantoor = ?, opmerkingen_chauffeur = ?
                 WHERE id = ? AND tenant_id = ?';
 
         $stmt = $pdo->prepare($sql);
@@ -251,6 +258,7 @@ try {
             $kmNl,
             $kmDe,
             $instructie,
+            $opmerkingenChauffeur,
             $id,
             $tenantId,
         ]);

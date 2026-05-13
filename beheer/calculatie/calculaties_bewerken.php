@@ -30,6 +30,7 @@ $rit = [
     'totaal_km'=>0, 'totaal_uren'=>0, 'prijs'=>0, 'voertuig_id'=>0,
     'km_nl'=>0, 'km_de'=>0, 'km_ch'=>0, 'km_ov'=>0, 'km_eu'=>0, 'km_tussen'=>0,
     'instructie_kantoor'=>'',
+    'opmerkingen_chauffeur' => '',
     'route_v2_json' => null,
     'extra_voertuigen' => null, // <-- De nieuwe kolom toevoegen aan defaults
     'datum_offerte_verstuurd' => null,
@@ -191,6 +192,21 @@ $calcCsrf = function_exists('auth_get_csrf_token') ? auth_get_csrf_token() : '';
     }
     .btn-clear-rit-twee-icon:hover { background: #fef2f2; color: #b91c1c; }
     .btn-clear-rit-twee-icon:focus-visible { outline: 2px solid #dc2626; outline-offset: 2px; }
+    .calc-berichten-details { margin-top: 0; border: 1px solid #e2e8f0; border-radius: 6px; background: #fafafa; }
+    .calc-berichten-details > summary {
+        cursor: pointer; font-size: 12px; font-weight: 700; color: #003366;
+        padding: 8px 10px; list-style-position: outside; user-select: none;
+    }
+    .calc-berichten-details > summary::-webkit-details-marker { color: #64748b; }
+    .calc-berichten-grid {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+        padding: 0 12px 12px;
+    }
+    @media (max-width: 720px) {
+        .calc-berichten-grid { grid-template-columns: 1fr; }
+    }
+    .calc-berichten-grid label { font-size: 11px; color: #334155; font-weight: 600; display: block; margin-bottom: 4px; }
+    .calc-berichten-grid textarea { min-height: 72px; font-size: 13px; resize: vertical; }
     .box-body { padding: 20px; }
     .form-grid-4 { display:grid; grid-template-columns: repeat(4, 1fr); gap: 15px; align-items: end; }
     .form-grid-3 { display:grid; grid-template-columns: 2fr 1fr 1fr; gap: 20px; }
@@ -654,14 +670,30 @@ $calcCsrf = function_exists('auth_get_csrf_token') ? auth_get_csrf_token() : '';
             </div>
         </div>
 
+        <?php
+        $berichtOpen = trim((string) ($rit['instructie_kantoor'] ?? '')) !== ''
+            || trim((string) ($rit['opmerkingen_chauffeur'] ?? '')) !== '';
+        ?>
         <div class="section-box" style="border-top: 4px solid #90caf9;"> 
             <div class="box-header">
-                <h3 class="box-title"><i class="fas fa-exclamation-triangle"></i> Bijzonderheden / Instructies</h3>
-                <span style="font-size: 11px; color: #64748b; font-weight: bold;">(Zichtbaar op Offerte & Chauffeurs App)</span>
+                <h3 class="box-title"><i class="fas fa-comments"></i> Berichten voor de rit</h3>
             </div> 
-            <div class="box-body" style="padding-top: 10px;">
-                <label style="color: #003366;">Heeft de klant speciale wensen? (Bijv: Rolstoel, parkeren, extra bagage, verrassingsrit)</label>
-                <textarea name="instructie_kantoor" class="form-control" rows="3" style="height: auto; border-color: #90caf9;" placeholder="Typ hier de instructies of wensen van de klant..."><?= htmlspecialchars($rit['instructie_kantoor'] ?? '') ?></textarea>
+            <div class="box-body" style="padding-top: 8px;">
+                <details class="calc-berichten-details"<?= $berichtOpen ? ' open' : '' ?>>
+                    <summary>Klant + chauffeur · alleen chauffeur — uitklappen om te bewerken</summary>
+                    <div class="calc-berichten-grid">
+                        <div>
+                            <label for="instructie_kantoor">Voor klant én chauffeur</label>
+                            <span style="display:block;font-size:10px;color:#64748b;margin:-2px 0 6px;">Zichtbaar op offerte/PDF naar de klant en in de chauffeurs-app.</span>
+                            <textarea id="instructie_kantoor" name="instructie_kantoor" class="form-control" rows="4" maxlength="8000" style="border-color: #90caf9;" placeholder="Bijv. rolstoel, opstapplek, contact ter plaatse…"><?= htmlspecialchars($rit['instructie_kantoor'] ?? '') ?></textarea>
+                        </div>
+                        <div>
+                            <label for="opmerkingen_chauffeur">Alleen chauffeur</label>
+                            <span style="display:block;font-size:10px;color:#64748b;margin:-2px 0 6px;">Niet op de klantofferte; wel in de chauffeurs-app.</span>
+                            <textarea id="opmerkingen_chauffeur" name="opmerkingen_chauffeur" class="form-control" rows="4" maxlength="8000" style="border-color: #fca5a5;" placeholder="Intern: route, parkeercode, contact kantoor…"><?= htmlspecialchars($rit['opmerkingen_chauffeur'] ?? '') ?></textarea>
+                        </div>
+                    </div>
+                </details>
             </div>
         </div>
 
