@@ -1,26 +1,34 @@
--- =============================================================================
--- EENMALIGE DATABASE-UPDATE (Hostinger / phpMyAdmin)
--- =============================================================================
--- Samenvoeging van alle losse wijzigingen t/m 2026-05-14.
--- Selecteer eerst de JUISTE database (je tenant-/ERP-schema).
---
--- Als een regel al is uitgevoerd, geeft MySQL/MariaDB vaak:
---   "Duplicate column name …" of "Table … already exists"
--- Dat is normaal: sla die ene statement over of negeer de fout en ga verder.
---
--- Volgorde: office OTP → calculatie-kolommen → calculatie_bijlagen-tabel
--- =============================================================================
+/*
+ * HOSTINGER / phpMyAdmin — EENMALIGE UPDATE (t/m 2026-05-14)
+ *
+ * STAP VOOR STAP (belangrijk):
+ * 1) Klik links je JUISTE database aan.
+ * 2) Tab "SQL".
+ * 3) Plak ALLEEN ÉÉN blok tegelijk (van "/* STAP …" tot en met de puntkomma ;).
+ * 4) Klik "Uitvoeren".
+ * 5) Ga naar het volgende blok.
+ *
+ * "Duplicate column" / "already exists" = die stap was al gedaan; ga door naar de volgende.
+ *
+ * STAP 1A: als fout op "AFTER actief" → gebruik STAP 1A-ALTERNATIEF (zonder AFTER).
+ */
 
 SET NAMES utf8mb4;
-SET FOREIGN_KEY_CHECKS = 0;
 
--- -----------------------------------------------------------------------------
--- 1) Office-login: e-mail OTP (users + challenge-tabel)
--- -----------------------------------------------------------------------------
+/* ========== STAP 1A: kolom email_otp_enabled op users ========== */
 ALTER TABLE users
     ADD COLUMN email_otp_enabled TINYINT(1) NOT NULL DEFAULT 0
     AFTER actief;
 
+/*
+ * ========== STAP 1A-ALTERNATIEF (alleen als STAP 1A faalt op "Unknown column actief") ==========
+ * Voer dan ALLEEN dit uit (niet tegelijk met STAP 1A):
+ *
+ * ALTER TABLE users
+ *     ADD COLUMN email_otp_enabled TINYINT(1) NOT NULL DEFAULT 0;
+ */
+
+/* ========== STAP 1B: tabel office_login_otp ========== */
 CREATE TABLE IF NOT EXISTS office_login_otp (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     email_normalized VARCHAR(190) NOT NULL,
@@ -38,48 +46,37 @@ CREATE TABLE IF NOT EXISTS office_login_otp (
     KEY idx_otp_user (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- -----------------------------------------------------------------------------
--- 2) Calculaties: buitenland-module
--- -----------------------------------------------------------------------------
+/* ========== STAP 2A: calculaties.offerte_module ========== */
 ALTER TABLE calculaties
     ADD COLUMN offerte_module VARCHAR(32) NOT NULL DEFAULT 'standaard'
         COMMENT 'standaard|buitenland';
 
+/* ========== STAP 2B: calculaties.buitenland_meta ========== */
 ALTER TABLE calculaties
     ADD COLUMN buitenland_meta LONGTEXT NULL
         COMMENT 'JSON metadata module buitenland';
 
--- -----------------------------------------------------------------------------
--- 3) Calculaties: tussenritten (JSON)
--- -----------------------------------------------------------------------------
+/* ========== STAP 3: calculaties.tussendagen_meta ========== */
 ALTER TABLE calculaties
     ADD COLUMN tussendagen_meta LONGTEXT NULL
         COMMENT 'JSON tussenritten';
 
--- -----------------------------------------------------------------------------
--- 4) Calculaties: km-zones CH + OV (naast NL/DE)
--- -----------------------------------------------------------------------------
+/* ========== STAP 4: calculaties.km_ch + km_ov ========== */
 ALTER TABLE calculaties
   ADD COLUMN km_ch DECIMAL(10,2) NOT NULL DEFAULT 0 AFTER km_de,
   ADD COLUMN km_ov DECIMAL(10,2) NOT NULL DEFAULT 0 AFTER km_ch;
 
--- -----------------------------------------------------------------------------
--- 5) Calculaties: route v2 (JSON)
--- -----------------------------------------------------------------------------
+/* ========== STAP 5: calculaties.route_v2_json ========== */
 ALTER TABLE calculaties
     ADD COLUMN route_v2_json LONGTEXT NULL
         COMMENT 'JSON canoniek route-model v2';
 
--- -----------------------------------------------------------------------------
--- 6) Calculaties: CAO onderbrekingen (breng & haal, 0–2)
--- -----------------------------------------------------------------------------
+/* ========== STAP 6: calculaties.cao_onderbreking_aantal ========== */
 ALTER TABLE calculaties
     ADD COLUMN cao_onderbreking_aantal TINYINT UNSIGNED NOT NULL DEFAULT 0
         COMMENT 'CAO art.37: aantal kwalificerende onderbrekingen (0-2), alleen brenghaal';
 
--- -----------------------------------------------------------------------------
--- 7) Calculaties: PDF-bijlagen (per tenant)
--- -----------------------------------------------------------------------------
+/* ========== STAP 7: tabel calculatie_bijlagen ========== */
 CREATE TABLE IF NOT EXISTS calculatie_bijlagen (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT,
     tenant_id INT UNSIGNED NOT NULL,
@@ -92,9 +89,3 @@ CREATE TABLE IF NOT EXISTS calculatie_bijlagen (
     PRIMARY KEY (id),
     KEY idx_tenant_calc (tenant_id, calculatie_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-SET FOREIGN_KEY_CHECKS = 1;
-
--- =============================================================================
--- Klaar. Controleer in phpMyAdmin of kolommen/tabel aanwezig zijn.
--- =============================================================================
