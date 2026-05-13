@@ -147,6 +147,7 @@ function val($data, $rij, $veld, $default = '') {
     .heen-seg-table td { padding: 6px 8px; border-bottom: 1px solid #eee; vertical-align: middle; }
     .heen-seg-table .form-control { height: 30px !important; font-size: 12px !important; padding: 4px 8px !important; }
     .heen-td-t { width: 76px; }
+    .heen-td-d { width: 48px; max-width: 52px; white-space: nowrap; font-size: 10px; font-weight: 700; color: #64748b; padding: 6px 4px 6px 6px !important; vertical-align: middle; line-height: 1.15; }
     .heen-td-km { width: 64px; }
     .heen-td-rm { width: 36px; text-align: center; }
     .heen-opt-row { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e0e0e0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
@@ -253,6 +254,7 @@ function val($data, $rij, $veld, $default = '') {
                     <table class="heen-seg-table">
                         <thead>
                             <tr>
+                                <th class="heen-td-d" scope="col" aria-label="Dag"></th>
                                 <th class="heen-td-t">Vertrek</th>
                                 <th>Van</th>
                                 <th>Naar</th>
@@ -337,6 +339,7 @@ function val($data, $rij, $veld, $default = '') {
                         <table class="heen-seg-table">
                             <thead>
                                 <tr>
+                                    <th class="heen-td-d" scope="col" aria-label="Dag"></th>
                                     <th class="heen-td-t">Vertrek</th>
                                     <th>Van</th>
                                     <th>Naar</th>

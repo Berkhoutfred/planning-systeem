@@ -126,6 +126,91 @@
         return offsets;
     }
 
+    /** Korte datum in segmenttabel: alleen eerste rij per kalenderdag (zelfde dag-offsetlogica als route_v2). */
+    function formatShortNlDate(isoYmd) {
+        const raw = String(isoYmd || '');
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return '';
+        const d = new Date(raw + 'T12:00:00');
+        if (Number.isNaN(d.getTime())) return '';
+        try {
+            return String(d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })).replace(/\.$/, '');
+        } catch (e) {
+            return raw.slice(8, 10) + '-' + raw.slice(5, 7);
+        }
+    }
+
+    function refreshSegmentDateColumnInTable(tbId, rowSelector, getRowList, baseId, baseFallbackId) {
+        const tb = document.getElementById(tbId);
+        if (!tb) return;
+        const allDomRows = Array.from(tb.querySelectorAll(rowSelector));
+        const rows = typeof getRowList === 'function' ? getRowList(allDomRows) : allDomRows;
+        let base = readTrimmedValue(baseId);
+        if (!base && baseFallbackId) {
+            base = readTrimmedValue(baseFallbackId);
+        }
+        const clearAll = function () {
+            allDomRows.forEach(function (row) {
+                const td = row.querySelector('.heen-seg-date');
+                if (td) td.textContent = '';
+            });
+        };
+        if (!rows.length) {
+            clearAll();
+            return;
+        }
+        const times = [];
+        rows.forEach(function (row) {
+            times.push(row.querySelector('.heen-vt')?.value.trim() || '');
+            times.push(row.querySelector('.heen-at')?.value.trim() || '');
+        });
+        const offsets = assignTimeDayOffsets(times);
+        let prevIso = null;
+        rows.forEach(function (row, i) {
+            const td = row.querySelector('.heen-seg-date');
+            if (!td) return;
+            let off = offsets[i * 2];
+            if (off === null) {
+                if (i === 0) {
+                    off = 0;
+                } else {
+                    let inherit = 0;
+                    const pd = offsets[(i - 1) * 2];
+                    const pa = offsets[(i - 1) * 2 + 1];
+                    if (pd !== null) inherit = Math.max(inherit, pd);
+                    if (pa !== null) inherit = Math.max(inherit, pa);
+                    off = inherit;
+                }
+            }
+            const iso = addIsoDays(base, off || 0);
+            if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+                td.textContent = '';
+                return;
+            }
+            if (prevIso !== null && iso === prevIso) {
+                td.textContent = '';
+            } else {
+                td.textContent = formatShortNlDate(iso);
+            }
+            prevIso = iso;
+        });
+        allDomRows.forEach(function (row) {
+            if (rows.indexOf(row) === -1) {
+                const td = row.querySelector('.heen-seg-date');
+                if (td) td.textContent = '';
+            }
+        });
+    }
+
+    function refreshHeenSegmentDateLabels() {
+        refreshSegmentDateColumnInTable('heen_segmenten_body', 'tr.heen-seg-row', function (all) {
+            return getEffectiveRows(all);
+        }, 'rit_datum', '');
+    }
+
+    function refreshTerugSegmentDateLabels() {
+        refreshSegmentDateColumnInTable('terug_segmenten_body', 'tr.terug-seg-row', null, 'rit_datum_eind', 'rit_datum');
+    }
+
     function enrichRoute1ForPlanner(route1Payload) {
         const events = [];
         const segments = (route1Payload.segments || []).map(function (segment, index) {
@@ -814,6 +899,7 @@
             tr.className = 'terug-seg-row';
             const zoneDisplay = showZoneColumn() ? '' : 'display:none';
             tr.innerHTML =
+                '<td class="heen-td-d heen-seg-date"></td>' +
                 '<td class="heen-td-t"><input type="text" class="form-control custom-time-input heen-vt" placeholder="--:--" readonly></td>' +
                 '<td><input type="text" class="form-control heen-van" readonly></td>' +
                 '<td><input type="text" class="form-control google-autocomplete heen-naar" placeholder="Naar" autocomplete="off"></td>' +
@@ -869,6 +955,7 @@
         });
 
         syncZoneColumnVisibility();
+        refreshTerugSegmentDateLabels();
     }
 
     function getGarageAddress(rows) {
@@ -1252,6 +1339,8 @@
         if (!opts.skipRekenen && typeof window.rekenen === 'function') window.rekenen();
         updateHeenOptChipStates();
         updateRouteV2HiddenInput();
+        refreshHeenSegmentDateLabels();
+        refreshTerugSegmentDateLabels();
     }
 
     function bindRow(row) {
@@ -1332,6 +1421,7 @@
         const zoneDisplay = showZoneColumn() ? '' : 'display:none';
         const tdAank = '<td class="heen-td-t"><input type="text" class="form-control custom-time-input heen-at reken-trigger" placeholder="--:--" readonly title="Vertrek bij klant"></td>';
         tr.innerHTML =
+            '<td class="heen-td-d heen-seg-date"></td>' +
             '<td class="heen-td-t"><input type="text" class="form-control custom-time-input heen-vt reken-trigger" placeholder="--:--" readonly title="Vertrek vanuit garage"></td>' +
             '<td><input type="text" class="form-control google-autocomplete heen-van reken-trigger" placeholder="Van" autocomplete="off"></td>' +
             '<td><input type="text" class="form-control google-autocomplete heen-naar reken-trigger" placeholder="Naar" autocomplete="off"></td>' +
@@ -1603,6 +1693,15 @@
         }
         if (typeof window.updateVisibility === 'function') window.updateVisibility();
         updateRouteV2HiddenInput();
+        refreshHeenSegmentDateLabels();
+        refreshTerugSegmentDateLabels();
+        document.getElementById('rit_datum')?.addEventListener('change', function () {
+            refreshHeenSegmentDateLabels();
+            refreshTerugSegmentDateLabels();
+        });
+        document.getElementById('rit_datum_eind')?.addEventListener('change', function () {
+            refreshTerugSegmentDateLabels();
+        });
 
         document.getElementById('chk_grens2')?.addEventListener('change', function () {
             syncLegacyFromSegments();
@@ -1624,7 +1723,10 @@
         const coreRows = parts.coreRows;
         const returnRows = parts.returnRows;
         const n = coreRows.length;
-        if (n < 1) return;
+        if (n < 1) {
+            refreshHeenSegmentDateLabels();
+            return;
+        }
 
         const legacyKm = function (key) {
             const el = document.querySelector('input[name="km[' + key + ']"]');
@@ -1668,6 +1770,8 @@
 
         applyAutoSegmentTijden(rows);
         updateRouteV2HiddenInput();
+        refreshHeenSegmentDateLabels();
+        refreshTerugSegmentDateLabels();
     };
 
     /** Na klant/adres uit DB: verborgen velden → eerste segmenten bijwerken */
