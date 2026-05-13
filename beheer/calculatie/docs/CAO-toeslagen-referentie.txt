@@ -1,7 +1,7 @@
 ================================================================================
 CAO / TOESLAGEN — REFERENTIE + PROJECT-AFSPRAKEN
 ================================================================================
-Laatst bijgewerkt door project: 2026-05-13
+Laatst bijgewerkt door project: 2026-05-14
 
 Doel van dit bestand
 ---------------------
@@ -66,10 +66,8 @@ acht uur netto arbeidstijd per dag. Voor elke tussenliggende dag wordt voor de
 loonberekening acht uur netto arbeidstijd in aanmerking genomen.
 
 Artikel 37 Onderbrekingstoeslag
-1. 2. 3. 4. 5. De rijdende werknemer heeft recht op een onderbrekingstoeslag bij alle typen vervoer. De
-onderbrekingstoeslag vanaf 1-1-2026 € 15,92).
-
-2. 3. 4. 5. De rijdende werknemer heeft recht op een onderbrekingstoeslag bij alle typen vervoer. De
+(opmerking: foutieve dubbele regel met «1. 2. 3. 4. 5. … € 15,92).» verwijderd uit dit archief.)
+De rijdende werknemer heeft recht op een onderbrekingstoeslag bij alle typen vervoer. De
 onderbrekingstoeslag bedraagt €14,72 (vanaf 1-7-2025 € 15,31 en vanaf 1-1-2026 € 15,92).
 Onder een onderbreking (van de diensttijd) wordt verstaan de tijd waarover een chauffeur
 op standplaats vrij kan beschikken en dus géén werkzaamheden verricht.
