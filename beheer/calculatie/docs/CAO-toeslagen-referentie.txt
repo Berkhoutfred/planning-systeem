@@ -57,6 +57,11 @@ PROJECT-AFSPRAKEN (conform opdrachtgever; o.a. 2026-05-13, aangevuld 2026-05-14)
   uitgaan van **Europe/Amsterdam** en de **Nederlandse kalender** (conform
   `rit_datum` / tijden in het formulier).
 
+• **Onderbrekingstoeslag `brenghaal` — fase 1 (2026-05-14):** handmatige invoer
+  **0 / 1 / 2** kwalificerende onderbrekingen (geen automatische afleiding uit
+  alleen rit-tijden; CAO‑definitie “vrij op standplaats” niet betrouwbaar te
+  reconstrueren).
+
 --------------------------------------------------------------------------------
 BRONTEKST (ingevoerd / geplakt)
 --------------------------------------------------------------------------------
