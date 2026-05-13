@@ -48,6 +48,10 @@ PROJECT-AFSPRAKEN (conform opdrachtgever; o.a. 2026-05-13, aangevuld 2026-05-14)
   tellen; één toeslagtoepassing — in de implementatie het **feestdagtarief**
   (hoger) leidend laten zijn, geen extra zondag-stapel bovenop dezelfde minuten.
 
+• **5 mei / lustrum (2026-05-14):** in fase 1 **niet** als algemeen erkende
+  feestdag voor onregelmatigheidstarieven modelleren (geen lustrum-logica tot
+  nadere beslissing).
+
 --------------------------------------------------------------------------------
 BRONTEKST (ingevoerd / geplakt)
 --------------------------------------------------------------------------------
