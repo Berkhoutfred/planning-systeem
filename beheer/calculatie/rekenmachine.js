@@ -249,6 +249,10 @@ function terugreisSectionHasData() {
 // --- ZICHTBAARHEID (V3.0 Logic) ---
 function updateVisibility() {
     const type = document.getElementById('rittype_select').value;
+    const wrapCaoOb = document.getElementById('wrap_cao_onderbreking');
+    if (wrapCaoOb) {
+        wrapCaoOb.style.display = type === 'brenghaal' ? 'block' : 'none';
+    }
     const blockTerug = document.getElementById('block_terug');
     const barTerug = document.getElementById('terugreis_gate_bar');
     const blockMeerdaags = document.getElementById('block_meerdaags');
@@ -1038,8 +1042,53 @@ function rekenen() {
     if(busSelect && busSelect.selectedIndex > -1) {
         busPrijs = parseFloat(busSelect.options[busSelect.selectedIndex].dataset.km) || 0;
     }
-    
-    const kostTotaal = (totaalKm * busPrijs) + (uren * LOON);
+
+    let caoRounded = 0;
+    let caoDetails = { lines: [], rawTotal: 0, roundedTotal: 0 };
+    const ritDatumVal = document.getElementById('rit_datum')?.value?.trim() || '';
+    const ritDatumEindVal = document.getElementById('rit_datum_eind')?.value?.trim() || '';
+    if (typeof window.berekenCaoToeslagen === 'function') {
+        const selOb = document.getElementById('cao_onderbreking_aantal');
+        const onderbrekingN = selOb
+            ? Math.max(0, Math.min(2, parseInt(String(selOb.value), 10) || 0))
+            : 0;
+        caoDetails = window.berekenCaoToeslagen({
+            rittype: type,
+            ritDatum: ritDatumVal,
+            ritDatumEind: ritDatumEindVal,
+            tGarage: t1,
+            tHeenEind: tHeenEind || '',
+            tRoute1End: tRoute1End || '',
+            tRoute2Start: tRoute2Start || '',
+            tRoute2End: tRoute2End || '',
+            route2Visible: route2Visible,
+            onderbrekingAantal: onderbrekingN,
+        });
+        caoRounded = caoDetails.roundedTotal || 0;
+    }
+    const hiddenCao = document.getElementById('cao_toeslagen_afgerond');
+    if (hiddenCao) {
+        hiddenCao.value = caoRounded.toFixed(2);
+    }
+    const brEl = document.getElementById('cao_toeslag_breakdown');
+    if (brEl) {
+        const lines = caoDetails.lines || [];
+        if (lines.length === 0) {
+            brEl.innerHTML = '';
+        } else {
+            let html = '<div style="font-size:11px;color:#475569;margin-top:8px;line-height:1.45;">';
+            html += '<strong>CAO-toeslagen (interne berekening)</strong><br>';
+            lines.forEach(function (ln) {
+                html += ln.label + ': € ' + ln.amount.toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '<br>';
+            });
+            const rawT = caoDetails.rawTotal || 0;
+            html += '<em>Som vóór afronding: € ' + rawT.toFixed(2).replace('.', ',') + ' → totaal toeslagen: € ' + caoRounded.toFixed(2).replace('.', ',') + '</em></div>';
+            brEl.innerHTML = html;
+        }
+    }
+
+    const basisKost = (totaalKm * busPrijs) + (uren * LOON);
+    const kostTotaal = basisKost + caoRounded;
     if(document.getElementById('display_kost')) 
         document.getElementById('display_kost').innerText = "€ " + kostTotaal.toLocaleString('nl-NL', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 

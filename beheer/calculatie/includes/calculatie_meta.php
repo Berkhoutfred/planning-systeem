@@ -51,7 +51,7 @@ function calculatie_append_buitenland_dagprogramma(string $base, string $rittype
 }
 
 /**
- * @return array{tussendagen_json: string|null, buitenland_json: string|null, route_v2_json: string|null, offerte_module: string|null, tussendagen_bus_ids: int[]}
+ * @return array{tussendagen_json: string|null, buitenland_json: string|null, route_v2_json: string|null, offerte_module: string|null, tussendagen_bus_ids: int[], cao_onderbreking_aantal: int}
  */
 function calculatie_parse_meta_from_post(array $post, string $rittype): array
 {
@@ -171,12 +171,20 @@ function calculatie_parse_meta_from_post(array $post, string $rittype): array
         }
     }
 
+    $caoOb = isset($post['cao_onderbreking_aantal']) ? (int) $post['cao_onderbreking_aantal'] : 0;
+    if ($caoOb < 0) {
+        $caoOb = 0;
+    } elseif ($caoOb > 2) {
+        $caoOb = 2;
+    }
+
     return [
         'tussendagen_json' => $tussJson,
         'buitenland_json' => $buitenJson,
         'route_v2_json' => calculatie_route_v2_from_post($post, $rittype),
         'offerte_module' => $offerteModule,
         'tussendagen_bus_ids' => array_values(array_unique(array_filter($busExtra, static fn (int $id): bool => $id > 0))),
+        'cao_onderbreking_aantal' => $caoOb,
     ];
 }
 
@@ -242,6 +250,11 @@ function calculatie_persist_meta_columns(
     if (calculatie_db_has_column($pdo, 'calculaties', 'route_v2_json')) {
         $sets[] = 'route_v2_json = ?';
         $params[] = $metaPack['route_v2_json'];
+    }
+
+    if (calculatie_db_has_column($pdo, 'calculaties', 'cao_onderbreking_aantal')) {
+        $sets[] = 'cao_onderbreking_aantal = ?';
+        $params[] = max(0, min(2, (int) ($metaPack['cao_onderbreking_aantal'] ?? 0)));
     }
 
     if ($sets === []) {

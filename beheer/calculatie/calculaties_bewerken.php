@@ -35,7 +35,8 @@ $rit = [
     'datum_offerte_verstuurd' => null,
     'datum_bevestiging_verstuurd' => null,
     'datum_ritopdracht_verstuurd' => null,
-    'datum_factuur_verstuurd' => null
+    'datum_factuur_verstuurd' => null,
+    'cao_onderbreking_aantal' => 0,
 ]; 
 $data = []; 
 
@@ -652,6 +653,26 @@ function val($data, $rij, $veld, $default = '') {
                     <i class="fas fa-plus"></i> Extra bus toevoegen aan deze calculatie
                 </button>
                 <span style="font-size:11px; color:#888; margin-left: 10px;">Elke bus berekent zijn eigen KM-prijs + het uurloon van een chauffeur!</span>
+
+                <?php
+                $caoOb = isset($rit['cao_onderbreking_aantal']) ? (int) $rit['cao_onderbreking_aantal'] : 0;
+                if ($caoOb < 0 || $caoOb > 2) {
+                    $caoOb = 0;
+                }
+                ?>
+                <div id="wrap_cao_onderbreking" style="display:none;margin-top:12px;">
+                    <label style="font-size:12px;color:#003366;font-weight:700;">Onderbrekingstoeslag (breng &amp; haal)</label>
+                    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:6px;">
+                        <select name="cao_onderbreking_aantal" id="cao_onderbreking_aantal" class="form-control reken-trigger" style="max-width:120px;">
+                            <option value="0" <?= $caoOb === 0 ? 'selected' : '' ?>>0</option>
+                            <option value="1" <?= $caoOb === 1 ? 'selected' : '' ?>>1</option>
+                            <option value="2" <?= $caoOb === 2 ? 'selected' : '' ?>>2</option>
+                        </select>
+                        <span style="font-size:11px;color:#64748b;">Kwalificerende onderbrekingen volgens CAO (handmatig 0–2).</span>
+                    </div>
+                </div>
+                <input type="hidden" name="cao_toeslagen_afgerond" id="cao_toeslagen_afgerond" value="0">
+                <div id="cao_toeslag_breakdown"></div>
                 
                 <div class="profit-grid"> 
                     <div class="profit-box"> 
@@ -1262,6 +1283,7 @@ window.HTML_BUS_TUSSENDAG = <?= json_encode($busOptiesTussendagHTML ?? '', JSON_
 </script>
 
 <script src="js/route_heen_segmenten.js?v=<?= time() ?>"></script>
+<script src="js/cao_toeslagen.js?v=<?= time() ?>"></script>
 <script src="rekenmachine.js?v=<?= time() ?>"></script> 
 
 <script>
@@ -1307,6 +1329,10 @@ function customFinancieleBerekening() {
             totaleKostprijs += kostenDezeBus;
         }
     });
+
+    const caoH = document.getElementById('cao_toeslagen_afgerond');
+    const caoAdd = caoH ? (parseFloat(String(caoH.value).replace(',', '.')) || 0) : 0;
+    totaleKostprijs += caoAdd;
 
     if(document.getElementById('display_kost')) 
         document.getElementById('display_kost').innerText = "€ " + totaleKostprijs.toLocaleString('nl-NL', {minimumFractionDigits: 2, maximumFractionDigits: 2});
