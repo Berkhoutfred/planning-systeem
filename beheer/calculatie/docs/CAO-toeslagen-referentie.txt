@@ -50,6 +50,12 @@ PROJECT-AFSPRAKEN (conform opdrachtgever; o.a. 2026-05-13, aangevuld 2026-05-14)
   meenemen in het interne kosttotaal (marge / suggestieprijs), alleen niet als
   regels op de klantofferte.
 
+• **Afronding CAO-toeslagen (2026-05-14):** De **som van alle** berekende
+  CAO-toeslagen (onregelmatigheid + onderbreking waar van toepassing) in de
+  interne berekening naar **boven** afronden op het **dichtstbijzijnde veelvoud
+  van €5** (voorbeeld: €12,34 → €15,00; €20,00 → €20,00). Het **uurloon-deel**
+  (uren × uurloon) valt **buiten** deze afronding.
+
 • **Zondag + erkende feestdag dezelfde kalenderdag (2026-05-14):** niet dubbel
   tellen; één toeslagtoepassing — in de implementatie het **feestdagtarief**
   (hoger) leidend laten zijn, geen extra zondag-stapel bovenop dezelfde minuten.
@@ -194,15 +200,13 @@ TECHNISCHE NOTITIES — VOORLIGGEND IMPLEMENTATIEPLAN (concept)
   configuratie (PHP-array of gedeeld JSON), zodat jaarlijkse aanpassing één plek is.
 
 • Onregelmatigheid: uit dienst-tijdsinterval(len) minuten in vensters verdelen
-  (zaterdag / zon+feest / nacht 00–06 doordeweeks / voor trein ook OV-vensters).
-  Feestdagen + Paas-/Pinksterberekening in code (lustrum 5 mei als aparte regel).
+  (zaterdag / zon+feest / nacht 00–06 doordeweeks). Geen OV-art. 11 in deze module.
+  Feestdagen + Paas-/Pinksterberekening; 5 mei lustrum in fase 1 uit.
 
-• Onderbreking brenghaal: minimaal «0/1/2 vaste bedragen» op basis van
-  meetbare onderbrekingen; als er geen betrouwbare tijdreeks is, eerst
-  expliciete invoer (checkbox + minuten) of documenteer heuristiek + disclaimer.
+• Onderbreking brenghaal: handmatige invoer 0/1/2; vaste bedragen per stuk.
 
-• UI: onder display_kost / offerte — regels «Basisonregelmatigheid … u × €…»,
-  «Onderbrekingstoeslag …». Totaal loon = uren×uurloon + som toeslagen.
+• UI (interne berekening): regels per toeslag; totaal arbeid = uren×uurloon +
+  **afgeronde** som toeslagen (ceil naar veelvoud €5 op totaal toeslagen alleen).
 
 • Juridisch: software toont «indicatief op basis van ingevoerde tijden»;
   cao-tekst blijft leidend bij twijfel.
