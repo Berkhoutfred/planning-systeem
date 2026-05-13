@@ -168,6 +168,14 @@ function val($data, $rij, $veld, $default = '') {
         background: #fff; cursor: pointer;
     }
     .btn-terugreis-open:hover { background: #f8fafc; }
+    .bijlagen-gate-bar {
+        margin-top: 16px;
+        margin-bottom: 4px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
     #block_terug { display: none; }
     .heen-vt--auto,
     .heen-at--auto { background: #f8fafc !important; color: #475569; font-size: 11px !important; }
@@ -496,6 +504,53 @@ function val($data, $rij, $veld, $default = '') {
         <button type="submit" class="btn-save"><i class="fas fa-save"></i> RIT OPSLAAN & TERUG NAAR OVERZICHT</button>
         <p class="calculatie-ui-build">BusAI calculatie · bijgewerkt: <?= $uiBuildLabel ?></p>
     </form> 
+
+    <div id="bijlagen">
+        <div class="bijlagen-gate-bar">
+            <button type="button" id="btn_toggle_bijlagen_maken" class="btn-terugreis-open" title="PDF bij calculatie (na opslaan)">
+                + PDF-bijlagen (kaart, extra info)
+            </button>
+        </div>
+        <div id="wrap_bijlagen_panel_maken" class="section-box" style="border-top: 4px solid #94a3b8; display:none;">
+            <div class="box-header"><h3 class="box-title"><i class="fas fa-paperclip"></i> PDF-bijlagen</h3></div>
+            <div class="box-body">
+                <p style="font-size:13px;color:#334155;margin:0 0 10px;line-height:1.5;">
+                    Bij een <strong>nieuwe</strong> calculatie kun je pas na het <strong>opslaan</strong> PDF’s toevoegen (kaart, busnummer, extra documenten).
+                    Sla onderaan op; open daarna deze rit in het overzicht via <strong>Bewerken</strong> — daar vind je dezelfde knop met upload.
+                </p>
+                <p style="font-size:12px;color:#64748b;margin:0;">Alleen PDF, max. 8 MB per bestand; niet automatisch op de klantofferte.</p>
+            </div>
+        </div>
+    </div>
+    <script>
+    (function () {
+        var btn = document.getElementById('btn_toggle_bijlagen_maken');
+        var panel = document.getElementById('wrap_bijlagen_panel_maken');
+        if (!btn || !panel) return;
+        function panelIsOpen() {
+            return window.getComputedStyle(panel).display !== 'none';
+        }
+        function syncLabel() {
+            btn.textContent = panelIsOpen()
+                ? '− PDF-bijlagen verbergen'
+                : '+ PDF-bijlagen (kaart, extra info)';
+        }
+        btn.addEventListener('click', function () {
+            if (panelIsOpen()) {
+                panel.style.display = 'none';
+            } else {
+                panel.style.display = 'block';
+                try {
+                    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                } catch (e) {
+                    panel.scrollIntoView();
+                }
+            }
+            syncLabel();
+        });
+        syncLabel();
+    })();
+    </script>
 </div> 
 
 <div id="timeModal" class="modal-overlay">
