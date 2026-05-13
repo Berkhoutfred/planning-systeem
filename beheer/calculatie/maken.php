@@ -163,6 +163,24 @@ function val($data, $rij, $veld, $default = '') {
     #block_tussendagen_inner .tz-col-tijd { width: 74px; flex-shrink: 0; }
     #block_tussendagen_inner .tz-col-tijd .form-control { height: 32px !important; font-size: 12px !important; padding: 4px 4px !important; }
     #btn_tz_add { font-size: 11px; padding: 4px 10px; margin-top: 4px; background: #003366; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+    #wrap_losse_rijdagen_pakket { max-width: 100%; margin-top: 10px; padding: 6px 10px; border: 1px solid #e8eef5; background: #f9fbfd; border-radius: 4px; font-size: 12px; }
+    #wrap_losse_rijdagen_pakket .tz-toggle-row { margin-bottom: 0; padding-bottom: 4px; align-items: center; }
+    #block_losse_rijdagen_inner { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #d0dae8; }
+    #calc_losse_rijdagen_rows .calc-losse-rijdag-row { margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px dashed #e0e8f0; }
+    #calc_losse_rijdagen_rows .calc-losse-rijdag-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .lr-row-head { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin-bottom: 8px; }
+    .lr-row-date label, #wrap_losse_rijdagen_pakket label { font-size: 11px; font-weight: 600; color: #003366; display: block; margin-bottom: 2px; }
+    .lr-row-date .form-control { height: 32px !important; font-size: 12px !important; }
+    .lr-row-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .btn-lr-copy, .btn-lr-remove, #btn_calc_losse_rijdag_add { font-size: 11px; padding: 4px 10px; border-radius: 4px; cursor: pointer; border: none; }
+    .btn-lr-copy { background: #003366; color: #fff; }
+    .btn-lr-remove { background: #eef2f7; color: #334; border: 1px solid #ccd6e4 !important; }
+    #btn_calc_losse_rijdag_add { margin-top: 6px; background: #0b5; color: #fff; }
+    #btn_calc_losse_rijdag_add:disabled { opacity: 0.45; cursor: not-allowed; }
+    .lr-seg-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    .lr-seg-table th { text-align: left; background: #003366; color: #fff; padding: 6px 8px; font-size: 9px; letter-spacing: 0.03em; text-transform: uppercase; }
+    .lr-seg-table td { padding: 4px 6px; border-bottom: 1px solid #eee; vertical-align: middle; }
+    .lr-seg-table .form-control { height: 28px !important; font-size: 11px !important; padding: 3px 6px !important; }
     .rit-row-check-only { align-items: center; min-height: 28px; }
     .rit-row-check-only input[type="checkbox"] { width: 14px; height: 14px; flex-shrink: 0; }
     .rit-row-check-only label { margin: 0; font-size: 11px; font-weight: 700; color: #003366; cursor: pointer; white-space: nowrap; }
@@ -371,6 +389,20 @@ function val($data, $rij, $veld, $default = '') {
                     <div id="block_tussendagen_inner" style="display:none;">
                         <div id="tussendagen_rows"></div>
                         <button type="button" id="btn_tz_add">+ regel</button>
+                    </div>
+                </div>
+
+                <div id="wrap_losse_rijdagen_pakket" class="route-compact">
+                    <div class="rit-row tz-toggle-row">
+                        <label class="rit-row-check-only" style="display:flex;align-items:center;gap:8px;width:100%;margin:0;">
+                            <input type="checkbox" id="calc_losse_rijdagen_enabled" value="1">
+                            <span style="font-size:11px;font-weight:700;color:#003366;">Meerdere losse rijdagen (één offerte)</span>
+                        </label>
+                    </div>
+                    <p style="margin:4px 0 0;font-size:11px;color:#445;">Extra heenritten op andere data (bus rijdt tussendoor naar de zaak). Maximaal vier extra dagen na rit 1.</p>
+                    <div id="block_losse_rijdagen_inner" style="display:none;">
+                        <div id="calc_losse_rijdagen_rows"></div>
+                        <button type="button" id="btn_calc_losse_rijdag_add">+ Rijdag</button>
                     </div>
                 </div>
 
@@ -857,6 +889,7 @@ window.HTML_BUS_TUSSENDAG = <?= json_encode($busOptiesTussendagHTML ?? '', JSON_
 })();
 </script>
 
+<script src="js/meerdere_losse_rijdagen.js?v=<?= time() ?>"></script>
 <script src="js/route_heen_segmenten.js?v=<?= time() ?>"></script>
 <script src="js/cao_toeslagen.js?v=<?= time() ?>"></script>
 <script src="rekenmachine.js?v=<?= time() ?>"></script> 

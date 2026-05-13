@@ -498,6 +498,9 @@
         if (!hidden) return;
         try {
             const payload = buildRouteV2Payload();
+            if (typeof window.mergeCalcLosseRijdagenIntoPayload === 'function') {
+                window.mergeCalcLosseRijdagenIntoPayload(payload);
+            }
             hidden.value = JSON.stringify(payload);
             const endEl = document.getElementById('rit_datum_eind');
             if (endEl && payload && payload.dates && payload.dates.end) {
@@ -1624,6 +1627,9 @@
         if (typeof window.updateVisibility === 'function') window.updateVisibility();
         updateHeenOptChipStates();
         renderTerugSegmentTable();
+        if (typeof window.calcLosseRijdagenBootFromPayload === 'function') {
+            window.calcLosseRijdagenBootFromPayload(null);
+        }
         updateRouteV2HiddenInput();
         window.CALC_ROUTE_FORCE_FRESH = false;
     };
@@ -1726,6 +1732,9 @@
             window.routeHeenRefreshFromLegacy();
         }
         if (typeof window.updateVisibility === 'function') window.updateVisibility();
+        if (typeof window.calcLosseRijdagenBootFromPayload === 'function') {
+            window.calcLosseRijdagenBootFromPayload(window.ROUTE_V2_BOOT);
+        }
         updateRouteV2HiddenInput();
         refreshHeenSegmentDateLabels();
         refreshTerugSegmentDateLabels();
@@ -1823,4 +1832,7 @@
     };
 
     window.updateRouteV2HiddenInput = updateRouteV2HiddenInput;
+    window.__calcEnrichRoute1ForPlanner = enrichRoute1ForPlanner;
+    window.__calcResolvePlannerEndDate = resolvePlannerEndDate;
+    window.__calcBuildRoute1SegmentsPayload = buildRoute1SegmentsPayload;
 })();

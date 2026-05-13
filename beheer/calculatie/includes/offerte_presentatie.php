@@ -509,6 +509,11 @@ function offerte_presentatie_build(PDO $pdo, array $rit): array
     $startDate = calculatie_route_v2_normalize_date($payload['dates']['start'] ?? ($rit['rit_datum'] ?? ''));
     $endDate = calculatie_route_v2_normalize_date($payload['dates']['end'] ?? ($rit['rit_datum_eind'] ?? $rit['rit_datum'] ?? ''));
     $routeDays = offerte_presentatie_build_route_days($payload);
+    $pakketLosseRijdagen = !empty($payload['flags']['losse_rijdagen_pakket']);
+    $intro = 'Hartelijk dank voor uw aanvraag. Wij doen u hierbij graag onze vrijblijvende offerte toekomen op basis van actuele beschikbaarheid. Hieronder vindt u de besproken ritgegevens, routeplanning en prijsopbouw.';
+    if ($pakketLosseRijdagen) {
+        $intro .= ' Deze offerte omvat meerdere losse rijdagen op opeenvolgende of gekozen data (tussendoor naar de zaak/garage), samengevat in één totaalprijs; de route staat per rijdag vermeld.';
+    }
 
     return [
         'company' => [
@@ -540,10 +545,11 @@ function offerte_presentatie_build(PDO $pdo, array $rit): array
             'phone' => trim((string) ($rit['telefoon'] ?? '')),
         ],
         'salutation' => 'Geachte ' . $aanhefNaam . ',',
-        'intro' => 'Hartelijk dank voor uw aanvraag. Wij doen u hierbij graag onze vrijblijvende offerte toekomen op basis van actuele beschikbaarheid. Hieronder vindt u de besproken ritgegevens, routeplanning en prijsopbouw.',
+        'intro' => $intro,
         'trip' => [
             'rittype' => trim((string) ($rit['rittype'] ?? '')),
             'rittype_label' => offerte_presentatie_rittype_label((string) ($rit['rittype'] ?? '')),
+            'pakket_losse_rijdagen' => $pakketLosseRijdagen,
             'passagiers' => (int) ($rit['passagiers'] ?? 0),
             'start_date' => $startDate,
             'start_date_display' => offerte_presentatie_format_date($startDate, true),

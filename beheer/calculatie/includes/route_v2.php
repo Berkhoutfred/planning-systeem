@@ -772,6 +772,7 @@ function calculatie_route_v2_normalize_payload(array $payload): array
     }
 
     $resolvedDates = calculatie_route_v2_resolve_dates($startDate, $endDate, $normalizedDays);
+    $flagsIn = is_array($payload['flags'] ?? null) ? $payload['flags'] : [];
 
     return [
         'schema' => 2,
@@ -782,6 +783,9 @@ function calculatie_route_v2_normalize_payload(array $payload): array
         'route2' => $normalizedRoute2,
         'tussendagen' => $normalizedTuss,
         'buitenland' => $normalizedBuitenland,
+        'flags' => [
+            'losse_rijdagen_pakket' => !empty($flagsIn['losse_rijdagen_pakket']),
+        ],
     ];
 }
 

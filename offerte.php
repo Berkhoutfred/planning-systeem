@@ -647,6 +647,12 @@ $hideForms = $rit['status'] === 'klant_akkoord'
                             <span class="mini-label">Einddatum</span>
                             <div class="mini-value"><?php echo h($view['trip']['end_date_display']); ?></div>
                         </div>
+                        <?php if (!empty($view['trip']['pakket_losse_rijdagen'])): ?>
+                        <div class="trip-card" style="grid-column: 1 / -1;">
+                            <span class="mini-label">Meerdere losse rijdagen</span>
+                            <div class="mini-value">Ja — één offerte; route per dag hieronder.</div>
+                        </div>
+                        <?php endif; ?>
                     </div>
                 </div>
 

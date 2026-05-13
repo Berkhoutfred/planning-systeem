@@ -371,6 +371,10 @@ offerte_pdf_kv_row($pdf, 'Soort reis', (string) ($view['trip']['rittype_label'] 
 offerte_pdf_kv_row($pdf, 'Aantal passagiers', (string) ($view['trip']['passagiers'] ?? 0) . ' personen', $fill); $fill = !$fill;
 offerte_pdf_kv_row($pdf, 'Vertrekdatum', (string) ($view['trip']['start_date_display'] ?? ''), $fill); $fill = !$fill;
 offerte_pdf_kv_row($pdf, 'Einddatum', (string) ($view['trip']['end_date_display'] ?? ''), $fill);
+if (!empty($view['trip']['pakket_losse_rijdagen'])) {
+    $fill = !$fill;
+    offerte_pdf_kv_row($pdf, 'Meerdere losse rijdagen', 'Ja (één offerte, route per dag)', $fill);
+}
 
 offerte_pdf_section_header($pdf, 'Routeplanning');
 if (($view['route_days'] ?? []) === []) {
