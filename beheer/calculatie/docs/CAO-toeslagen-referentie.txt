@@ -44,6 +44,10 @@ PROJECT-AFSPRAKEN (conform opdrachtgever; o.a. 2026-05-13, aangevuld 2026-05-14)
 • Offerte / kostweergave: wanneer toeslagen > 0, moet zichtbaar zijn HOE de
   loonkost is opgebouwd (basisuren + regels per toeslagregel).
 
+• **Zondag + erkende feestdag dezelfde kalenderdag (2026-05-14):** niet dubbel
+  tellen; één toeslagtoepassing — in de implementatie het **feestdagtarief**
+  (hoger) leidend laten zijn, geen extra zondag-stapel bovenop dezelfde minuten.
+
 --------------------------------------------------------------------------------
 BRONTEKST (ingevoerd / geplakt)
 --------------------------------------------------------------------------------
