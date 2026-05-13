@@ -11,7 +11,7 @@ Doel van dit bestand
    technische en bestuurlijke referentie.)
 
 --------------------------------------------------------------------------------
-PROJECT-AFSPRAKEN (conform opdrachtgever, 2026-05-13)
+PROJECT-AFSPRAKEN (conform opdrachtgever; o.a. 2026-05-13, aangevuld 2026-05-14)
 --------------------------------------------------------------------------------
 
 • Meerdaagse ritten + buitenland: in EERSTE implementatiefase buiten scope laten
@@ -21,14 +21,19 @@ PROJECT-AFSPRAKEN (conform opdrachtgever, 2026-05-13)
 • Onderbrekingstoeslag (art. 37): ALLEEN voor rittype «Breng & Haal» (split),
   dus rittype `brenghaal`.
 
-• Onregelmatigheidstoeslag CAO Openbaar Vervoer (art. 11): ALLEEN bij
-  rittype «Treinstremming», dus rittype `trein`.
+• Onregelmatigheid art. 37 lid 2 (touringcar e.d.): voor `dagtocht`, `schoolreis`,
+  `enkel` én voor `brenghaal` (naast onderbrekingstoeslag). Tijdsbasis: **rit 1
+  én rit 2** meenemen, gelijk aan hoe `total_uren` nu al rit 2 meeneemt wanneer
+  die actief is.
+
+• **OV / treinstremming (`trein`):** in de **offerte- en calculatie-module**
+  geen OV-art. 11 en geen aparte OV-toeslagen uit deze tekst — vaste OV-afspraken
+  lopen via de twee OV-partijen; in dit ERP vooral **ritopdracht**-flow. Later:
+  **aparte OV-module** (eigen scherm / eigen logica).
 
 • «Gewone» ritten (fase 1): dagtocht, schoolreis, enkele rit (`dagtocht`,
-  `schoolreis`, `enkel`) — hier worden de touringcar-/personenvervoer-gerichte
-  onregelmatigheidstarieven toegepast zoals in het brondocument onder art. 37
-  lid 2 (zaterdag / zon+feest / nacht doordeweeks 00:00–06:00). Geen OV-art. 11
-  op deze ritten.
+  `schoolreis`, `enkel`) — onregelmatigheidstarieven art. 37 lid 2. Geen OV-art. 11
+  in deze offerte-stap.
 
 • Basisuurloon (`SERVER_DATA.uurloon` / LOON in JS): blijft voor iedereen
   gelijk. CAO-componenten zijn TOESLAGEN BOVENOP het bestaande
