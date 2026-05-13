@@ -12,4 +12,6 @@ Werkwijze: Werk altijd stapje voor stapje. Doe geen gigantische aanpassingen in 
 
 Git: Na een afgeronde codewijziging in deze repo uitvoeren: `git add`, `git commit` (duidelijke message) en `git push` naar origin, tenzij de gebruiker expliciet vraagt om nog niet te pushen of alleen lokaal te laten.
 
+Calculatie-UI: Bij elke zichtbare wijziging in `beheer/calculatie/` (schermen maken/bewerken/wizard) ook `beheer/calculatie/includes/ui_build.php` bijwerken: `nr` +1 en `time` op huidige tijd (Europe/Amsterdam, HH:MM), zodat onderaan «BusAI calculatie · bijgewerkt» klopt.
+
 Codekwaliteit: Houd functies kort en overzichtelijk. Voorzie complexe logica van korte, heldere commentaren.
