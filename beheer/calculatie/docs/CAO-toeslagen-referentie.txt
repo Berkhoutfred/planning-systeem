@@ -29,7 +29,9 @@ PROJECT-AFSPRAKEN (conform opdrachtgever; o.a. 2026-05-13, aangevuld 2026-05-14)
 • **OV / treinstremming (`trein`):** in de **offerte- en calculatie-module**
   geen OV-art. 11 en geen aparte OV-toeslagen uit deze tekst — vaste OV-afspraken
   lopen via de twee OV-partijen; in dit ERP vooral **ritopdracht**-flow. Later:
-  **aparte OV-module** (eigen scherm / eigen logica).
+  **aparte OV-module** (eigen scherm / eigen logica). **Bevestigd 2026-05-14:**
+  ook **geen** onregelmatigheid art. 37 lid 2 voor `trein` in deze stap; OV volledig
+  uit deze CAO-kostopbouw tot de aparte module.
 
 • «Gewone» ritten (fase 1): dagtocht, schoolreis, enkele rit (`dagtocht`,
   `schoolreis`, `enkel`) — onregelmatigheidstarieven art. 37 lid 2. Geen OV-art. 11
