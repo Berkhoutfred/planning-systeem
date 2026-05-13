@@ -64,6 +64,10 @@ function val($data, $rij, $veld, $default = '') {
     .box-header { background: #f8f9fa; padding: 15px 20px; border-bottom: 1px solid #eee; display:flex; justify-content:space-between; align-items:center; }
     .box-title { color:#003366; font-size:16px; font-weight:bold; text-transform: uppercase; margin:0; }
     .header-rit-2 { background: #003366; color: white; padding: 10px 20px; font-weight: bold; text-transform: uppercase; font-size: 14px; margin-top: 25px; border-radius: 4px 4px 0 0; }
+    .header-rit-2-wrap { display: flex; align-items: stretch; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 25px; }
+    .header-rit-2-wrap .header-rit-2 { margin-top: 0; flex: 1 1 auto; min-width: 140px; border-radius: 4px 4px 0 0; }
+    .btn-clear-rit-twee { align-self: center; border: 1px solid #fecaca; background: #fff; color: #b91c1c; font-size: 12px; font-weight: 600; padding: 8px 12px; border-radius: 4px; cursor: pointer; white-space: nowrap; }
+    .btn-clear-rit-twee:hover { background: #fef2f2; }
     .box-body { padding: 20px; }
     .form-grid-4 { display:grid; grid-template-columns: repeat(4, 1fr); gap: 15px; align-items: end; }
     .form-grid-3 { display:grid; grid-template-columns: 2fr 1fr 1fr; gap: 20px; }
@@ -349,7 +353,10 @@ function val($data, $rij, $veld, $default = '') {
                 </div>
 
                 <div id="block_terug" style="margin-top:20px;display:none;">
-                    <div class="header-rit-2" id="header_terug">Rit twee</div>
+                    <div class="header-rit-2-wrap">
+                        <div class="header-rit-2" id="header_terug">Rit twee</div>
+                        <button type="button" id="btn_clear_rit_twee" class="btn-clear-rit-twee" title="Rit twee wissen: alle velden van de tweede rit leegmaken en dit blok verbergen">Rit twee wissen</button>
+                    </div>
                     <div class="route-compact heen-segment-wrap" style="background: #fdfdfd; padding: 8px 10px; border: 1px solid #eee; border-top:none; border-radius: 0 0 4px 4px;">
                         <table class="heen-seg-table">
                             <thead>

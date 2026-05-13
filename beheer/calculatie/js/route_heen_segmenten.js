@@ -838,6 +838,37 @@
         });
     }
 
+    /**
+     * Rit twee volledig leegmaken en verbergen (gate weer tonen).
+     * Nodig omdat het blok anders open blijft zolang legacy route-2-velden gevuld zijn.
+     */
+    function clearRitTweePlanning() {
+        const ok = window.confirm(
+            'Rit twee wissen?\n\n' +
+                'Alle adressen, kilometers en tijden van de tweede rit worden leeggemaakt en het blok wordt verborgen. ' +
+                'Niet-opgeslagen wijzigingen kun je herstellen door de pagina te herladen.'
+        );
+        if (!ok) {
+            return;
+        }
+        writeRoute2Points([]);
+        window.__calcTerugreisUserShow = false;
+        if (typeof window.updateVisibility === 'function') {
+            window.updateVisibility();
+        }
+        if (typeof window.calculateRoute === 'function') {
+            window.calculateRoute();
+        }
+        if (typeof window.rekenen === 'function') {
+            window.rekenen();
+        }
+        renderTerugSegmentTable();
+        updateRouteV2HiddenInput();
+        updateHeenOptChipStates();
+    }
+
+    window.clearCalculatieRitTwee = clearRitTweePlanning;
+
     function getRoute2VisibleSegments() {
         const points = getRoute2VisiblePoints();
         const segments = [];
@@ -1634,6 +1665,9 @@
                 vb.value = ab.value.trim();
             }
             if (typeof window.updateVisibility === 'function') window.updateVisibility();
+        });
+        document.getElementById('btn_clear_rit_twee')?.addEventListener('click', function () {
+            clearRitTweePlanning();
         });
         const refreshIds = [
             'addr_t_garage',
