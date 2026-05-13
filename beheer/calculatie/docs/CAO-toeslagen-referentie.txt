@@ -1,0 +1,180 @@
+================================================================================
+CAO / TOESLAGEN — REFERENTIE + PROJECT-AFSPRAKEN
+================================================================================
+Laatst bijgewerkt door project: 2026-05-13
+
+Doel van dit bestand
+---------------------
+1) Bewaar de ingevoerde CAO-tekstfragmenten (brondocument voor menselijke lezing).
+2) Legt vaste keuzes vast voor hoe dit straks in software mag worden vertaald.
+   (Juridische eindverantwoordelijkheid blijft bij de werkgever; dit is een
+   technische en bestuurlijke referentie.)
+
+--------------------------------------------------------------------------------
+PROJECT-AFSPRAKEN (conform opdrachtgever, 2026-05-13)
+--------------------------------------------------------------------------------
+
+• Meerdaagse ritten + buitenland: in EERSTE implementatiefase buiten scope laten
+  (bestaande meerdaagse urenlogica in rekenmachine.js blijft ongemoeid tot
+  herziening).
+
+• Onderbrekingstoeslag (art. 37): ALLEEN voor rittype «Breng & Haal» (split),
+  dus rittype `brenghaal`.
+
+• Onregelmatigheidstoeslag CAO Openbaar Vervoer (art. 11): ALLEEN bij
+  rittype «Treinstremming», dus rittype `trein`.
+
+• «Gewone» ritten (fase 1): dagtocht, schoolreis, enkele rit (`dagtocht`,
+  `schoolreis`, `enkel`) — hier worden de touringcar-/personenvervoer-gerichte
+  onregelmatigheidstarieven toegepast zoals in het brondocument onder art. 37
+  lid 2 (zaterdag / zon+feest / nacht doordeweeks 00:00–06:00). Geen OV-art. 11
+  op deze ritten.
+
+• Basisuurloon (`SERVER_DATA.uurloon` / LOON in JS): blijft voor iedereen
+  gelijk. CAO-componenten zijn TOESLAGEN BOVENOP het bestaande
+  «uren × uurloon»-deel (transparant uitgesplitst in de UI).
+
+• Offerte / kostweergave: wanneer toeslagen > 0, moet zichtbaar zijn HOE de
+  loonkost is opgebouwd (basisuren + regels per toeslagregel).
+
+--------------------------------------------------------------------------------
+BRONTEKST (ingevoerd / geplakt)
+--------------------------------------------------------------------------------
+
+Artikel 11 Onregelmatigheidstoeslag arbeidsuren Openbaar Vervoer
+1. € 4,80 (vanaf 1-7-2025 € 4,99 en vanaf 1-1-2026 € 5,19) per uur voor arbeidsuren van
+maandag tot en met vrijdag, liggende tussen 19:00 en 07:30 uur.
+2. € 4,45 (vanaf 1-7-2025 € 4,63 en vanaf 1-1-2026 € 4,81) per uur voor arbeidsuren op
+zaterdagen.
+3. € 6,18 (vanaf 1-7-2025 € 6,43 en vanaf 1-1-2026 € 6,68) per uur voor arbeidsuren op zon- en
+feestdagen en op werkdagen tussen 00:00 en 06:00 uur, indien het een dienst betreft die op
+een zon- of feestdag is aangevangen.
+
+Algemeen erkende feestdagen zijn:
+- Nieuwjaarsdag;
+- 1e en 2e Paasdag;
+- Koningsdag;
+- Hemelvaartsdag;
+- 1e en 2e Pinksterdag;
+- 1e en 2e Kerstdag;
+- 5 mei elk lustrum (5 jaar).
+
+Bij meerdaagse reizen wordt de arbeidstijd geacht te zijn: op de eerste en
+laatste kalenderdag 6/6 van de diensttijd met inachtneming van de
+staffelregeling voor de pauzetijden (art. 16 lid 1 sub d.) met een minimum van
+acht uur netto arbeidstijd per dag. Voor elke tussenliggende dag wordt voor de
+loonberekening acht uur netto arbeidstijd in aanmerking genomen.
+
+Artikel 37 Onderbrekingstoeslag
+1. 2. 3. 4. 5. De rijdende werknemer heeft recht op een onderbrekingstoeslag bij alle typen vervoer. De
+onderbrekingstoeslag vanaf 1-1-2026 € 15,92).
+
+2. 3. 4. 5. De rijdende werknemer heeft recht op een onderbrekingstoeslag bij alle typen vervoer. De
+onderbrekingstoeslag bedraagt €14,72 (vanaf 1-7-2025 € 15,31 en vanaf 1-1-2026 € 15,92).
+Onder een onderbreking (van de diensttijd) wordt verstaan de tijd waarover een chauffeur
+op standplaats vrij kan beschikken en dus géén werkzaamheden verricht.
+a. Er wordt per dienst één onderbrekingstoeslag toegekend, indien de diensttijd langer dan
+1 uur wordt onderbroken en de totale diensttijd niet meer dan 12 uur bedraagt.
+b. Voor zover de totale diensttijd meer dan 12 uur bedraagt en er meer dan één onderbre-
+king als hiervoor bedoeld plaatsvindt, worden per dienst maximaal twee onderbrekings-
+toeslagen toegekend.
+
+2. Rijdende werknemers belast met uitvoering van (meer- en eendaags) touringcar
+vervoer, ongeregeld vervoer en pendelvervoer hebben recht op een
+onregelmatigheidstoeslag van:
+a. Voor werkzaamheden op de zaterdag € 3,71 (vanaf 1-7-2025 € 3,86 en vanaf 1-1-2026 €
+4,01) per uur
+b. Voor werkzaamheden op zon- en feestdagen € 5,58 (vanaf 1-7-2025 € 5,80 en vanaf 1-1-
+2026 € 6,04) per uur.
+c. Voor werkzaamheden tijdens de nachtelijke uren op doordeweekse dagen (00:00 – 06:00
+24uur) van € 3,71 (vanaf 1-7-2025 € 3,86 en vanaf 1-1-2026 € 4,01) per uur.
+
+3. Maaltijden meerdaagse reizen
+Voor meerdaagse reizen geldt aanvullend op lid 1 en 2:
+a. Per maaltijd wordt het bedrag van de ingeleverde bon of bonnen vergoed, tot
+onderstaande maximumbedragen:
+
+Land Diner Lunch Ontbijt
+België/Luxemburg €22,95 €13,77 € 10,20
+Duitsland €22,95 €13,77 € 10,20
+Oostenrijk €22,95 €13,77 € 10,20
+Frankrijk €28,56 €17,85 € 10,20
+Groot Brittannië €28,56 €17,85 € 10,20
+Italië €24,48 €16,83 € 10,20
+Zwitserland €29,07 €17,85 € 10,20
+Scandinavië €24,48 €16,83 € 10,20
+Spanje €22,95 €13,77 € 10,20
+Griekenland €22,95 €13,77 € 10,20
+Kroatië/Slovenië €22,95 €13,77 € 10,20
+Polen/Rusland €19,89 €12,75 € 10,20
+Tsjechië/Slowakije €22,95 €13,77 € 10,20
+
+b. Voor landen die niet zijn genoemd gelden de volgende maximum bedragen:
+1. Diner € 22.50 en per 1-1-2026 € 22,95 per dag;
+2. Lunch € 13,50 en per 1-1-2026 € 13,77 per dag.;
+3. Ontbijt € 10,00 en per 1-1-2026 € 10,20 per dag.
+
+Artikel 40 Vergoedingen meerdaagse reizen
+a. Bij meerdaagse reizen heeft de chauffeur die zonder reisleider vervoer van personen
+verricht per dag recht op:
+1. een netto vergoeding van € 7,75 (vanaf 1-1-2026 € 10,20);
+2. een bruto vergoeding van € 5,25 (vanaf 1-1-2026 € 25,25).
+b. Bij meerdaagse reizen uitgevoerd met reisleider, heeft de chauffeur voor de overige
+zakelijke kosten recht op een netto vergoeding van € 5,73 (vanaf 1-1-2026 € 7,54) per dag.
+Belangrijke toevoegingen:
+1. Indien van een chauffeur verlangd wordt WEL als chauffeur/reisleider te fungeren
+omdat er bijvoorbeeld een niet-deskundige passagier of leraar als reisleiding is
+benoemd, dan dient de chauffeur de hiervoor bedoelde reisleiderstoeslag te ontvangen.
+2. Als de situatie als onder 1 genoemd zich onverwacht voordoet dient de chauffeur zijn
+leidinggevende te bellen om zo zijn toeslag veilig te stellen of de opdrachtgever
+gelegenheid te geven dit op te lossen.
+Tot de werkzaamheden van de chauffeur behoort:
+- Alles wat met de touringcar te maken heeft, van zorgen dat er voldoende brandstof in
+zit tot het schoonhouden van interieur en exterieur tijdens de reis;
+- Voorbereiden (eventueel in overleg met de reisleider) van de route (routekennis);
+- Hotels en bezienswaardigheden weten te bereiken;
+- Mededelen van vertrektijden indien nodig;
+- Het helpen van de passagiers bij in- en uitstappen;
+- Het zorg dragen voor de bagage van de passagiers.
+c. Bij meerdaagse reizen waarbij de touringcar met twee chauffeurs is bemand, heeft iedere
+chauffeur voor de overige zakelijke kosten recht op een netto vergoeding van € 7,16
+(vanaf 1-1-2026 € 9,42) per dag.
+26d. In geval van pendelvervoer en internationale lijndiensten heeft de chauffeur voor de
+overige zakelijke kosten recht op een netto vergoeding van € 5,73 (vanaf 1-1-2026 € 7,54)
+per dienst.
+e. Bij driedaagse stedenreizen worden de overige zakelijke kosten op de tweede dag gesteld
+op een netto vergoeding van € 7,75 (vanaf 1-1-2026 € 10,20) plus een bruto vergoeding
+van € 16,50 (vanaf 1-1-2026 € 36,50). En geldt voor dag één en drie de bij lid a en b
+genoemde vergoedingen.
+f. Geen aanspraak op de vergoeding bestaat, indien de touroperator, organisator of
+opdrachtgever van de werkgever ten minste de bedragen, genoemd in artikel 40, lid a tot
+en met e aantoonbaar verstrekt aan de werknemer. Bij een lager bedrag dient de
+werkgever dit tot in het in artikel 40, lid a tot en met e genoemde bedrag aan te vullen.
+g. Indien op de eerste en/of laatste dag van een meerdaagse reis uitsluitend sprake is van
+(rij)werkzaamheden zonder dat er personen worden vervoerd, dan is voor die kalenderdag
+geen vergoeding overige beroepskosten, als bedoeld in artikel 40 lid a, b, c of e
+verschuldigd.
+h. De vergoedingen, zoals genoemd in dit artikel, zijn in Bijlage 1 onderbouwd naar
+kostensoort.
+
+================================================================================
+TECHNISCHE NOTITIES — VOORLIGGEND IMPLEMENTATIEPLAN (concept)
+================================================================================
+(Zie antwoord in chat 2026-05-13 voor volledige uitleg; hier samengevat.)
+
+• Tariefperiode: start met vaste bedragen «vanaf 1-1-2026» in één centrale
+  configuratie (PHP-array of gedeeld JSON), zodat jaarlijkse aanpassing één plek is.
+
+• Onregelmatigheid: uit dienst-tijdsinterval(len) minuten in vensters verdelen
+  (zaterdag / zon+feest / nacht 00–06 doordeweeks / voor trein ook OV-vensters).
+  Feestdagen + Paas-/Pinksterberekening in code (lustrum 5 mei als aparte regel).
+
+• Onderbreking brenghaal: minimaal «0/1/2 vaste bedragen» op basis van
+  meetbare onderbrekingen; als er geen betrouwbare tijdreeks is, eerst
+  expliciete invoer (checkbox + minuten) of documenteer heuristiek + disclaimer.
+
+• UI: onder display_kost / offerte — regels «Basisonregelmatigheid … u × €…»,
+  «Onderbrekingstoeslag …». Totaal loon = uren×uurloon + som toeslagen.
+
+• Juridisch: software toont «indicatief op basis van ingevoerde tijden»;
+  cao-tekst blijft leidend bij twijfel.
