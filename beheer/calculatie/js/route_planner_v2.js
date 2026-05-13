@@ -44,6 +44,19 @@
         return date.toISOString().slice(0, 10);
     }
 
+    /** Zelfde compacte vorm als segmenttabel op het formulier. */
+    function formatShortNlDate(isoYmd) {
+        const raw = String(isoYmd || '');
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return '';
+        const d = new Date(raw + 'T12:00:00');
+        if (Number.isNaN(d.getTime())) return '';
+        try {
+            return String(d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })).replace(/\.$/, '');
+        } catch (e) {
+            return raw.slice(8, 10) + '-' + raw.slice(5, 7);
+        }
+    }
+
     function getStartDate() {
         return document.getElementById('rit_datum')?.value.trim() || '';
     }
@@ -601,7 +614,7 @@
                 routeCard.className = 'planner-route-card';
                 routeCard.innerHTML =
                     '<div class="planner-route-head"><strong>' + route.code + ' · ' + route.label + '</strong><div class="planner-route-actions"></div></div>' +
-                    '<table class="heen-seg-table planner-seg-table"><thead><tr><th class="heen-td-t">Vertrek</th><th>Van</th><th>Naar</th><th class="heen-td-t">Aankomst</th><th class="heen-zone-col">Zone</th><th class="heen-td-km">Km</th><th class="heen-td-rm"></th></tr></thead><tbody></tbody></table>' +
+                    '<table class="heen-seg-table planner-seg-table"><thead><tr><th class="heen-td-d" scope="col" aria-label="Dag"></th><th class="heen-td-t">Vertrek</th><th>Van</th><th>Naar</th><th class="heen-td-t">Aankomst</th><th class="heen-zone-col">Zone</th><th class="heen-td-km">Km</th><th class="heen-td-rm"></th></tr></thead><tbody></tbody></table>' +
                     '<button type="button" class="btn-add-bus planner-add-row">+ regel</button>';
                 const routeActions = routeCard.querySelector('.planner-route-actions');
                 const routeRemove = document.createElement('button');
@@ -619,10 +632,13 @@
                 routeActions.appendChild(routeRemove);
 
                 const tbody = routeCard.querySelector('tbody');
+                const dayAnchor = (day.date && /^\d{4}-\d{2}-\d{2}$/.test(day.date)) ? day.date : getStartDate();
+                let prevPlannerRowIso = null;
                 route.rows.forEach(function (row, rowIndex) {
                     const tr = document.createElement('tr');
                     tr.className = 'planner-row';
                     tr.innerHTML =
+                        '<td class="heen-td-d planner-seg-date"></td>' +
                         '<td class="heen-td-t"><input type="text" class="form-control custom-time-input planner-vt" placeholder="--:--" readonly></td>' +
                         '<td><input type="text" class="form-control planner-google planner-from" autocomplete="off"></td>' +
                         '<td><input type="text" class="form-control planner-google planner-to" autocomplete="off"></td>' +
@@ -642,6 +658,20 @@
                     at.value = row.arrive_at || '';
                     zone.value = row.zone || 'nl';
                     km.value = String(parseFloat(row.km || 0) || 0);
+                    const dateCell = tr.querySelector('.planner-seg-date');
+                    if (dateCell) {
+                        const isoDepart = dayAnchor ? addIsoDays(dayAnchor, row.depart_day_offset || 0) : '';
+                        if (!isoDepart || !/^\d{4}-\d{2}-\d{2}$/.test(isoDepart)) {
+                            dateCell.textContent = '';
+                        } else if (prevPlannerRowIso !== null && isoDepart === prevPlannerRowIso) {
+                            dateCell.textContent = '';
+                        } else {
+                            dateCell.textContent = formatShortNlDate(isoDepart);
+                        }
+                        if (isoDepart && /^\d{4}-\d{2}-\d{2}$/.test(isoDepart)) {
+                            prevPlannerRowIso = isoDepart;
+                        }
+                    }
                     if (rowIndex > 0) {
                         from.readOnly = true;
                         from.classList.add('planner-readonly');
@@ -801,6 +831,15 @@
         plannerRoot = document.getElementById('route_planner_days');
         if (!plannerRoot) return;
         initialized = true;
+        if (!document.getElementById('route-planner-v2-style')) {
+            const st = document.createElement('style');
+            st.id = 'route-planner-v2-style';
+            st.textContent =
+                '.planner-seg-table .heen-td-d{' +
+                'width:48px;max-width:52px;white-space:nowrap;font-size:10px;font-weight:700;color:#64748b;' +
+                'padding:6px 4px 6px 6px!important;vertical-align:middle;line-height:1.15;}';
+            document.head.appendChild(st);
+        }
         hideLegacyExtraDayUi();
         bootFromRouteV2();
         bindToolbar();
