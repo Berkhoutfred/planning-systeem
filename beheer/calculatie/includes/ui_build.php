@@ -12,5 +12,5 @@ declare(strict_types=1);
  */
 return [
     'nr' => 54,
-    'time' => '01:06',
+    'time' => '01:28',
 ];
