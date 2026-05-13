@@ -965,6 +965,17 @@ function syncFiscalFromZones() {
     }
 }
 
+/** Aantal gekozen voertuigen (hoofd + extra) voor CAO-meervoud. */
+function countSelectedCalculatieBussen() {
+    let n = 0;
+    document.querySelectorAll('.bus-select-class').forEach(function (sel) {
+        if (sel && sel.selectedIndex > 0) {
+            n += 1;
+        }
+    });
+    return n;
+}
+
 // --- REKENEN ---
 function rekenen() {
     const type = document.getElementById('rittype_select').value;
@@ -1052,6 +1063,7 @@ function rekenen() {
         const onderbrekingN = selOb
             ? Math.max(0, Math.min(2, parseInt(String(selOb.value), 10) || 0))
             : 0;
+        const vehicleCount = countSelectedCalculatieBussen();
         caoDetails = window.berekenCaoToeslagen({
             rittype: type,
             ritDatum: ritDatumVal,
@@ -1063,6 +1075,7 @@ function rekenen() {
             tRoute2End: tRoute2End || '',
             route2Visible: route2Visible,
             onderbrekingAantal: onderbrekingN,
+            vehicleCount: vehicleCount,
         });
         caoRounded = caoDetails.roundedTotal || 0;
     }
@@ -1077,7 +1090,12 @@ function rekenen() {
             brEl.innerHTML = '';
         } else {
             let html = '<div style="font-size:11px;color:#475569;margin-top:8px;line-height:1.45;">';
-            html += '<strong>CAO-toeslagen (interne berekening)</strong><br>';
+            const vcBr = countSelectedCalculatieBussen();
+            html += '<strong>CAO-toeslagen (interne berekening)</strong>';
+            if (vcBr > 1) {
+                html += ' — <span style="color:#0f766e;">' + vcBr + ' bussen (zelfde rit)</span>';
+            }
+            html += '<br>';
             lines.forEach(function (ln) {
                 html += ln.label + ': € ' + ln.amount.toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '<br>';
             });

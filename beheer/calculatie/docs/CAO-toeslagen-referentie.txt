@@ -56,6 +56,13 @@ PROJECT-AFSPRAKEN (conform opdrachtgever; o.a. 2026-05-13, aangevuld 2026-05-14)
   van €5** (voorbeeld: €12,34 → €15,00; €20,00 → €20,00). Het **uurloon-deel**
   (uren × uurloon) valt **buiten** deze afronding.
 
+• **Meerdere touringcars, zelfde rit (2026-05-14):** De CAO-componenten voor
+  art. 37 (onregelmatigheid + onderbreking waar van toepassing) worden per
+  ingezette bus **hetzelfde** berekend (tarief hangt niet van busgrootte af);
+  de **ruwe som** wordt vermenigvuldigd met het **aantal gekozen voertuigen**
+  (hoofd + extra), daarna **één keer** naar boven afronden op €5 over die
+  totale som (niet per bus apart afronden en optellen).
+
 • **Zondag + erkende feestdag dezelfde kalenderdag (2026-05-14):** niet dubbel
   tellen; één toeslagtoepassing — in de implementatie het **feestdagtarief**
   (hoger) leidend laten zijn, geen extra zondag-stapel bovenop dezelfde minuten.

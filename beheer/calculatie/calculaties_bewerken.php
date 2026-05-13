@@ -49,6 +49,7 @@ $busOptiesTussendagHTML = '';
 
 $heenSegmentsBoot = [];
 $routeV2Boot = null;
+$bijlagenLijst = [];
 
 try {
     $instellingen = tenant_calculatie_instellingen_merged($pdo, $tenantId);
@@ -146,6 +147,15 @@ try {
         }
     }
 
+    require_once __DIR__ . '/includes/calculatie_bijlagen.php';
+    if (!$is_nieuw && (int) ($rit['id'] ?? 0) > 0) {
+        try {
+            $bijlagenLijst = calculatie_bijlagen_fetch_list($pdo, $tenantId, (int) $rit['id']);
+        } catch (Throwable $e) {
+            $bijlagenLijst = [];
+        }
+    }
+
 } catch (PDOException $e) {
     die("<div style='padding:20px; background:#f8d7da; color:#721c24; border:1px solid #f5c6cb; border-radius:5px;'><strong>Database Fout in basisgegevens:</strong> " . $e->getMessage() . "</div>");
 }
@@ -153,6 +163,7 @@ try {
 function val($data, $rij, $veld, $default = '') { 
     return isset($data[$rij][$veld]) ? htmlspecialchars($data[$rij][$veld]) : $default; 
 } 
+$calcCsrf = function_exists('auth_get_csrf_token') ? auth_get_csrf_token() : '';
 ?> 
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"> 
@@ -303,6 +314,16 @@ function val($data, $rij, $veld, $default = '') {
             PDF/planbord werken zoals bij andere offertes. CAO-/BTW-automatisering volgt in een volgende stap.
         </div>
     <?php endif; ?> 
+    <?php
+    if (!empty($_GET['bijlage_ok']) || !empty($_GET['bijlage_err'])) {
+        $bijlageFlash = isset($_GET['bijlage_msg']) ? rawurldecode((string) $_GET['bijlage_msg']) : '';
+        $bijlageFlash = htmlspecialchars($bijlageFlash, ENT_QUOTES, 'UTF-8');
+        $bijlageOk = !empty($_GET['bijlage_ok']);
+        ?>
+        <div style="margin-bottom:16px;padding:12px 16px;border-radius:8px;font-size:14px;border:1px solid <?= $bijlageOk ? '#86efac' : '#fecaca' ?>;background:<?= $bijlageOk ? '#ecfdf5' : '#fef2f2' ?>;color:<?= $bijlageOk ? '#166534' : '#991b1b' ?>;">
+            <?= $bijlageFlash !== '' ? $bijlageFlash : ($bijlageOk ? 'Actie uitgevoerd.' : 'Er ging iets mis.') ?>
+        </div>
+    <?php } ?>
     <form action="calculaties_update.php" method="POST" id="mainForm"> 
         <input type="hidden" name="id" value="<?= $rit['id'] ?>"> 
         <input type="hidden" name="naar_dashboard" value="1"> 
@@ -610,6 +631,42 @@ function val($data, $rij, $veld, $default = '') {
                 <textarea name="instructie_kantoor" class="form-control" rows="3" style="height: auto; border-color: #90caf9;" placeholder="Typ hier de instructies of wensen van de klant..."><?= htmlspecialchars($rit['instructie_kantoor'] ?? '') ?></textarea>
             </div>
         </div>
+
+        <?php if (!$is_nieuw && (int) ($rit['id'] ?? 0) > 0): ?>
+        <div class="section-box" id="bijlagen" style="border-top: 4px solid #94a3b8;">
+            <div class="box-header"><h3 class="box-title"><i class="fas fa-paperclip"></i> PDF-bijlagen (per tenant)</h3></div>
+            <div class="box-body">
+                <p style="font-size:12px;color:#64748b;margin:0 0 12px;">Alleen PDF, max. 8 MB. Link opent in een nieuw tabblad (niet in de klantofferte ingevoegd).</p>
+                <?php if ($bijlagenLijst !== []): ?>
+                    <ul style="margin:0 0 16px;padding-left:18px;line-height:1.6;">
+                        <?php foreach ($bijlagenLijst as $bl): ?>
+                            <li>
+                                <a href="calculatie_bijlage_download.php?id=<?= (int) $bl['id'] ?>" target="_blank" rel="noopener"><?= htmlspecialchars((string) $bl['original_name'], ENT_QUOTES, 'UTF-8') ?></a>
+                                <span style="color:#94a3b8;font-size:11px;">(<?= (int) $bl['file_size'] ?> bytes)</span>
+                                <form action="calculatie_bijlage_verwijderen.php" method="post" style="display:inline;margin-left:8px;" onsubmit="return confirm('Bijlage verwijderen?');">
+                                    <input type="hidden" name="auth_csrf_token" value="<?= htmlspecialchars($calcCsrf, ENT_QUOTES, 'UTF-8') ?>">
+                                    <input type="hidden" name="calculatie_id" value="<?= (int) $rit['id'] ?>">
+                                    <input type="hidden" name="bijlage_id" value="<?= (int) $bl['id'] ?>">
+                                    <button type="submit" class="btn-remove-bus" style="padding:2px 8px;font-size:11px;">Verwijderen</button>
+                                </form>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                <?php else: ?>
+                    <p style="font-size:13px;color:#64748b;margin:0 0 12px;">Nog geen bijlagen.</p>
+                <?php endif; ?>
+                <form action="calculatie_bijlage_upload.php" method="post" enctype="multipart/form-data" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
+                    <input type="hidden" name="auth_csrf_token" value="<?= htmlspecialchars($calcCsrf, ENT_QUOTES, 'UTF-8') ?>">
+                    <input type="hidden" name="calculatie_id" value="<?= (int) $rit['id'] ?>">
+                    <div>
+                        <label style="font-size:12px;">PDF toevoegen</label>
+                        <input type="file" name="bijlage_pdf" accept="application/pdf,.pdf" class="form-control" style="height:auto;padding:6px;">
+                    </div>
+                    <button type="submit" class="btn-save" style="padding:8px 16px;font-size:13px;">Uploaden</button>
+                </form>
+            </div>
+        </div>
+        <?php endif; ?>
 
         <div class="section-box" style="border-top: 4px solid #90caf9;"> 
             <div class="box-header"><h3 class="box-title"><i class="fas fa-euro-sign"></i> Financieel & Vervoer</h3></div> 

@@ -196,6 +196,9 @@
     }
 
     /**
+     * vehicleCount: aantal ingezette touringcars (zelfde rit); toeslagen × count,
+     * daarna één afronding op veelvoud €5 over de totale som (projectafspraak 2026-05-14+).
+     *
      * @returns {{ lines: {key:string,label:string,amount:number}[], rawTotal: number, roundedTotal: number }}
      */
     function berekenCaoToeslagen(input) {
@@ -204,6 +207,14 @@
         var rawOnreg = 0;
 
         if (type === 'trein' || type === 'meerdaags' || type === 'buitenland') {
+            return { lines: [], rawTotal: 0, roundedTotal: 0 };
+        }
+
+        var vc = parseInt(String(input.vehicleCount != null ? input.vehicleCount : '1'), 10);
+        if (isNaN(vc) || vc < 0) {
+            vc = 0;
+        }
+        if (vc === 0) {
             return { lines: [], rawTotal: 0, roundedTotal: 0 };
         }
 
@@ -251,49 +262,56 @@
             }
         }
 
+        var eSat = 0;
+        var eFeast = 0;
+        var eNight = 0;
         if (intervals.length > 0) {
             var acc = accumulateBuckets(intervals);
-            var eSat = euroFromMinutes(acc.satMin, RATE_SAT);
-            var eFeast = euroFromMinutes(acc.feastMin, RATE_SUN_FEAST);
-            var eNight = euroFromMinutes(acc.nightMin, RATE_NIGHT_WEEKDAY);
+            eSat = euroFromMinutes(acc.satMin, RATE_SAT);
+            eFeast = euroFromMinutes(acc.feastMin, RATE_SUN_FEAST);
+            eNight = euroFromMinutes(acc.nightMin, RATE_NIGHT_WEEKDAY);
             rawOnreg = eSat + eFeast + eNight;
-            if (eSat > 0.001) {
-                lines.push({
-                    key: 'onreg_za',
-                    label: 'Onregelmatigheid zaterdag (art. 37 lid 2a)',
-                    amount: eSat
-                });
-            }
-            if (eFeast > 0.001) {
-                lines.push({
-                    key: 'onreg_zon_feest',
-                    label: 'Onregelmatigheid zon-/feestdag (art. 37 lid 2b)',
-                    amount: eFeast
-                });
-            }
-            if (eNight > 0.001) {
-                lines.push({
-                    key: 'onreg_nacht',
-                    label: 'Onregelmatigheid nacht doordeweeks 00:00–06:00 (art. 37 lid 2c)',
-                    amount: eNight
-                });
-            }
         }
 
         var rawOb = 0;
+        var onderbrekingN = 0;
         if (type === 'brenghaal') {
-            var n = Math.max(0, Math.min(2, parseInt(String(input.onderbrekingAantal || 0), 10) || 0));
-            rawOb = n * ONDERBREKING_STUK;
-            if (rawOb > 0.001) {
-                lines.push({
-                    key: 'onderbreking',
-                    label: 'Onderbrekingstoeslag (' + n + '× art. 37)',
-                    amount: rawOb
-                });
-            }
+            onderbrekingN = Math.max(0, Math.min(2, parseInt(String(input.onderbrekingAantal || 0), 10) || 0));
+            rawOb = onderbrekingN * ONDERBREKING_STUK;
         }
 
-        var rawTotal = rawOnreg + rawOb;
+        var rawPerBus = rawOnreg + rawOb;
+        var rawTotal = rawPerBus * vc;
+
+        if (eSat > 0.001) {
+            lines.push({
+                key: 'onreg_za',
+                label: 'Onregelmatigheid zaterdag (art. 37 lid 2a)' + (vc > 1 ? ' (totaal ' + vc + ' bussen)' : ''),
+                amount: eSat * vc
+            });
+        }
+        if (eFeast > 0.001) {
+            lines.push({
+                key: 'onreg_zon_feest',
+                label: 'Onregelmatigheid zon-/feestdag (art. 37 lid 2b)' + (vc > 1 ? ' (totaal ' + vc + ' bussen)' : ''),
+                amount: eFeast * vc
+            });
+        }
+        if (eNight > 0.001) {
+            lines.push({
+                key: 'onreg_nacht',
+                label: 'Onregelmatigheid nacht doordeweeks 00:00–06:00 (art. 37 lid 2c)' + (vc > 1 ? ' (totaal ' + vc + ' bussen)' : ''),
+                amount: eNight * vc
+            });
+        }
+        if (rawOb > 0.001) {
+            lines.push({
+                key: 'onderbreking',
+                label: 'Onderbrekingstoeslag (' + onderbrekingN + '× art. 37)' + (vc > 1 ? ' (totaal ' + vc + ' bussen)' : ''),
+                amount: rawOb * vc
+            });
+        }
+
         var rounded = ceilToMultiple5(rawTotal);
         if (rounded > rawTotal + 0.001) {
             lines.push({
