@@ -46,7 +46,9 @@ PROJECT-AFSPRAKEN (conform opdrachtgever; o.a. 2026-05-13, aangevuld 2026-05-14)
   bedrag **0** (2026-05-14): **niet** tonen. **Aanvulling 2026-05-14:** deze
   uitgesplitste kostopbouw **alleen in de interne berekening** (maken /
   calculaties bewerken), **niet** op de **klantofferte** (geen offerte-PDF,
-  geen klant-webofferte).
+  geen klant-webofferte). **Totaalkost (2026-05-14):** CAO-toeslagen **wél**
+  meenemen in het interne kosttotaal (marge / suggestieprijs), alleen niet als
+  regels op de klantofferte.
 
 • **Zondag + erkende feestdag dezelfde kalenderdag (2026-05-14):** niet dubbel
   tellen; één toeslagtoepassing — in de implementatie het **feestdagtarief**
