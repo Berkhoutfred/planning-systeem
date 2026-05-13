@@ -42,7 +42,8 @@ PROJECT-AFSPRAKEN (conform opdrachtgever; o.a. 2026-05-13, aangevuld 2026-05-14)
   «uren × uurloon»-deel (transparant uitgesplitst in de UI).
 
 • Offerte / kostweergave: wanneer toeslagen > 0, moet zichtbaar zijn HOE de
-  loonkost is opgebouwd (basisuren + regels per toeslagregel).
+  loonkost is opgebouwd (basisuren + regels per toeslagregel). Regels met
+  bedrag **0** (2026-05-14): **niet** tonen.
 
 • **Zondag + erkende feestdag dezelfde kalenderdag (2026-05-14):** niet dubbel
   tellen; één toeslagtoepassing — in de implementatie het **feestdagtarief**
