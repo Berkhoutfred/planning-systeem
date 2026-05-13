@@ -280,7 +280,7 @@ function updateVisibility() {
 
     blockTerug.style.display = showTerugBlock ? 'block' : 'none';
     if (blockMeerdaags) blockMeerdaags.style.display = 'none';
-    if(headerTerug) headerTerug.innerText = "TERUGREIS";
+    if(headerTerug) headerTerug.innerText = "Rit twee";
     if(labelVertrekTerug) labelVertrekTerug.innerText = "Vertrek Bestemming";
     if(rowGarageRit2) rowGarageRit2.style.display = 'none';
     if(rowVoorstaanRit2) rowVoorstaanRit2.style.display = 'none';
@@ -293,7 +293,7 @@ function updateVisibility() {
         if (blockMeerdaags) blockMeerdaags.style.display = 'block';
     }
     if (showTerugBlock && type === 'brenghaal') {
-        if(headerTerug) headerTerug.innerText = "RIT 2 / OPHALEN";
+        if(headerTerug) headerTerug.innerText = "Rit twee — ophalen";
         if(labelVertrekTerug) labelVertrekTerug.innerText = "Klant Instappen (Ophaaladres)";
         if(rowRetourGarageHeen) rowRetourGarageHeen.style.display = 'flex'; 
         if(rowGarageRit2) rowGarageRit2.style.display = 'flex'; 

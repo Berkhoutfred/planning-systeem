@@ -284,7 +284,14 @@ $calcCsrf = function_exists('auth_get_csrf_token') ? auth_get_csrf_token() : '';
     .heen-opt-mini:hover { border-color: #003366; background: #f1f5f9; }
     .heen-opt-mini:focus { outline: none; box-shadow: 0 0 0 2px rgba(0,51,102,.2); }
     .heen-opt-mini.is-active { border-color: #003366; background: #e8eef5; }
-    .terugreis-gate-bar { margin-top: 14px; align-items: center; gap: 10px; display: none; }
+    .terugreis-gate-bar {
+        margin-top: 16px;
+        margin-bottom: 4px;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        display: none;
+    }
     .btn-terugreis-open {
         font-size: 11px; font-weight: 700; color: #003366;
         padding: 5px 12px; border: 1px dashed #003366; border-radius: 6px;
@@ -474,7 +481,7 @@ $calcCsrf = function_exists('auth_get_csrf_token') ? auth_get_csrf_token() : '';
                         <span class="heen-opt-label">Regels</span>
                         <button type="button" class="heen-opt-mini" id="btn_heen_opt_rg" aria-pressed="false" title="Retour garage na rit 1">RG</button>
                         <button type="button" class="heen-opt-mini" id="btn_heen_opt_rk" aria-pressed="false" title="Terug: bestemming → 1e klantadres">RK</button>
-                        <button type="button" class="heen-opt-mini" id="btn_heen_opt_rr" aria-pressed="false" title="Start retourrit als Rit 2">RR</button>
+                        <button type="button" class="heen-opt-mini" id="btn_heen_opt_rr" aria-pressed="false" title="Start retourrit als rit twee">RR</button>
                     </div>
                 </div>
 
@@ -533,11 +540,11 @@ $calcCsrf = function_exists('auth_get_csrf_token') ? auth_get_csrf_token() : '';
                 </div>
 
                 <div id="terugreis_gate_bar" class="terugreis-gate-bar" style="display:none;">
-                    <button type="button" id="btn_show_terugreis" class="btn-terugreis-open" title="Terugreis / rit 2 tonen">+ Rit 2 · terugreis</button>
+                    <button type="button" id="btn_show_terugreis" class="btn-terugreis-open" title="Rit twee: terugreis en tweede rit tonen">+ Rit twee</button>
                 </div>
 
                 <div id="block_terug" style="display:none;">
-                    <div class="header-rit-2" id="header_terug">TERUGREIS / RIT 2</div>
+                    <div class="header-rit-2" id="header_terug">Rit twee</div>
                     <div class="route-compact heen-segment-wrap" style="background: #fdfdfd; padding: 8px 10px; border: 1px solid #eee; border-top:none;">
                         <table class="heen-seg-table">
                             <thead>
@@ -557,8 +564,8 @@ $calcCsrf = function_exists('auth_get_csrf_token') ? auth_get_csrf_token() : '';
                         <div id="legacy_terug_mirror" class="legacy-heen-sr-only" aria-hidden="true" style="display:none;">
                         
                         <div class="rit-row" id="row_garage_rit2" style="display:none; background:#f9f9f9; padding:5px; margin-bottom:10px; border-radius:4px;">
-                            <div class="col-tijd"><label>Start Rit 2</label><input type="text" name="time[t_garage_rit2]" id="time_t_garage_rit2" class="form-control custom-time-input reken-trigger" value="<?= val($data, 't_garage_rit2', 'tijd') ?>" placeholder="--:--" readonly></div>
-                            <div class="col-adres"><label>Garage Start (Rit 2)</label><input type="text" name="addr[t_garage_rit2]" id="addr_t_garage_rit2" class="form-control google-autocomplete" value="<?= val($data, 't_garage_rit2', 'adres') ?>" placeholder="Garage..."></div>
+                            <div class="col-tijd"><label>Start rit twee</label><input type="text" name="time[t_garage_rit2]" id="time_t_garage_rit2" class="form-control custom-time-input reken-trigger" value="<?= val($data, 't_garage_rit2', 'tijd') ?>" placeholder="--:--" readonly></div>
+                            <div class="col-adres"><label>Garage start (rit twee)</label><input type="text" name="addr[t_garage_rit2]" id="addr_t_garage_rit2" class="form-control google-autocomplete" value="<?= val($data, 't_garage_rit2', 'adres') ?>" placeholder="Garage..."></div>
                             <div class="col-km"><label>Km</label><input type="number" name="km[t_garage_rit2]" class="form-control km-calc reken-trigger" value="<?= val($data, 't_garage_rit2', 'km', 0) ?>"></div>
                             <div class="col-zone"><label>Zone</label><select class="form-control km-zone-select reken-trigger" title="Fiscale zone"><option value="nl" <?= sel($data, 't_garage_rit2', 'soort_km', 'nl') ?>>NL</option><option value="de" <?= sel($data, 't_garage_rit2', 'soort_km', 'de') ?>>DE</option><option value="ch" <?= sel($data, 't_garage_rit2', 'soort_km', 'ch') ?>>CH</option><option value="ov" <?= sel($data, 't_garage_rit2', 'soort_km', 'ov') ?>>0%</option></select></div>
                         </div>
