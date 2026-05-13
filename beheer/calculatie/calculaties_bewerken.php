@@ -291,6 +291,14 @@ $calcCsrf = function_exists('auth_get_csrf_token') ? auth_get_csrf_token() : '';
         background: #fff; cursor: pointer;
     }
     .btn-terugreis-open:hover { background: #f8fafc; }
+    .bijlagen-gate-bar {
+        margin-top: 16px;
+        margin-bottom: 4px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
     #block_terug { display: none; }
     .heen-vt--auto,
     .heen-at--auto { background: #f8fafc !important; color: #475569; font-size: 11px !important; }
@@ -774,40 +782,81 @@ $calcCsrf = function_exists('auth_get_csrf_token') ? auth_get_csrf_token() : '';
         <p class="calculatie-ui-build">BusAI calculatie · bijgewerkt: <?= $uiBuildLabel ?></p>
     </form> 
 
-    <?php if (!$is_nieuw && (int) ($rit['id'] ?? 0) > 0): ?>
-    <div class="section-box" id="bijlagen" style="border-top: 4px solid #94a3b8;">
-        <div class="box-header"><h3 class="box-title"><i class="fas fa-paperclip"></i> PDF-bijlagen (per tenant)</h3></div>
-        <div class="box-body">
-            <p style="font-size:12px;color:#64748b;margin:0 0 12px;">Alleen PDF, max. 8 MB. Link opent in een nieuw tabblad (niet in de klantofferte ingevoegd).</p>
-            <?php if ($bijlagenLijst !== []): ?>
-                <ul style="margin:0 0 16px;padding-left:18px;line-height:1.6;">
-                    <?php foreach ($bijlagenLijst as $bl): ?>
-                        <li>
-                            <a href="calculatie_bijlage_download.php?id=<?= (int) $bl['id'] ?>" target="_blank" rel="noopener"><?= htmlspecialchars((string) $bl['original_name'], ENT_QUOTES, 'UTF-8') ?></a>
-                            <span style="color:#94a3b8;font-size:11px;">(<?= (int) $bl['file_size'] ?> bytes)</span>
-                            <form action="calculatie_bijlage_verwijderen.php" method="post" style="display:inline;margin-left:8px;" onsubmit="return confirm('Bijlage verwijderen?');">
-                                <input type="hidden" name="auth_csrf_token" value="<?= htmlspecialchars($calcCsrf, ENT_QUOTES, 'UTF-8') ?>">
-                                <input type="hidden" name="calculatie_id" value="<?= (int) $rit['id'] ?>">
-                                <input type="hidden" name="bijlage_id" value="<?= (int) $bl['id'] ?>">
-                                <button type="submit" class="btn-remove-bus" style="padding:2px 8px;font-size:11px;">Verwijderen</button>
-                            </form>
-                        </li>
-                    <?php endforeach; ?>
-                </ul>
-            <?php else: ?>
-                <p style="font-size:13px;color:#64748b;margin:0 0 12px;">Nog geen bijlagen.</p>
-            <?php endif; ?>
-            <form action="calculatie_bijlage_upload.php" method="post" enctype="multipart/form-data" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
-                <input type="hidden" name="auth_csrf_token" value="<?= htmlspecialchars($calcCsrf, ENT_QUOTES, 'UTF-8') ?>">
-                <input type="hidden" name="calculatie_id" value="<?= (int) $rit['id'] ?>">
-                <div>
-                    <label style="font-size:12px;">PDF toevoegen</label>
-                    <input type="file" name="bijlage_pdf" accept="application/pdf,.pdf" class="form-control" style="height:auto;padding:6px;">
-                </div>
-                <button type="submit" class="btn-save" style="padding:8px 16px;font-size:13px;">Uploaden</button>
-            </form>
+    <?php if (!$is_nieuw && (int) ($rit['id'] ?? 0) > 0):
+        $bijlagenPanelStartOpen = ($bijlagenLijst !== [])
+            || !empty($_GET['bijlage_ok'])
+            || !empty($_GET['bijlage_err'])
+            || (!empty($_GET['bijlage_msg']));
+    ?>
+    <div id="bijlagen">
+        <div class="bijlagen-gate-bar">
+            <button type="button" id="btn_toggle_bijlagen" class="btn-terugreis-open" title="PDF bij deze calculatie (kaart, busnummer, extra info)">
+                <?= $bijlagenPanelStartOpen ? '− PDF-bijlagen verbergen' : '+ PDF-bijlagen (kaart, extra info)' ?>
+            </button>
+        </div>
+        <div id="wrap_bijlagen_panel" class="section-box" style="border-top: 4px solid #94a3b8;<?= $bijlagenPanelStartOpen ? '' : ' display:none;' ?>">
+            <div class="box-header"><h3 class="box-title"><i class="fas fa-paperclip"></i> PDF-bijlagen</h3></div>
+            <div class="box-body">
+                <p style="font-size:12px;color:#64748b;margin:0 0 12px;">Alleen PDF, max. 8 MB. Opent in een nieuw tabblad (niet automatisch in de klantofferte).</p>
+                <?php if ($bijlagenLijst !== []): ?>
+                    <ul style="margin:0 0 16px;padding-left:18px;line-height:1.6;">
+                        <?php foreach ($bijlagenLijst as $bl): ?>
+                            <li>
+                                <a href="calculatie_bijlage_download.php?id=<?= (int) $bl['id'] ?>" target="_blank" rel="noopener"><?= htmlspecialchars((string) $bl['original_name'], ENT_QUOTES, 'UTF-8') ?></a>
+                                <span style="color:#94a3b8;font-size:11px;">(<?= (int) $bl['file_size'] ?> bytes)</span>
+                                <form action="calculatie_bijlage_verwijderen.php" method="post" style="display:inline;margin-left:8px;" onsubmit="return confirm('Bijlage verwijderen?');">
+                                    <input type="hidden" name="auth_csrf_token" value="<?= htmlspecialchars($calcCsrf, ENT_QUOTES, 'UTF-8') ?>">
+                                    <input type="hidden" name="calculatie_id" value="<?= (int) $rit['id'] ?>">
+                                    <input type="hidden" name="bijlage_id" value="<?= (int) $bl['id'] ?>">
+                                    <button type="submit" class="btn-remove-bus" style="padding:2px 8px;font-size:11px;">Verwijderen</button>
+                                </form>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                <?php else: ?>
+                    <p style="font-size:13px;color:#64748b;margin:0 0 12px;">Nog geen bijlagen.</p>
+                <?php endif; ?>
+                <form action="calculatie_bijlage_upload.php" method="post" enctype="multipart/form-data" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
+                    <input type="hidden" name="auth_csrf_token" value="<?= htmlspecialchars($calcCsrf, ENT_QUOTES, 'UTF-8') ?>">
+                    <input type="hidden" name="calculatie_id" value="<?= (int) $rit['id'] ?>">
+                    <div>
+                        <label style="font-size:12px;">PDF kiezen</label>
+                        <input type="file" name="bijlage_pdf" accept="application/pdf,.pdf" class="form-control" style="height:auto;padding:6px;">
+                    </div>
+                    <button type="submit" class="btn-save" style="padding:8px 16px;font-size:13px;">Uploaden</button>
+                </form>
+            </div>
         </div>
     </div>
+    <script>
+    (function () {
+        var btn = document.getElementById('btn_toggle_bijlagen');
+        var panel = document.getElementById('wrap_bijlagen_panel');
+        if (!btn || !panel) return;
+        function panelIsOpen() {
+            return window.getComputedStyle(panel).display !== 'none';
+        }
+        function syncLabel() {
+            btn.textContent = panelIsOpen()
+                ? '− PDF-bijlagen verbergen'
+                : '+ PDF-bijlagen (kaart, extra info)';
+        }
+        btn.addEventListener('click', function () {
+            if (panelIsOpen()) {
+                panel.style.display = 'none';
+            } else {
+                panel.style.display = 'block';
+                try {
+                    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                } catch (e) {
+                    panel.scrollIntoView();
+                }
+            }
+            syncLabel();
+        });
+        syncLabel();
+    })();
+    </script>
     <?php endif; ?>
 </div> 
 
