@@ -650,7 +650,7 @@ $hideForms = $rit['status'] === 'klant_akkoord'
                         <?php if (!empty($view['trip']['pakket_losse_rijdagen'])): ?>
                         <div class="trip-card" style="grid-column: 1 / -1;">
                             <span class="mini-label">Meerdere losse rijdagen</span>
-                            <div class="mini-value">Ja — één offerte; route per dag hieronder.</div>
+                            <div class="mini-value">Ja: één offerte; route per dag hieronder.</div>
                         </div>
                         <?php endif; ?>
                     </div>
