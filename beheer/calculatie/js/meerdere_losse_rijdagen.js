@@ -506,6 +506,9 @@
         if (typeof window.updateRouteV2HiddenInput === 'function') {
             window.updateRouteV2HiddenInput();
         }
+        if (typeof window.__calcRefreshTerugSegmentDateLabels === 'function') {
+            window.__calcRefreshTerugSegmentDateLabels();
+        }
     }
 
     function requestLosseKmRecalc(delayMs) {

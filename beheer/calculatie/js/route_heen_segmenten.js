@@ -145,14 +145,20 @@
         }
     }
 
-    function refreshSegmentDateColumnInTable(tbId, rowSelector, getRowList, baseId, baseFallbackId) {
+    function refreshSegmentDateColumnInTable(tbId, rowSelector, getRowList, baseId, baseFallbackId, fixedBaseYmd) {
         const tb = document.getElementById(tbId);
         if (!tb) return;
         const allDomRows = Array.from(tb.querySelectorAll(rowSelector));
         const rows = typeof getRowList === 'function' ? getRowList(allDomRows) : allDomRows;
-        let base = readTrimmedValue(baseId);
-        if (!base && baseFallbackId) {
-            base = readTrimmedValue(baseFallbackId);
+        let base = '';
+        const fixed = typeof fixedBaseYmd === 'string' ? fixedBaseYmd.trim().substring(0, 10) : '';
+        if (fixed && /^\d{4}-\d{2}-\d{2}$/.test(fixed)) {
+            base = fixed;
+        } else {
+            base = readTrimmedValue(baseId);
+            if (!base && baseFallbackId) {
+                base = readTrimmedValue(baseFallbackId);
+            }
         }
         const clearAll = function () {
             allDomRows.forEach(function (row) {
@@ -210,19 +216,44 @@
     function refreshHeenSegmentDateLabels() {
         refreshSegmentDateColumnInTable('heen_segmenten_body', 'tr.heen-seg-row', function (all) {
             return getEffectiveRows(all);
-        }, 'rit_datum', '');
+        }, 'rit_datum', '', undefined);
+    }
+
+    /**
+     * Basisdatum voor RIT TWEE-kolom: bij losse pakketdagen max(rit_datum, alle losse .lr-date),
+     * zodat de kolom niet op 18 mei blijft staan als er een extra rijdag op 19 mei staat.
+     */
+    function resolveTerugSegmentLabelBaseYmd() {
+        const start = readTrimmedValue('rit_datum').substring(0, 10);
+        const cb = document.getElementById('calc_losse_rijdagen_enabled');
+        if (!cb || !cb.checked || !/^\d{4}-\d{2}-\d{2}$/.test(start)) {
+            return start;
+        }
+        let best = start;
+        document.querySelectorAll('#calc_losse_rijdagen_rows .lr-date').forEach(function (el) {
+            const v = el && el.value ? String(el.value).trim().substring(0, 10) : '';
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+                return;
+            }
+            if (v > best) {
+                best = v;
+            }
+        });
+        return best;
     }
 
     function refreshTerugSegmentDateLabels() {
         const rt = document.getElementById('rittype_select');
         const t = rt ? rt.value : 'dagtocht';
         const useEndDate = t === 'meerdaags' || t === 'buitenland';
+        const fixedBase = useEndDate ? undefined : resolveTerugSegmentLabelBaseYmd();
         refreshSegmentDateColumnInTable(
             'terug_segmenten_body',
             'tr.terug-seg-row',
             null,
             useEndDate ? 'rit_datum_eind' : 'rit_datum',
-            'rit_datum'
+            'rit_datum',
+            fixedBase
         );
     }
 
@@ -1219,6 +1250,21 @@
             });
 
             tbody.appendChild(tr);
+
+            if (window.google && google.maps && google.maps.places) {
+                try {
+                    const ac = new google.maps.places.Autocomplete(toEl, {
+                        componentRestrictions: { country: ['nl', 'de', 'be', 'at', 'fr'] }
+                    });
+                    ac.addListener('place_changed', function () {
+                        setRoute2SlotValue(segment.endPointIdx, 'address', toEl.value.trim());
+                        if (typeof window.calculateRoute === 'function') window.calculateRoute();
+                        if (typeof window.rekenen === 'function') window.rekenen();
+                        if (typeof window.updateRouteV2HiddenInput === 'function') window.updateRouteV2HiddenInput();
+                        renderTerugSegmentTable();
+                    });
+                } catch (e) {}
+            }
         });
 
         syncZoneColumnVisibility();
@@ -2071,5 +2117,6 @@
     window.__calcResolvePlannerEndDate = resolvePlannerEndDate;
     window.__calcBuildRoute1SegmentsPayload = buildRoute1SegmentsPayload;
     window.__calcApplyLosseHeenSegmentTijden = applyLosseHeenSegmentTijden;
+    window.__calcRefreshTerugSegmentDateLabels = refreshTerugSegmentDateLabels;
     window.__calcNormalizeAddr = normalizeAddr;
 })();
