@@ -188,7 +188,21 @@ try {
 
 function val($data, $rij, $veld, $default = '') { 
     return isset($data[$rij][$veld]) ? htmlspecialchars($data[$rij][$veld]) : $default; 
-} 
+}
+
+/**
+ * Geeft het HTML-attribuut `selected` voor zone-opties.
+ * calculatie_regels levert doorgaans geen soort_km; default is dan NL.
+ */
+function sel(array $data, string $rij, string $veld, string $optie): string
+{
+    $current = isset($data[$rij][$veld]) ? trim((string) $data[$rij][$veld]) : '';
+    if ($current === '') {
+        return $optie === 'nl' ? 'selected' : '';
+    }
+
+    return strcasecmp($current, $optie) === 0 ? 'selected' : '';
+}
 $calcCsrf = function_exists('auth_get_csrf_token') ? auth_get_csrf_token() : '';
 ?> 
 
