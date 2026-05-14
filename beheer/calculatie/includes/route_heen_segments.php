@@ -16,6 +16,31 @@ function route_heen_time_minus_minutes(string $hhmm, int $minutes): string
 }
 
 /**
+ * Of de heen-bootsegmenten daadwerkelijk route-inhoud hebben (anders: fallback naar calculatie_regels).
+ *
+ * @param list<array<string, mixed>> $segs
+ */
+function route_heen_boot_segments_have_content(array $segs): bool
+{
+    foreach ($segs as $s) {
+        if (!is_array($s)) {
+            continue;
+        }
+        foreach (['van', 'naar', 'vertrektijd', 'aankomst_tijd'] as $k) {
+            if (trim((string) ($s[$k] ?? '')) !== '') {
+                return true;
+            }
+        }
+        $kmStr = str_replace(',', '.', trim((string) ($s['km'] ?? '')));
+        if ($kmStr !== '' && is_numeric($kmStr) && (float) $kmStr > 0) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
  * Heenroute als segmenten voor UI / JSON-boot (parallel aan calculatie_regels).
  *
  * @param array<string, array{tijd?:string,adres?:string,km?:mixed}> $data Zoals calculaties_bewerken $data

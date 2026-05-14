@@ -899,11 +899,13 @@ function calculatie_route_v2_extract_route1_segments(?array $payload): array
         if (!is_array($segment)) {
             continue;
         }
+        // Zelfde veldnamen als calculatie_route_v2_route1_segments_from_rows (from/to + depart/arrive)
+        // én legacy/UI-boot (van/naar + vertrektijd/aankomst_tijd); anders lege tabel bij heropenen.
         $segments[] = [
-            'vertrektijd' => calculatie_route_v2_normalize_hhmm($segment['depart_at'] ?? ''),
-            'aankomst_tijd' => calculatie_route_v2_normalize_hhmm($segment['arrive_at'] ?? ''),
-            'van' => trim((string) ($segment['from'] ?? '')),
-            'naar' => trim((string) ($segment['to'] ?? '')),
+            'vertrektijd' => calculatie_route_v2_normalize_hhmm($segment['depart_at'] ?? $segment['vertrektijd'] ?? ''),
+            'aankomst_tijd' => calculatie_route_v2_normalize_hhmm($segment['arrive_at'] ?? $segment['aankomst_tijd'] ?? ''),
+            'van' => trim((string) ($segment['from'] ?? $segment['van'] ?? '')),
+            'naar' => trim((string) ($segment['to'] ?? $segment['naar'] ?? '')),
             'km' => (string) calculatie_route_v2_normalize_float($segment['km'] ?? 0),
             'zone' => calculatie_route_v2_normalize_zone($segment['zone'] ?? 'nl'),
             'return_kind' => in_array((string) ($segment['return_kind'] ?? ''), ['rg', 'rk-klant', 'rk-garage'], true)

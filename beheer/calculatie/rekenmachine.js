@@ -1070,10 +1070,13 @@ function rekenen() {
         if(t1 && tEnd) uren = calcDiff(t1, tEnd);
     }
     else if (type === 'brenghaal') {
-        const tEnd1 = document.getElementById('time_t_retour_garage_heen').value;
+        const tEnd1 = (document.getElementById('time_t_retour_garage_heen')?.value || '').trim()
+            || (document.getElementById('time_t_aankomst_best')?.value || '').trim();
         let uren1 = (t1 && tEnd1) ? calcDiff(t1, tEnd1) : 0;
-        const tStart2 = document.getElementById('time_t_garage_rit2').value; 
-        const tEnd2 = document.getElementById('time_t_retour_garage').value;
+        const tStart2 = (document.getElementById('time_t_garage_rit2')?.value || '').trim()
+            || (document.getElementById('time_t_voorstaan_rit2')?.value || '').trim()
+            || (document.getElementById('time_t_vertrek_best')?.value || '').trim();
+        const tEnd2 = (document.getElementById('time_t_retour_garage')?.value || '').trim();
         let uren2 = (tStart2 && tEnd2) ? calcDiff(tStart2, tEnd2) : 0;
         uren = uren1 + uren2;
     }

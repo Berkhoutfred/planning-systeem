@@ -96,7 +96,7 @@ try {
 
     $routeV2Boot = calculatie_route_v2_decode(isset($rit['route_v2_json']) ? (string) $rit['route_v2_json'] : null);
     $heenSegmentsBoot = calculatie_route_v2_extract_route1_segments($routeV2Boot);
-    if ($heenSegmentsBoot === []) {
+    if ($heenSegmentsBoot === [] || !route_heen_boot_segments_have_content($heenSegmentsBoot)) {
         $heenSegmentsBoot = route_heen_segments_from_regels($data);
     }
 
@@ -386,6 +386,16 @@ $calcCsrf = function_exists('auth_get_csrf_token') ? auth_get_csrf_token() : '';
         margin: 16px 0 8px;
         letter-spacing: 0.02em;
     }
+    .calculatie-ui-build--banner {
+        text-align: center;
+        font-size: 12px;
+        color: #0f172a;
+        background: #e2e8f0;
+        padding: 10px 14px;
+        border-radius: 8px;
+        margin-bottom: 14px;
+        border: 1px solid #cbd5e1;
+    }
 </style> 
 
 <div class="container">
@@ -405,7 +415,8 @@ $calcCsrf = function_exists('auth_get_csrf_token') ? auth_get_csrf_token() : '';
             <?= $bijlageFlash !== '' ? $bijlageFlash : ($bijlageOk ? 'Actie uitgevoerd.' : 'Er ging iets mis.') ?>
         </div>
     <?php } ?>
-    <form action="calculaties_update.php" method="POST" id="mainForm"> 
+    <form action="calculaties_update.php" method="POST" id="mainForm">
+        <div class="calculatie-ui-build calculatie-ui-build--banner" role="status"><strong>UI-build</strong> <?= $uiBuildLabel ?></div>
         <input type="hidden" name="id" value="<?= $rit['id'] ?>"> 
         <input type="hidden" name="naar_dashboard" value="1"> 
         <input type="hidden" name="route_v2_json" id="route_v2_json" value="<?= htmlspecialchars((string) ($rit['route_v2_json'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">

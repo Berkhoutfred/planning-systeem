@@ -245,11 +245,21 @@ function val($data, $rij, $veld, $default = '') {
         margin: 16px 0 8px;
         letter-spacing: 0.02em;
     }
+    .calculatie-ui-build--banner {
+        text-align: center;
+        font-size: 12px;
+        color: #0f172a;
+        background: #e2e8f0;
+        padding: 10px 14px;
+        border-radius: 8px;
+        margin-bottom: 14px;
+        border: 1px solid #cbd5e1;
+    }
 </style> 
 
 <div class="container"> 
-    <form action="opslaan.php" method="POST" id="hoofdFormulier"> 
-        
+    <form action="opslaan.php" method="POST" id="hoofdFormulier">
+        <div class="calculatie-ui-build calculatie-ui-build--banner" role="status"><strong>UI-build</strong> <?= $uiBuildLabel ?></div>
         <input type="hidden" name="naar_dashboard" value="1"> 
         <input type="hidden" name="route_v2_json" id="route_v2_json" value="">
         <input type="hidden" name="verkoopprijs_is_inclusief_btw" value="1">
