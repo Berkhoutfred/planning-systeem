@@ -396,7 +396,7 @@ function val($data, $rij, $veld, $default = '') {
                             <span style="font-size:11px;font-weight:700;color:#003366;">Meerdere losse rijdagen (één offerte)</span>
                         </label>
                     </div>
-                    <p style="margin:4px 0 0;font-size:11px;color:#445;">Extra heenritten op andere data (bus rijdt tussendoor naar de zaak). Maximaal vier extra dagen na rit 1.</p>
+                    <p style="margin:4px 0 0;font-size:11px;color:#445;">Extra heenritten op andere data (bus rijdt tussendoor naar de zaak). Maximaal zes extra dagen na rit 1.</p>
                     <div id="block_losse_rijdagen_inner" style="display:none;">
                         <div id="calc_losse_rijdagen_rows"></div>
                         <button type="button" id="btn_calc_losse_rijdag_add">+ Rijdag</button>

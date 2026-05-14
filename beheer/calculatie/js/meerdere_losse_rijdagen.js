@@ -6,7 +6,7 @@
 (function () {
     'use strict';
 
-    var MAX_EXTRA_DAYS = 4;
+    var MAX_EXTRA_DAYS = 6;
     var MAX_SEG = 6;
     var DEFAULT_GARAGE_ADDRESS = 'Industrieweg 95a, Zutphen';
 
@@ -70,13 +70,16 @@
         });
     }
 
-    /** Ketting Van[i] = Naar[i-1] binnen één losse-dag tbody. */
+    /** Ketting Van[i] = Naar[i-1] (zelfde tekst als vorige «Naar», o.a. na Google Places). */
     function chainLosseVanNaar(tbody, options) {
         if (!tbody) {
             return;
         }
         var rows = Array.from(tbody.querySelectorAll('tr.heen-seg-row'));
         var activeEl = options && options.preserveActiveAddress ? document.activeElement : null;
+        var norm = typeof window.__calcNormalizeAddr === 'function' ? window.__calcNormalizeAddr : function (s) {
+            return String(s || '').trim().replace(/\s+/g, ' ');
+        };
         var i;
         for (i = 1; i < rows.length; i++) {
             var prevNaar = rows[i - 1].querySelector('.heen-naar');
@@ -88,13 +91,22 @@
                 continue;
             }
             var pv = prevNaar.value.trim();
-            if (pv && van.value.trim() !== pv) {
+            if (!pv) {
+                continue;
+            }
+            if (norm(van.value) !== norm(pv)) {
                 van.value = pv;
             }
         }
     }
 
-    function bindLosseGooglePlaces(tr) {
+    function applyLosseTijdenIfAvailable(tbody) {
+        if (tbody && typeof window.__calcApplyLosseHeenSegmentTijden === 'function') {
+            window.__calcApplyLosseHeenSegmentTijden(tbody);
+        }
+    }
+
+    function bindLosseGooglePlaces(tr, tbody) {
         if (!window.google || !google.maps || !google.maps.places) {
             return;
         }
@@ -104,6 +116,8 @@
                     componentRestrictions: { country: ['nl', 'de', 'be', 'at', 'fr'] }
                 });
                 ac.addListener('place_changed', function () {
+                    chainLosseVanNaar(tbody, {});
+                    applyLosseTijdenIfAvailable(tbody);
                     if (typeof window.updateRouteV2HiddenInput === 'function') {
                         window.updateRouteV2HiddenInput();
                     }
@@ -120,11 +134,12 @@
                 addressSyncTimer = null;
             }
             chainLosseVanNaar(tbody, {});
+            applyLosseTijdenIfAvailable(tbody);
             if (typeof window.updateRouteV2HiddenInput === 'function') {
                 window.updateRouteV2HiddenInput();
             }
         };
-        tr.querySelectorAll('.heen-km, .heen-zone, .heen-vt, .heen-at').forEach(function (el) {
+        tr.querySelectorAll('.heen-km, .heen-zone').forEach(function (el) {
             el.addEventListener('input', flushAddressSync);
             el.addEventListener('change', flushAddressSync);
         });
@@ -136,6 +151,7 @@
                 addressSyncTimer = setTimeout(function () {
                     addressSyncTimer = null;
                     chainLosseVanNaar(tbody, { preserveActiveAddress: true });
+                    applyLosseTijdenIfAvailable(tbody);
                     if (typeof window.updateRouteV2HiddenInput === 'function') {
                         window.updateRouteV2HiddenInput();
                     }
@@ -144,6 +160,7 @@
             el.addEventListener('change', flushAddressSync);
             el.addEventListener('blur', function () {
                 chainLosseVanNaar(tbody, {});
+                applyLosseTijdenIfAvailable(tbody);
             });
         });
         var markManual = function (el) {
@@ -157,24 +174,27 @@
             }
         };
         tr.querySelectorAll('.heen-vt').forEach(function (el) {
-            el.addEventListener('input', function () {
+            var runVt = function () {
                 markManual(el);
-            });
-            el.addEventListener('change', function () {
-                markManual(el);
-            });
+                applyLosseTijdenIfAvailable(tbody);
+                if (typeof window.updateRouteV2HiddenInput === 'function') {
+                    window.updateRouteV2HiddenInput();
+                }
+            };
+            el.addEventListener('input', runVt);
+            el.addEventListener('change', runVt);
         });
-        if (tr.classList.contains('heen-seg-first')) {
-            var atEl = tr.querySelector('.heen-at');
-            if (atEl) {
-                atEl.addEventListener('input', function () {
-                    markManual(atEl);
-                });
-                atEl.addEventListener('change', function () {
-                    markManual(atEl);
-                });
-            }
-        }
+        tr.querySelectorAll('.heen-at').forEach(function (el) {
+            var runAt = function () {
+                markManual(el);
+                applyLosseTijdenIfAvailable(tbody);
+                if (typeof window.updateRouteV2HiddenInput === 'function') {
+                    window.updateRouteV2HiddenInput();
+                }
+            };
+            el.addEventListener('input', runAt);
+            el.addEventListener('change', runAt);
+        });
         tr.querySelectorAll('.heen-vt, .heen-at').forEach(function (el) {
             el.addEventListener('click', function (e) {
                 if (el.dataset.timeEditable !== '1') {
@@ -186,7 +206,7 @@
                 }
             });
         });
-        bindLosseGooglePlaces(tr);
+        bindLosseGooglePlaces(tr, tbody);
     }
 
     function segmentKindFromRow(row, idx) {
@@ -363,6 +383,7 @@
             }
             tr.remove();
             chainLosseVanNaar(tb, {});
+            applyLosseTijdenIfAvailable(tb);
             refreshLosseDayDates(tb.closest('.calc-losse-rijdag-row'));
             if (typeof window.updateRouteV2HiddenInput === 'function') {
                 window.updateRouteV2HiddenInput();
@@ -370,6 +391,7 @@
         });
 
         chainLosseVanNaar(tb, {});
+        applyLosseTijdenIfAvailable(tb);
         return tr;
     }
 
@@ -383,6 +405,7 @@
         });
         syncLosseZoneColumns();
         refreshLosseDayDates(tbody.closest('.calc-losse-rijdag-row'));
+        applyLosseTijdenIfAvailable(tbody);
     }
 
     function defaultDateForNewRow() {
@@ -643,6 +666,7 @@
                 var tb = lr && lr.querySelector('.lr-seg-body');
                 if (tb) {
                     createLosseHeenSegmentRow(tb, {});
+                    applyLosseTijdenIfAvailable(tb);
                     refreshLosseDayDates(lr);
                     triggerRouteV2Sync();
                 }

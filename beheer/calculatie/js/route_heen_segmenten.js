@@ -708,6 +708,145 @@
         }
     }
 
+    /**
+     * Tijd- en readonly-layout voor losse-rijdagen-segmenten (zelfde regels als hoofd-heen,
+     * maar volledig op basis van de rijen in één tbody, zonder legacy time_t_* velden).
+     */
+    function applyLosseHeenSegmentTijden(tbody) {
+        if (!tbody) {
+            return;
+        }
+        const rows = Array.from(tbody.querySelectorAll('tr.heen-seg-row'));
+        const parts = getRowPartitions(rows);
+        const activeRows = parts.activeRows;
+        const coreRows = parts.coreRows;
+        const returnRows = parts.returnRows;
+        if (coreRows.length < 1) {
+            return;
+        }
+
+        const clearInactiveTail = function () {
+            for (let i = activeRows.length; i < rows.length; i++) {
+                const vtEl = rows[i].querySelector('.heen-vt');
+                const atEl = rows[i].querySelector('.heen-at');
+                if (vtEl) {
+                    vtEl.value = '';
+                    vtEl.readOnly = true;
+                    vtEl.classList.remove('heen-vt--auto');
+                    vtEl.dataset.timeEditable = '1';
+                    vtEl.title = 'Vul eerst een bestemming in';
+                }
+                if (atEl) {
+                    atEl.value = '';
+                    atEl.readOnly = true;
+                    atEl.classList.add('heen-at--auto');
+                    delete atEl.dataset.timeEditable;
+                    atEl.title = 'Vul eerst een bestemming in';
+                }
+            }
+        };
+
+        if (coreRows.length === 1) {
+            const row0 = coreRows[0];
+            const row0Vt = row0.querySelector('.heen-vt');
+            const row0At = row0.querySelector('.heen-at');
+            if (row0Vt) {
+                row0Vt.readOnly = true;
+                row0Vt.classList.remove('heen-vt--auto');
+                row0Vt.dataset.timeEditable = '1';
+                row0Vt.title = 'Vertrek vanuit garage';
+            }
+            if (row0At) {
+                row0At.readOnly = true;
+                row0At.classList.remove('heen-at--auto');
+                row0At.dataset.timeEditable = '1';
+                row0At.title = 'Aankomst bij klant';
+            }
+            clearInactiveTail();
+            return;
+        }
+
+        const r0 = coreRows[0];
+        const r1 = coreRows[1];
+        const vt0 = r0.querySelector('.heen-vt');
+        const at0 = r0.querySelector('.heen-at');
+        const vt1 = r1.querySelector('.heen-vt');
+        if (vt0) {
+            vt0.readOnly = true;
+            vt0.classList.remove('heen-vt--auto');
+            vt0.dataset.timeEditable = '1';
+            vt0.title = 'Vertrek vanuit garage';
+        }
+        const lead = vt1 && vt1.value ? vt1.value.trim().substring(0, 5) : '';
+        if (at0) {
+            at0.readOnly = true;
+            at0.classList.remove('heen-at--auto');
+            at0.dataset.timeEditable = '1';
+            if (at0.dataset.manual !== '1' && lead) {
+                at0.value = hmMinusMinutes(lead, KLANT_VOORVERTREK_MIN);
+            }
+            at0.title = 'Aankomst bij klant';
+        }
+        const tv = lead;
+        if (vt1) {
+            vt1.readOnly = true;
+            vt1.classList.remove('heen-vt--auto');
+            vt1.dataset.timeEditable = '1';
+            vt1.title = 'Vertrek bij klant';
+        }
+
+        const stopAankomsten = coreRows.slice(1).map(function (cr) {
+            const a = cr.querySelector('.heen-at');
+            return a && a.value ? a.value.trim().substring(0, 5) : '';
+        });
+        returnRows.forEach(function (row) {
+            const a = row.querySelector('.heen-at');
+            stopAankomsten.push(a && a.value ? a.value.trim().substring(0, 5) : '');
+        });
+
+        for (let i = 1; i < activeRows.length; i++) {
+            const vtEl = activeRows[i].querySelector('.heen-vt');
+            const atEl = activeRows[i].querySelector('.heen-at');
+            const kind = activeRows[i].dataset.returnKind || '';
+            const coreIdxOf = coreRows.indexOf(activeRows[i]);
+            const isCore = !kind && coreIdxOf >= 0;
+            const isLastCore = isCore && coreIdxOf === coreRows.length - 1;
+
+            if (vtEl) {
+                vtEl.readOnly = true;
+                vtEl.classList.remove('heen-vt--auto');
+                vtEl.dataset.timeEditable = '1';
+                if (i === 1) {
+                    if (vtEl.dataset.manual !== '1' && tv) {
+                        vtEl.value = tv;
+                    }
+                    vtEl.title = 'Vertrek bij klant';
+                } else if (vtEl.dataset.manual !== '1') {
+                    vtEl.value = stopAankomsten[i - 2] || '';
+                    vtEl.title = kind ? 'Vertrek voor retourregel' : 'Vertrek vanaf deze stop';
+                }
+            }
+            if (atEl) {
+                if (isLastCore) {
+                    atEl.readOnly = true;
+                    atEl.classList.remove('heen-at--auto');
+                    atEl.dataset.timeEditable = '1';
+                    atEl.title = 'Aankomst bij eindbestemming';
+                } else {
+                    atEl.readOnly = true;
+                    atEl.classList.add('heen-at--auto');
+                    delete atEl.dataset.timeEditable;
+                    if (atEl.dataset.manual !== '1') {
+                        atEl.value = stopAankomsten[i - 1] || '';
+                    }
+                    atEl.title = kind ? 'Automatische aankomsttijd voor retourregel' : 'Automatische aankomsttijd op deze stop';
+                }
+            }
+        }
+
+        clearInactiveTail();
+    }
+
     function ritType() {
         const el = document.getElementById('rittype_select');
         return el ? el.value : 'dagtocht';
@@ -1835,4 +1974,6 @@
     window.__calcEnrichRoute1ForPlanner = enrichRoute1ForPlanner;
     window.__calcResolvePlannerEndDate = resolvePlannerEndDate;
     window.__calcBuildRoute1SegmentsPayload = buildRoute1SegmentsPayload;
+    window.__calcApplyLosseHeenSegmentTijden = applyLosseHeenSegmentTijden;
+    window.__calcNormalizeAddr = normalizeAddr;
 })();
