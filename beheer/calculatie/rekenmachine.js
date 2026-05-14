@@ -13,17 +13,74 @@ const BUFFER_VOORSTAAN = 15;
 const BUFFER_NAZORG = 15;     
 const ROUTE2_DEPART_TIME_IDS = ['time_t_garage_rit2', 'time_t_vertrek_best', 'time_t_voorstaan_rit2', 'time_t_retour_klant'];
 
+/** Voorkomt dubbele event-listeners; Maps mag later laden. */
+window.__calcRekenmachineInited = false;
+
 /** Zichtbare route-Km / zones (segment-tabel); niet de verborgen legacy POST-spiegel (#legacy_heen_mirror). */
 function isRouteKmInputForTotals(el) {
     return el && el.matches('.km-calc') && !el.closest('#legacy_heen_mirror');
 }
 
-window.startHetSysteem = function() {
-    directionsService = new google.maps.DirectionsService();
-    init();
+/**
+ * Google Places op velden met .google-autocomplete — veilig: geen throw, idempotent.
+ * Moet ná init() kunnen draaien als Maps pas later beschikbaar is.
+ */
+function bindGooglePlacesAutocomplete() {
+    if (!window.google || !google.maps || !google.maps.places) {
+        return;
+    }
+    document.querySelectorAll('.google-autocomplete').forEach(function (el) {
+        if (!el || el.dataset.calcPlacesBound === '1') {
+            return;
+        }
+        try {
+            const ac = new google.maps.places.Autocomplete(el);
+            el.dataset.calcPlacesBound = '1';
+            ac.addListener('place_changed', function () {
+                if (el.id === 'addr_t_aankomst_best') {
+                    const typeEl = document.getElementById('rittype_select');
+                    const type = typeEl ? typeEl.value : '';
+                    const terugVeld = document.getElementById('addr_t_vertrek_best');
+                    if (
+                        (type === 'dagtocht' || type === 'schoolreis') &&
+                        terugVeld &&
+                        window.__calcTerugreisUserShow === true
+                    ) {
+                        if (!terugVeld.value) {
+                            terugVeld.value = el.value;
+                        }
+                    }
+                }
+                calculateRoute();
+            });
+        } catch (e) {
+            console.warn('[calculatie] Places Autocomplete overgeslagen voor veld', el && el.id, e);
+        }
+    });
 }
 
+window.startHetSysteem = function () {
+    try {
+        if (window.google && google.maps && typeof google.maps.DirectionsService === 'function') {
+            directionsService = new google.maps.DirectionsService();
+        }
+    } catch (e) {
+        console.warn('[calculatie] DirectionsService niet beschikbaar', e);
+    }
+    if (window.__calcRekenmachineInited) {
+        bindGooglePlacesAutocomplete();
+        return;
+    }
+    init();
+};
+
 function init() {
+    if (window.__calcRekenmachineInited) {
+        bindGooglePlacesAutocomplete();
+        return;
+    }
+    window.__calcRekenmachineInited = true;
+
     const typeSelect = document.getElementById('rittype_select');
     if(typeSelect) {
         typeSelect.addEventListener('change', function() {
@@ -31,27 +88,6 @@ function init() {
             calculateRoute(); 
         });
     }
-
-    document.querySelectorAll('.google-autocomplete').forEach(el => {
-        const ac = new google.maps.places.Autocomplete(el);
-        ac.addListener('place_changed', () => {
-            // Autocopy logica voor dagtochten
-            if (el.id === 'addr_t_aankomst_best') {
-                const type = document.getElementById('rittype_select').value;
-                const terugVeld = document.getElementById('addr_t_vertrek_best');
-                if (
-                    (type === 'dagtocht' || type === 'schoolreis') &&
-                    terugVeld &&
-                    window.__calcTerugreisUserShow === true
-                ) {
-                    if (!terugVeld.value) {
-                        terugVeld.value = el.value;
-                    }
-                }
-            }
-            calculateRoute(); 
-        });
-    });
 
     const klantSelect = document.getElementById('klant_select');
     if (klantSelect) {
@@ -137,7 +173,24 @@ function init() {
         window.calculatieExtrasAfterInit();
     }
     updateVisibility();
+    bindGooglePlacesAutocomplete();
 }
+
+/** Als de Maps-callback uitblijft (adblock, sleutel, netwerk), toch route/segmenten laden. */
+(function scheduleCalculatieInitFallback() {
+    if (typeof document === 'undefined') {
+        return;
+    }
+    document.addEventListener('DOMContentLoaded', function () {
+        window.setTimeout(function () {
+            if (window.__calcRekenmachineInited) {
+                return;
+            }
+            console.warn('[calculatie] Geen Google Maps-callback — init zonder kaarten-API.');
+            init();
+        }, 4500);
+    });
+})();
 
 /** Eénmalig na laden: als alle zichtbare km-regels nog 0 zijn en kernadressen staan, routes laten berekenen (o.a. wizard-import). */
 function tryInitialRouteIfNoKm() {
