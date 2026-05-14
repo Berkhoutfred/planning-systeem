@@ -55,13 +55,7 @@ function init() {
 
     const klantSelect = document.getElementById('klant_select');
     if (klantSelect) {
-        // Direct triggeren bij laden als er al een waarde is
-        if(klantSelect.value) {
-            fillKlantCard(klantSelect);
-            loadContacts(klantSelect.value);
-        }
-        
-        // Triggeren bij wijziging
+        // Triggeren bij wijziging (initiële vulling gebeurt ná routeHeenSegmentenInit)
         klantSelect.addEventListener('change', function() {
             fillKlantCard(this);
             loadContacts(this.value);
@@ -100,7 +94,7 @@ function init() {
         },
         true
     );
-    document.getElementById('closeModalBtn').addEventListener('click', closeTimeModal);
+    document.getElementById('closeModalBtn')?.addEventListener('click', closeTimeModal);
 
     document.addEventListener('change', function (e) {
         const row = e.target.closest && e.target.closest('.tz-row');
@@ -125,13 +119,22 @@ function init() {
         row.style.display = chk.checked ? 'flex' : 'none';
     })();
 
+    // Eerst segment-tabel vullen (HEEN_SEGMENTS_BOOT / legacy), daarna rekenen en klant-sync.
+    // Anders draait rekenen() en fillKlantCard() zonder zichtbare heen-rijen — route lijkt “leeg”.
+    if (typeof window.routeHeenSegmentenInit === 'function') {
+        const boot = typeof window.HEEN_SEGMENTS_BOOT !== 'undefined' ? window.HEEN_SEGMENTS_BOOT : null;
+        window.routeHeenSegmentenInit(Array.isArray(boot) ? boot : null);
+    }
+
+    if (klantSelect && klantSelect.value) {
+        fillKlantCard(klantSelect);
+        loadContacts(klantSelect.value);
+    }
+
     rekenen();
     tryInitialRouteIfNoKm();
     if (typeof window.calculatieExtrasAfterInit === 'function') {
         window.calculatieExtrasAfterInit();
-    }
-    if (typeof window.routeHeenSegmentenInit === 'function') {
-        window.routeHeenSegmentenInit(typeof window.HEEN_SEGMENTS_BOOT !== 'undefined' ? window.HEEN_SEGMENTS_BOOT : null);
     }
     updateVisibility();
 }
@@ -183,7 +186,10 @@ function fillKlantCard(s) {
         });
     }
     if (typeof window.routeHeenRefreshFromLegacy === 'function') {
-        window.routeHeenRefreshFromLegacy();
+        const segBody = document.getElementById('heen_segmenten_body');
+        if (segBody && segBody.querySelectorAll('tr.heen-seg-row').length > 0) {
+            window.routeHeenRefreshFromLegacy();
+        }
     }
 }
 

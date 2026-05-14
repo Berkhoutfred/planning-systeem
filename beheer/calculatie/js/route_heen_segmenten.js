@@ -1813,9 +1813,10 @@
         const tb = document.getElementById('heen_segmenten_body');
         if (!tb) return;
         tb.innerHTML = '';
-        if (rows && rows.length >= 1) {
+        const safeRows = Array.isArray(rows) ? rows : null;
+        if (safeRows && safeRows.length >= 1) {
             const bootReturnMode = getBootReturnMode();
-            const filteredRows = rows.filter(function (r) {
+            const filteredRows = safeRows.filter(function (r) {
                 if (!r || !r.return_kind) return true;
                 return bootReturnMode === 'rg' || bootReturnMode === 'rk';
             });
