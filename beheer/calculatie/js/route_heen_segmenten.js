@@ -1090,9 +1090,12 @@
     }
 
     function getRoute2SlotState(cfg) {
+        const addrEl = document.getElementById(cfg.addrId);
         const address = cfg.normalizeGarage
             ? normalizeGarageAddress(readTrimmedValue(cfg.addrId))
             : normalizeAddr(readTrimmedValue(cfg.addrId));
+        const hasAddr = !!normalizeAddr(address);
+        const forcedVisible = !!(addrEl && addrEl.dataset.route2Pending === '1' && !hasAddr);
         return {
             addrId: cfg.addrId,
             timeId: cfg.timeId,
@@ -1102,16 +1105,21 @@
             address: address,
             time: readTrimmedValue(cfg.timeId),
             km: readKmInput(cfg.kmKey),
-            zone: readZoneInRow(cfg.rowId)
+            zone: readZoneInRow(cfg.rowId),
+            forcedVisible: forcedVisible
         };
     }
 
     function getRoute2VisiblePoints() {
         const raw = ROUTE2_SLOT_CONFIG.map(getRoute2SlotState).filter(function (point) {
-            return point.address !== '';
+            return point.address !== '' || point.forcedVisible;
         });
         const nonGarageCount = raw.filter(function (point) {
-            return normalizeGarageAddress(point.address) !== DEFAULT_GARAGE_ADDRESS;
+            const a = normalizeAddr(point.address);
+            if (!a) {
+                return false;
+            }
+            return normalizeGarageAddress(a) !== DEFAULT_GARAGE_ADDRESS;
         }).length;
         if (raw.length < 2 || nonGarageCount === 0) {
             return [];
@@ -1124,7 +1132,12 @@
         if (!cfg) return;
         if (field === 'address') {
             const el = document.getElementById(cfg.addrId);
-            if (el) el.value = value;
+            if (el) {
+                el.value = value;
+                if (normalizeAddr(value)) {
+                    delete el.dataset.route2Pending;
+                }
+            }
             return;
         }
         if (field === 'time') {
@@ -1156,6 +1169,12 @@
     }
 
     function writeRoute2Points(points) {
+        ROUTE2_SLOT_CONFIG.forEach(function (cfg) {
+            const el = document.getElementById(cfg.addrId);
+            if (el) {
+                delete el.dataset.route2Pending;
+            }
+        });
         ROUTE2_SLOT_CONFIG.forEach(function (cfg, idx) {
             const point = points[idx] || null;
             setRoute2SlotValue(idx, 'address', point ? point.address : '');
@@ -1244,6 +1263,44 @@
         if (typeof window.calculateRoute === 'function') window.calculateRoute();
         if (typeof window.rekenen === 'function') window.rekenen();
         if (typeof window.updateRouteV2HiddenInput === 'function') window.updateRouteV2HiddenInput();
+        renderTerugSegmentTable();
+    }
+
+    /** Voegt een lege tussenstop toe vóór het laatste zichtbare punt (max. 5 punten). */
+    function addRoute2SegmentRow() {
+        const points = getRoute2VisiblePoints().map(function (point) {
+            return {
+                address: point.address,
+                time: point.time,
+                km: point.km,
+                zone: point.zone,
+                manual: !!document.getElementById(point.timeId)?.dataset.manual
+            };
+        });
+        if (points.length < 2) {
+            return;
+        }
+        if (points.length >= ROUTE2_SLOT_CONFIG.length) {
+            window.alert('Maximum aantal stops voor rit twee is bereikt (5 punten).');
+            return;
+        }
+        const insertAt = points.length - 1;
+        points.splice(insertAt, 0, { address: '', time: '', km: 0, zone: 'nl', manual: false });
+        writeRoute2Points(points);
+        const cfg = ROUTE2_SLOT_CONFIG[insertAt];
+        const addrEl = cfg ? document.getElementById(cfg.addrId) : null;
+        if (addrEl) {
+            addrEl.dataset.route2Pending = '1';
+        }
+        if (typeof window.calculateRoute === 'function') {
+            window.calculateRoute();
+        }
+        if (typeof window.rekenen === 'function') {
+            window.rekenen();
+        }
+        if (typeof window.updateRouteV2HiddenInput === 'function') {
+            window.updateRouteV2HiddenInput();
+        }
         renderTerugSegmentTable();
     }
 
@@ -2062,6 +2119,10 @@
         document.getElementById('btn_heen_seg_add')?.addEventListener('click', function () {
             addRow({});
             syncLegacyFromSegments();
+        });
+
+        document.getElementById('btn_terug_seg_add')?.addEventListener('click', function () {
+            addRoute2SegmentRow();
         });
 
         const rt = document.getElementById('rittype_select');

@@ -447,6 +447,7 @@ function val($data, $rij, $veld, $default = '') {
                             </thead>
                             <tbody id="terug_segmenten_body"></tbody>
                         </table>
+                        <button type="button" class="btn-add-bus" id="btn_terug_seg_add" style="margin-top:8px;font-size:11px;padding:4px 10px;">+ regel</button>
                         <div id="legacy_terug_mirror" class="legacy-heen-sr-only" aria-hidden="true" style="display:none;">
                         
                         <div class="rit-row" id="row_garage_rit2" style="display:none; background:#f9f9f9; padding:5px; margin-bottom:10px; border-radius:4px;">
