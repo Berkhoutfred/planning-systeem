@@ -1316,11 +1316,11 @@ $calcCsrf = function_exists('auth_get_csrf_token') ? auth_get_csrf_token() : '';
 </script>
 
 <script>
-window.HEEN_SEGMENTS_BOOT = <?= json_encode($heenSegmentsBoot ?? [], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
-window.ROUTE_V2_BOOT = <?= json_encode($routeV2Boot ?? null, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
-window.CALC_BUITENLAND_DP = <?= json_encode($buitenlandMetaDp ?? [], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
-window.CALC_TUSSENDAGEN_BOOT = <?= json_encode(['enabled' => $tussendagenEnabledBoot ?? false, 'items' => $tussendagenItemsBoot ?? []], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
-window.HTML_BUS_TUSSENDAG = <?= json_encode($busOptiesTussendagHTML ?? '', JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
+window.HEEN_SEGMENTS_BOOT = <?= calculatie_json_encode_for_script($heenSegmentsBoot ?? [], '[]') ?>;
+window.ROUTE_V2_BOOT = <?= calculatie_json_encode_for_script($routeV2Boot ?? null, 'null') ?>;
+window.CALC_BUITENLAND_DP = <?= calculatie_json_encode_for_script($buitenlandMetaDp ?? [], '[]') ?>;
+window.CALC_TUSSENDAGEN_BOOT = <?= calculatie_json_encode_for_script(['enabled' => $tussendagenEnabledBoot ?? false, 'items' => $tussendagenItemsBoot ?? []], '{"enabled":false,"items":[]}') ?>;
+window.HTML_BUS_TUSSENDAG = <?= calculatie_json_encode_for_script($busOptiesTussendagHTML ?? '', '""') ?>;
 (function () {
     function bindPlaces(el) {
         if (!window.google || !google.maps || !google.maps.places) return;
@@ -1547,9 +1547,15 @@ setTimeout(() => {
 }, 500);
 
 function customFinancieleBerekening() {
-    const type = document.getElementById('rittype_select').value;
-    let totaalKm = parseFloat(document.getElementById('total_km').value) || 0;
-    let uren = parseFloat(document.getElementById('total_uren').value) || 0;
+    const typeEl = document.getElementById('rittype_select');
+    const totalKmEl = document.getElementById('total_km');
+    const totalUrenEl = document.getElementById('total_uren');
+    if (!typeEl || !totalKmEl || !totalUrenEl) {
+        return;
+    }
+    const type = typeEl.value;
+    let totaalKm = parseFloat(String(totalKmEl.value).replace(',', '.')) || 0;
+    let uren = parseFloat(String(totalUrenEl.value).replace(',', '.')) || 0;
     const LOON = (typeof SERVER_DATA !== 'undefined') ? SERVER_DATA.uurloon : 35.00;
     
     let totaleKostprijs = 0;

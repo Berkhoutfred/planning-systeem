@@ -2075,6 +2075,10 @@
         }
 
         bootFromData(bootRows || window.HEEN_SEGMENTS_BOOT || null);
+        if (getRows().length === 0) {
+            console.warn('[calculatie] Geen heen-segmentrijen na boot — fallback op standaard-template');
+            bootFromData(null);
+        }
         syncZoneColumnVisibility();
         wireOptieKnopen();
         updateHeenOptChipStates();

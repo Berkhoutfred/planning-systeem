@@ -989,3 +989,26 @@ function calculatie_route_v2_extract_route1_segments(?array $payload): array
     }
     return $segments;
 }
+
+/**
+ * JSON voor inline &lt;script&gt; (window.* = …). Voorkomt kapotte pagina's als json_encode faalt (UTF-8, INF, enz.).
+ *
+ * @param mixed $value
+ */
+function calculatie_json_encode_for_script($value, string $fallbackJson = 'null'): string
+{
+    $flags = JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_THROW_ON_ERROR;
+    if (defined('JSON_INVALID_UTF8_SUBSTITUTE')) {
+        $flags |= JSON_INVALID_UTF8_SUBSTITUTE;
+    }
+    try {
+        $out = json_encode($value, $flags);
+        if ($out === false) {
+            return $fallbackJson;
+        }
+
+        return $out;
+    } catch (Throwable $e) {
+        return $fallbackJson;
+    }
+}
