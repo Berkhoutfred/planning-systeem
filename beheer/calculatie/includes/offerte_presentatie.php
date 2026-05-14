@@ -311,16 +311,16 @@ function offerte_presentatie_route_table_from_segments(array $route): array
         }
 
         $rows[] = [
-            'depart' => calculatie_route_v2_normalize_hhmm($segment['depart_at'] ?? ''),
+            'depart' => calculatie_route_v2_normalize_hhmm($segment['depart_at'] ?? $segment['vertrektijd'] ?? ''),
             'depart_display' => offerte_presentatie_format_time_with_offset(
-                (string) ($segment['depart_at'] ?? ''),
+                (string) ($segment['depart_at'] ?? $segment['vertrektijd'] ?? ''),
                 max(0, (int) ($segment['depart_day_offset'] ?? 0))
             ),
-            'from' => trim((string) ($segment['from'] ?? '')),
-            'to' => trim((string) ($segment['to'] ?? '')),
-            'arrive' => calculatie_route_v2_normalize_hhmm($segment['arrive_at'] ?? ''),
+            'from' => trim((string) ($segment['from'] ?? $segment['van'] ?? '')),
+            'to' => trim((string) ($segment['to'] ?? $segment['naar'] ?? '')),
+            'arrive' => calculatie_route_v2_normalize_hhmm($segment['arrive_at'] ?? $segment['aankomst_tijd'] ?? ''),
             'arrive_display' => offerte_presentatie_format_time_with_offset(
-                (string) ($segment['arrive_at'] ?? ''),
+                (string) ($segment['arrive_at'] ?? $segment['aankomst_tijd'] ?? ''),
                 max(0, (int) ($segment['arrive_day_offset'] ?? 0))
             ),
             'km' => calculatie_route_v2_normalize_float($segment['km'] ?? 0),
@@ -463,6 +463,94 @@ function offerte_presentatie_build_route_days(?array $payload): array
     return $days;
 }
 
+/**
+ * Routeplanning voor klant-PDF/web: geen aanrijden garage→instapplaats en geen retour naar garage;
+ * voor standaard ritten voorkeur voor de zichtbare lijn (instap → bestemming) uit calculatie_regels.
+ *
+ * @param array<string, array{tijd?:string,adres?:string,km?:mixed}> $regelMap
+ * @return list<array<string, mixed>>
+ */
+function offerte_presentatie_build_klant_route_days(array $rit, ?array $payload, array $regelMap): array
+{
+    $rittype = trim((string) ($rit['rittype'] ?? ''));
+    $legacy = offerte_presentatie_build_legacy_data($regelMap);
+    $vl = trim((string) ($legacy['t_vertrek_klant']['adres'] ?? ''));
+    $best = trim((string) ($legacy['t_aankomst_best']['adres'] ?? ''));
+
+    $rows = [];
+    if (is_array($payload)) {
+        $segs = calculatie_route_v2_route1_source_segments_for_boot($payload);
+        $filtered = [];
+        foreach ($segs as $origIdx => $seg) {
+            if (!is_array($seg)) {
+                continue;
+            }
+            if (trim((string) ($seg['return_kind'] ?? '')) !== '') {
+                continue;
+            }
+            if (calculatie_route_v2_route1_kind($seg, $origIdx) === 'garage_to_customer') {
+                continue;
+            }
+            $filtered[] = $seg;
+        }
+        if ($filtered !== []) {
+            $rows = offerte_presentatie_route_table_from_segments(['segments' => $filtered]);
+        }
+    }
+
+    if (
+        $rows === []
+        && $vl !== ''
+        && $best !== ''
+        && in_array($rittype, ['dagtocht', 'schoolreis', 'trein', 'enkel'], true)
+    ) {
+        $rows = offerte_presentatie_route_table_from_segments(['segments' => [[
+            'from' => $vl,
+            'to' => $best,
+            'depart_at' => (string) ($legacy['t_vertrek_klant']['tijd'] ?? ''),
+            'arrive_at' => (string) ($legacy['t_aankomst_best']['tijd'] ?? ''),
+            'km' => (float) ($legacy['t_vertrek_klant']['km'] ?? 0) + (float) ($legacy['t_aankomst_best']['km'] ?? 0),
+            'zone' => 'nl',
+        ]]]);
+    }
+
+    if ($rows === []) {
+        return [];
+    }
+
+    $showZone = false;
+    foreach ($rows as $row) {
+        if (($row['zone'] ?? 'nl') !== 'nl') {
+            $showZone = true;
+            break;
+        }
+    }
+
+    $start = is_array($payload)
+        ? calculatie_route_v2_normalize_date($payload['dates']['start'] ?? ($rit['rit_datum'] ?? ''))
+        : calculatie_route_v2_normalize_date((string) ($rit['rit_datum'] ?? ''));
+    if ($start === '') {
+        $start = calculatie_route_v2_normalize_date((string) ($rit['rit_datum'] ?? ''));
+    }
+
+    return [[
+        'label' => 'Rit',
+        'heading_label' => 'Route',
+        'kind' => 'travel',
+        'date' => $start,
+        'date_display' => offerte_presentatie_format_date($start, true),
+        'show_zone' => $showZone,
+        'routes' => [[
+            'label' => '',
+            'table_type' => 'segment_table',
+            'show_zone' => $showZone,
+            'inline_with_day_heading' => true,
+            'rows' => $rows,
+        ]],
+        'events' => [],
+    ]];
+}
+
 function offerte_presentatie_logo_web_src(string $logoPad): string
 {
     $logoPad = trim($logoPad);
@@ -508,8 +596,19 @@ function offerte_presentatie_build(PDO $pdo, array $rit): array
 
     $startDate = calculatie_route_v2_normalize_date($payload['dates']['start'] ?? ($rit['rit_datum'] ?? ''));
     $endDate = calculatie_route_v2_normalize_date($payload['dates']['end'] ?? ($rit['rit_datum_eind'] ?? $rit['rit_datum'] ?? ''));
-    $routeDays = offerte_presentatie_build_route_days($payload);
     $pakketLosseRijdagen = !empty($payload['flags']['losse_rijdagen_pakket']);
+    $rittypeNorm = trim((string) ($rit['rittype'] ?? ''));
+    $useKlantRoute = !$pakketLosseRijdagen
+        && !in_array($rittypeNorm, ['meerdaags', 'buitenland'], true);
+
+    if (!$useKlantRoute) {
+        $routeDays = offerte_presentatie_build_route_days($payload);
+    } else {
+        $routeDays = offerte_presentatie_build_klant_route_days($rit, $payload, $regelMap);
+        if ($routeDays === []) {
+            $routeDays = offerte_presentatie_build_route_days($payload);
+        }
+    }
     $intro = 'Hartelijk dank voor uw aanvraag. Wij doen u hierbij graag onze vrijblijvende offerte toekomen op basis van actuele beschikbaarheid. Hieronder vindt u de besproken ritgegevens, routeplanning en prijsopbouw.';
     if ($pakketLosseRijdagen) {
         $intro .= ' Deze offerte omvat meerdere losse rijdagen op opeenvolgende of gekozen data (tussendoor naar de zaak/garage), samengevat in één totaalprijs; de route staat per rijdag vermeld.';

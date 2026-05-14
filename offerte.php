@@ -774,10 +774,6 @@ $hideForms = $rit['status'] === 'klant_akkoord'
                 <div class="section-box">
                     <div class="box-header"><h2 class="box-title">Prijs</h2></div>
                     <div class="box-body price-grid">
-                        <div class="price-card primary">
-                            <span class="mini-label">Totaalprijs incl. btw</span>
-                            <div class="price-value"><?php echo h($view['price']['incl_display']); ?></div>
-                        </div>
                         <div class="price-card">
                             <span class="mini-label">Excl. btw</span>
                             <div class="price-value" style="font-size:22px;"><?php echo h($view['price']['excl_display']); ?></div>
@@ -785,6 +781,10 @@ $hideForms = $rit['status'] === 'klant_akkoord'
                         <div class="price-card">
                             <span class="mini-label">BTW-bedrag</span>
                             <div class="price-value" style="font-size:22px;"><?php echo h($view['price']['btw_display']); ?></div>
+                        </div>
+                        <div class="price-card primary">
+                            <span class="mini-label">Totaal incl. btw</span>
+                            <div class="price-value"><?php echo h($view['price']['incl_display']); ?></div>
                         </div>
                     </div>
                     <div class="box-body" style="padding-top:0;">

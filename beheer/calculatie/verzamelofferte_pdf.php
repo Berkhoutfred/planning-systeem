@@ -93,10 +93,14 @@ foreach ($rows as $r) {
     } else {
         $titel = substr($titel, 0, 48);
     }
+    $inclCell = (string) ($vw['price']['incl_display'] ?? '');
+    if ($inclCell === '') {
+        $inclCell = offerte_presentatie_format_currency((float) ($vw['price']['incl'] ?? 0));
+    }
     $pdf->Cell(22, 7, safe_iconv((string) ($vw['offer']['order_nummer'] ?? '')), 1, 0, 'L');
     $pdf->Cell(78, 7, safe_iconv($titel), 1, 0, 'L');
     $pdf->Cell(40, 7, safe_iconv((string) ($vw['trip']['start_date_display'] ?? '')), 1, 0, 'L');
-    $pdf->Cell(50, 7, safe_iconv((string) ($vw['price']['incl_display'] ?? '')), 1, 1, 'R');
+    $pdf->Cell(50, 7, safe_iconv($inclCell), 1, 1, 'R');
     $totIncl += (float) ($vw['price']['incl'] ?? 0);
 }
 

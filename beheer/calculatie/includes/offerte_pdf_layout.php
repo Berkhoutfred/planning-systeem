@@ -389,18 +389,17 @@ function offerte_pdf_render_offer_body(OffertePDF $pdf, array $view): void
     $pdf->Cell(70, 7, safe_iconv('Bedrag'), 0, 1, 'R', true);
     $pdf->SetDrawColor(235, 235, 235);
     $pdf->SetFont('Arial', '', 10);
-    $pdf->Cell(120, 7, safe_iconv('  Totaalprijs incl. btw'), 0, 0, 'L');
-    $pdf->SetFont('Arial', 'B', 11);
-    $pdf->SetTextColor(217, 119, 6);
-    $pdf->Cell(70, 7, safe_iconv((string) ($view['price']['incl_display'] ?? '')), 0, 1, 'R');
     $pdf->SetTextColor(0, 0, 0);
-    $pdf->SetFont('Arial', '', 9);
     $pdf->Cell(120, 6, safe_iconv('  Excl. btw'), 0, 0, 'L');
     $pdf->Cell(70, 6, safe_iconv((string) ($view['price']['excl_display'] ?? '')), 0, 1, 'R');
     $pdf->Cell(120, 6, safe_iconv('  BTW-bedrag'), 0, 0, 'L');
     $pdf->Cell(70, 6, safe_iconv((string) ($view['price']['btw_display'] ?? '')), 0, 1, 'R');
-
-    $pdf->Ln(8);
+    $pdf->Ln(1);
+    $pdf->SetFont('Arial', 'B', 11);
+    $pdf->SetTextColor(217, 119, 6);
+    $pdf->Cell(120, 8, safe_iconv('  Totaal incl. btw'), 0, 0, 'L');
+    $pdf->Cell(70, 8, safe_iconv((string) ($view['price']['incl_display'] ?? '')), 0, 1, 'R');
+    $pdf->SetTextColor(0, 0, 0);
     $pdf->SetFont('Arial', '', 10);
     $pdf->MultiCell(190, 5.2, safe_iconv('Wij vertrouwen erop u hiermee een passende aanbieding te hebben gedaan en zien uw reactie graag tegemoet.'));
     $pdf->Ln(5);

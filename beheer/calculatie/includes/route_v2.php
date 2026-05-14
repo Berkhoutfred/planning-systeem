@@ -886,15 +886,47 @@ function calculatie_route_v2_from_post(array $post, string $rittype): ?string
     }
 }
 
+/**
+ * Route-1-segmenten voor UI-boot / extract: gebruik route1.segments als die echte adressen bevat,
+ * anders planner-days (route_index 1 / code R1). Voorkomt lege bewerkpagina als route alleen in `days` staat.
+ *
+ * @return list<array<string, mixed>>
+ */
+function calculatie_route_v2_route1_source_segments_for_boot(array $payload): array
+{
+    $route1 = is_array($payload['route1'] ?? null) ? $payload['route1'] : [];
+    $direct = is_array($route1['segments'] ?? null) ? $route1['segments'] : [];
+    $hasAddresses = false;
+    foreach ($direct as $seg) {
+        if (!is_array($seg)) {
+            continue;
+        }
+        $from = trim((string) ($seg['from'] ?? $seg['van'] ?? ''));
+        $to = trim((string) ($seg['to'] ?? $seg['naar'] ?? ''));
+        if ($from !== '' || $to !== '') {
+            $hasAddresses = true;
+            break;
+        }
+    }
+    if ($hasAddresses) {
+        return $direct;
+    }
+
+    $fromDays = calculatie_route_v2_route1_from_days(is_array($payload['days'] ?? null) ? $payload['days'] : []);
+    if (is_array($fromDays) && is_array($fromDays['segments'] ?? null)) {
+        return $fromDays['segments'];
+    }
+
+    return [];
+}
+
 function calculatie_route_v2_extract_route1_segments(?array $payload): array
 {
     $segments = [];
     if (!is_array($payload)) {
         return $segments;
     }
-    $sourceSegments = is_array($payload['route1']['segments'] ?? null)
-        ? $payload['route1']['segments']
-        : (calculatie_route_v2_route1_from_days(is_array($payload['days'] ?? null) ? $payload['days'] : [])['segments'] ?? []);
+    $sourceSegments = calculatie_route_v2_route1_source_segments_for_boot($payload);
     foreach ($sourceSegments as $segment) {
         if (!is_array($segment)) {
             continue;
