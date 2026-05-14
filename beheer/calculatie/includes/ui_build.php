@@ -3,14 +3,17 @@
 declare(strict_types=1);
 
 /**
- * Zichtbaar build-label voor calculatie-UI (maken / bewerken / wizard).
+ * Zichtbaar versielabel voor calculatie-UI (maken / bewerken / wizard).
  *
- * - Verhoog NR bij elke relevante wijziging (idem voor alle schermen).
- * - TIME = lokale release-tijd (HH:MM), handmatig bij deploy — makkelijker dan datum voor cache-check.
+ * - `nr`: handmatig +1 bij elke relevante UI-wijziging (cache-busting op ?v= queries).
+ * - `date`: aanbevolen — releasedatum YYYY-MM-DD (Europe/Amsterdam), géén kloktijd; zo voorkom je
+ *   verwarring met “huidige tijd” op het scherm.
+ * - `time`: alleen nog als fallback als `date` leeg is (oudere installs); mag HH:MM zijn, is géén servertijd.
  *
- * @return array{nr:int,time:string}
+ * @return array{nr:int,date?:string,time?:string}
  */
 return [
-    'nr' => 63,
-    'time' => '23:20',
+    'nr' => 64,
+    'date' => '2026-05-13',
+    'time' => '',
 ];

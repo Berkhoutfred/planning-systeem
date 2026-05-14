@@ -27,7 +27,11 @@ if ($moduleBuitenland) {
 $data = [];
 
 $uiBuildConf = require __DIR__ . '/includes/ui_build.php';
-$uiBuildLabel = 'nr. ' . (int) ($uiBuildConf['nr'] ?? 1) . ' · ' . htmlspecialchars((string) ($uiBuildConf['time'] ?? ''), ENT_QUOTES, 'UTF-8');
+$uiBuildTag = trim((string) ($uiBuildConf['date'] ?? ''));
+if ($uiBuildTag === '') {
+    $uiBuildTag = trim((string) ($uiBuildConf['time'] ?? ''));
+}
+$uiBuildLabel = 'nr. ' . (int) ($uiBuildConf['nr'] ?? 1) . ($uiBuildTag !== '' ? ' · ' . htmlspecialchars($uiBuildTag, ENT_QUOTES, 'UTF-8') : '');
 
 require_once __DIR__ . '/includes/calculatie_feature_flags.php';
 $calcLossePakketDagenEnabled = calculatie_feature_losse_pakket_dagen_enabled();
@@ -259,7 +263,7 @@ function val($data, $rij, $veld, $default = '') {
 
 <div class="container"> 
     <form action="opslaan.php" method="POST" id="hoofdFormulier">
-        <div class="calculatie-ui-build calculatie-ui-build--banner" role="status"><strong>UI-build</strong> <?= $uiBuildLabel ?></div>
+        <div class="calculatie-ui-build calculatie-ui-build--banner" role="status"><strong>Versie</strong> <?= $uiBuildLabel ?></div>
         <input type="hidden" name="naar_dashboard" value="1"> 
         <input type="hidden" name="route_v2_json" id="route_v2_json" value="">
         <input type="hidden" name="verkoopprijs_is_inclusief_btw" value="1">
@@ -598,7 +602,7 @@ function val($data, $rij, $veld, $default = '') {
         </div> 
 
         <button type="submit" class="btn-save"><i class="fas fa-save"></i> RIT OPSLAAN & TERUG NAAR OVERZICHT</button>
-        <p class="calculatie-ui-build">BusAI calculatie · bijgewerkt: <?= $uiBuildLabel ?></p>
+        <p class="calculatie-ui-build">BusAI calculatie · versie: <?= $uiBuildLabel ?></p>
     </form> 
 
     <div id="bijlagen">

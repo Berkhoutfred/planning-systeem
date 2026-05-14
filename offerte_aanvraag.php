@@ -118,7 +118,11 @@ $bedankt = isset($_GET['bedankt']) && (string) $_GET['bedankt'] === '1';
 $foutmelding = '';
 
 $uiBuildConf = require __DIR__ . '/beheer/calculatie/includes/ui_build.php';
-$offerteWizardBuildLabel = 'nr. ' . (int) ($uiBuildConf['nr'] ?? 1) . ' · ' . htmlspecialchars((string) ($uiBuildConf['time'] ?? ''), ENT_QUOTES, 'UTF-8');
+$uiBuildTag = trim((string) ($uiBuildConf['date'] ?? ''));
+if ($uiBuildTag === '') {
+    $uiBuildTag = trim((string) ($uiBuildConf['time'] ?? ''));
+}
+$offerteWizardBuildLabel = 'nr. ' . (int) ($uiBuildConf['nr'] ?? 1) . ($uiBuildTag !== '' ? ' · ' . htmlspecialchars($uiBuildTag, ENT_QUOTES, 'UTF-8') : '');
 
 if ($tenant === null) {
     $foutmelding = 'Deze pagina is niet bereikbaar zonder geldige organisatie. Gebruik de link van uw vervoerder (met ?tenant=...) of neem contact op.';
@@ -941,7 +945,7 @@ $csrf = offerte_csrf_token();
         </div>
     <?php endif; ?>
     <?php if ($tenant !== null): ?>
-        <p class="offerte-build-label"><?php echo offerte_h('Bijgewerkt: ' . $offerteWizardBuildLabel); ?></p>
+        <p class="offerte-build-label"><?php echo offerte_h('Versie: ' . $offerteWizardBuildLabel); ?></p>
     <?php endif; ?>
 </div>
 

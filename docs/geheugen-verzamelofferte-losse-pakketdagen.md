@@ -44,7 +44,7 @@ Intern naslagwerk voor opschoning of vervolg. Laatste relevante traject: meerder
 
 ### Overig
 
-- `beheer/calculatie/includes/ui_build.php` — buildnr/tijd voor cache-busting UI
+- `beheer/calculatie/includes/ui_build.php` — versienr + releasedatum (`date` YYYY-MM-DD) voor cache-busting UI
 
 ---
 
