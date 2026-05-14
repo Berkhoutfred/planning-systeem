@@ -177,10 +177,7 @@ function val($data, $rij, $veld, $default = '') {
     .btn-lr-remove { background: #eef2f7; color: #334; border: 1px solid #ccd6e4 !important; }
     #btn_calc_losse_rijdag_add { margin-top: 6px; background: #0b5; color: #fff; }
     #btn_calc_losse_rijdag_add:disabled { opacity: 0.45; cursor: not-allowed; }
-    .lr-seg-table { width: 100%; border-collapse: collapse; font-size: 11px; }
-    .lr-seg-table th { text-align: left; background: #003366; color: #fff; padding: 6px 8px; font-size: 9px; letter-spacing: 0.03em; text-transform: uppercase; }
-    .lr-seg-table td { padding: 4px 6px; border-bottom: 1px solid #eee; vertical-align: middle; }
-    .lr-seg-table .form-control { height: 28px !important; font-size: 11px !important; padding: 3px 6px !important; }
+    .losse-heen-wrap { margin-top: 4px; }
     .rit-row-check-only { align-items: center; min-height: 28px; }
     .rit-row-check-only input[type="checkbox"] { width: 14px; height: 14px; flex-shrink: 0; }
     .rit-row-check-only label { margin: 0; font-size: 11px; font-weight: 700; color: #003366; cursor: pointer; white-space: nowrap; }
