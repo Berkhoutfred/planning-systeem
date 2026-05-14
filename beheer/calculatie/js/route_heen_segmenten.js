@@ -1168,13 +1168,35 @@
         }
     }
 
-    function writeRoute2Points(points) {
-        ROUTE2_SLOT_CONFIG.forEach(function (cfg) {
-            const el = document.getElementById(cfg.addrId);
-            if (el) {
-                delete el.dataset.route2Pending;
+    function refreshRoute2PendingAfterWrite(points) {
+        const src = points || [];
+        const padded = [];
+        for (let i = 0; i < ROUTE2_SLOT_CONFIG.length; i++) {
+            padded[i] = src[i] || { address: '', time: '', km: 0, zone: 'nl', manual: false };
+        }
+        for (let idx = 0; idx < ROUTE2_SLOT_CONFIG.length; idx++) {
+            const el = document.getElementById(ROUTE2_SLOT_CONFIG[idx].addrId);
+            if (!el) {
+                continue;
             }
-        });
+            delete el.dataset.route2Pending;
+            const pt = padded[idx];
+            if (!pt || normalizeAddr(pt.address)) {
+                continue;
+            }
+            const prev = padded.slice(0, idx).some(function (p) {
+                return p && normalizeAddr(p.address);
+            });
+            const next = padded.slice(idx + 1).some(function (p) {
+                return p && normalizeAddr(p.address);
+            });
+            if (prev && next) {
+                el.dataset.route2Pending = '1';
+            }
+        }
+    }
+
+    function writeRoute2Points(points) {
         ROUTE2_SLOT_CONFIG.forEach(function (cfg, idx) {
             const point = points[idx] || null;
             setRoute2SlotValue(idx, 'address', point ? point.address : '');
@@ -1183,6 +1205,7 @@
             setRoute2SlotValue(idx, 'zone', point ? (point.zone || 'nl') : 'nl');
             setRoute2SlotManual(idx, !!(point && point.manual));
         });
+        refreshRoute2PendingAfterWrite(points);
     }
 
     /**
@@ -1287,11 +1310,6 @@
         const insertAt = points.length - 1;
         points.splice(insertAt, 0, { address: '', time: '', km: 0, zone: 'nl', manual: false });
         writeRoute2Points(points);
-        const cfg = ROUTE2_SLOT_CONFIG[insertAt];
-        const addrEl = cfg ? document.getElementById(cfg.addrId) : null;
-        if (addrEl) {
-            addrEl.dataset.route2Pending = '1';
-        }
         if (typeof window.calculateRoute === 'function') {
             window.calculateRoute();
         }
