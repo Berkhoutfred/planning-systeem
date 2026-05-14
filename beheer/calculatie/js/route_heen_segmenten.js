@@ -520,7 +520,10 @@
         const startDate = readTrimmedValue('rit_datum');
         const route1Payload = {
             label: 'Route 1',
-            return_mode: isRkChipActive() ? 'rk' : (isRgChipActive() ? 'rg' : ''),
+            return_mode: (function () {
+                const chip = isRkChipActive() ? 'rk' : (isRgChipActive() ? 'rg' : '');
+                return chip || inferReturnModeFromDomRows();
+            })(),
             segments: buildRoute1SegmentsPayload()
         };
         const route2Payload = buildRoute2Payload();
@@ -982,13 +985,67 @@
         return t === 'meerdaags' || t === 'buitenland';
     }
 
+    function inferReturnModeFromBootSegmentList(list) {
+        if (!Array.isArray(list)) {
+            return '';
+        }
+        let hasRk = false;
+        let hasRg = false;
+        list.forEach(function (s) {
+            if (!s) {
+                return;
+            }
+            const rk = String(s.return_kind || '').trim();
+            if (rk === 'rk-klant' || rk === 'rk-garage') {
+                hasRk = true;
+            }
+            if (rk === 'rg') {
+                hasRg = true;
+            }
+        });
+        if (hasRk) {
+            return 'rk';
+        }
+        if (hasRg) {
+            return 'rg';
+        }
+        return '';
+    }
+
     function getBootReturnMode() {
         const payload = window.ROUTE_V2_BOOT;
-        if (!payload || typeof payload !== 'object') return '';
+        if (!payload || typeof payload !== 'object') {
+            return inferReturnModeFromBootSegmentList(window.HEEN_SEGMENTS_BOOT || []);
+        }
         const mode = payload.route1 && typeof payload.route1 === 'object'
             ? String(payload.route1.return_mode || '').trim().toLowerCase()
             : '';
-        return mode === 'rg' || mode === 'rk' ? mode : '';
+        if (mode === 'rg' || mode === 'rk') {
+            return mode;
+        }
+        const fromRoute1 = inferReturnModeFromBootSegmentList(
+            payload.route1 && Array.isArray(payload.route1.segments) ? payload.route1.segments : []
+        );
+        if (fromRoute1) {
+            return fromRoute1;
+        }
+        return inferReturnModeFromBootSegmentList(window.HEEN_SEGMENTS_BOOT || []);
+    }
+
+    function inferReturnModeFromDomRows() {
+        const kinds = getRowPartitions(getRows()).returnRows.map(function (row) {
+            return row.dataset.returnKind || '';
+        });
+        if (kinds.length === 2 && kinds[0] === 'rk-klant' && kinds[1] === 'rk-garage') {
+            return 'rk';
+        }
+        if (kinds.length === 1 && kinds[0] === 'rg') {
+            return 'rg';
+        }
+        if (kinds.some(function (k) { return k === 'rk-klant' || k === 'rk-garage'; })) {
+            return 'rk';
+        }
+        return '';
     }
 
     function syncZoneColumnVisibility() {
@@ -1809,28 +1866,51 @@
         }
     }
 
+    function coerceBootRows(rows) {
+        if (Array.isArray(rows)) {
+            return rows;
+        }
+        if (rows && typeof rows === 'object') {
+            const keys = Object.keys(rows)
+                .filter(function (k) { return /^\d+$/.test(k); })
+                .sort(function (a, b) { return parseInt(a, 10) - parseInt(b, 10); });
+            if (keys.length) {
+                return keys.map(function (k) { return rows[k]; });
+            }
+        }
+        return null;
+    }
+
     function bootFromData(rows) {
         const tb = document.getElementById('heen_segmenten_body');
         if (!tb) return;
         tb.innerHTML = '';
-        const safeRows = Array.isArray(rows) ? rows : null;
-        if (safeRows && safeRows.length >= 1) {
-            const bootReturnMode = getBootReturnMode();
-            const filteredRows = safeRows.filter(function (r) {
-                if (!r || !r.return_kind) return true;
-                return bootReturnMode === 'rg' || bootReturnMode === 'rk';
-            });
-            filteredRows.forEach(function (r) {
-                addRow(r);
-            });
-            let coreCount = filteredRows.filter(function (r) {
-                return !r || !r.return_kind;
-            }).length;
-            while (coreCount < 2) {
+        try {
+            const coerced = coerceBootRows(rows);
+            const safeRows = Array.isArray(coerced) ? coerced : null;
+            if (safeRows && safeRows.length >= 1) {
+                const bootReturnMode = getBootReturnMode();
+                const filteredRows = safeRows.filter(function (r) {
+                    if (!r || !r.return_kind) return true;
+                    return bootReturnMode === 'rg' || bootReturnMode === 'rk';
+                });
+                filteredRows.forEach(function (r) {
+                    addRow(r);
+                });
+                let coreCount = filteredRows.filter(function (r) {
+                    return !r || !r.return_kind;
+                }).length;
+                while (coreCount < 2) {
+                    addRow({ van: '', naar: '', km: '0', zone: 'nl' });
+                    coreCount += 1;
+                }
+            } else {
+                addRow({ van: DEFAULT_GARAGE_ADDRESS, naar: '', km: '0', zone: 'nl', vertrektijd: '' });
                 addRow({ van: '', naar: '', km: '0', zone: 'nl' });
-                coreCount += 1;
             }
-        } else {
+        } catch (e) {
+            console.error('[calculatie] bootFromData mislukt', e);
+            tb.innerHTML = '';
             addRow({ van: DEFAULT_GARAGE_ADDRESS, naar: '', km: '0', zone: 'nl', vertrektijd: '' });
             addRow({ van: '', naar: '', km: '0', zone: 'nl' });
         }

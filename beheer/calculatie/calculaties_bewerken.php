@@ -103,6 +103,7 @@ try {
     if ($heenSegmentsBoot === [] || !route_heen_boot_segments_have_content($heenSegmentsBoot)) {
         $heenSegmentsBoot = route_heen_segments_from_regels($data);
     }
+    $heenSegmentsBoot = array_values($heenSegmentsBoot);
 
     // Actieve prijscategorieën ophalen
     $stmtBussen = $pdo->prepare("SELECT * FROM calculatie_voertuigen WHERE tenant_id = ? AND actief = 1 ORDER BY capaciteit ASC");

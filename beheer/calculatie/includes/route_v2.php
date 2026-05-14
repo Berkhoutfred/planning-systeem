@@ -697,6 +697,40 @@ function calculatie_route_v2_normalize_days(array $days, string $fallbackStartDa
     return $normalized;
 }
 
+/**
+ * Bepaal route1.return_mode uit segment-return_kind als het veld ontbreekt (oudere saves / migraties).
+ * Zonder deze waarde filtert de bewerk-UI retoursegmenten weg en lijkt de route "leeg".
+ *
+ * @param list<array<string, mixed>> $segments
+ */
+function calculatie_route_v2_infer_route1_return_mode_from_segments(array $segments): string
+{
+    $hasRkKlant = false;
+    $hasRkGarage = false;
+    $hasRg = false;
+    foreach ($segments as $seg) {
+        if (!is_array($seg)) {
+            continue;
+        }
+        $rk = trim((string) ($seg['return_kind'] ?? ''));
+        if ($rk === 'rk-klant') {
+            $hasRkKlant = true;
+        } elseif ($rk === 'rk-garage') {
+            $hasRkGarage = true;
+        } elseif ($rk === 'rg') {
+            $hasRg = true;
+        }
+    }
+    if ($hasRkKlant || $hasRkGarage) {
+        return 'rk';
+    }
+    if ($hasRg) {
+        return 'rg';
+    }
+
+    return '';
+}
+
 function calculatie_route_v2_resolve_dates(string $startDate, string $endDate, array $days): array
 {
     $start = $startDate;
@@ -810,6 +844,14 @@ function calculatie_route_v2_normalize_payload(array $payload): array
     }
     if (empty($normalizedDays)) {
         $normalizedDays = calculatie_route_v2_build_days_from_compat($normalizedRoute1, $normalizedRoute2, $normalizedTuss, $startDate ?: $endDate);
+    }
+
+    if (($normalizedRoute1['return_mode'] ?? '') === '') {
+        $segList = is_array($normalizedRoute1['segments'] ?? null) ? $normalizedRoute1['segments'] : [];
+        $inferred = calculatie_route_v2_infer_route1_return_mode_from_segments($segList);
+        if ($inferred !== '') {
+            $normalizedRoute1['return_mode'] = $inferred;
+        }
     }
 
     $resolvedDates = calculatie_route_v2_resolve_dates($startDate, $endDate, $normalizedDays);
