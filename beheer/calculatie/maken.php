@@ -29,6 +29,9 @@ $data = [];
 $uiBuildConf = require __DIR__ . '/includes/ui_build.php';
 $uiBuildLabel = 'nr. ' . (int) ($uiBuildConf['nr'] ?? 1) . ' · ' . htmlspecialchars((string) ($uiBuildConf['time'] ?? ''), ENT_QUOTES, 'UTF-8');
 
+require_once __DIR__ . '/includes/calculatie_feature_flags.php';
+$calcLossePakketDagenEnabled = calculatie_feature_losse_pakket_dagen_enabled();
+
 try {
     $instellingen = tenant_calculatie_instellingen_merged($pdo, $tenantId);
     $chauffeur_uurloon = $instellingen['uurloon_basis'];
@@ -389,6 +392,7 @@ function val($data, $rij, $veld, $default = '') {
                     </div>
                 </div>
 
+                <?php if ($calcLossePakketDagenEnabled): ?>
                 <div id="wrap_losse_rijdagen_pakket" class="route-compact">
                     <div class="rit-row tz-toggle-row">
                         <label class="rit-row-check-only" style="display:flex;align-items:center;gap:8px;width:100%;margin:0;">
@@ -402,6 +406,7 @@ function val($data, $rij, $veld, $default = '') {
                         <button type="button" id="btn_calc_losse_rijdag_add">+ Rijdag</button>
                     </div>
                 </div>
+                <?php endif; ?>
 
                 <div id="terugreis_gate_bar" class="terugreis-gate-bar" style="display:none;">
                     <button type="button" id="btn_show_terugreis" class="btn-terugreis-open" title="Rit twee: terugreis en tweede rit tonen">+ Rit twee</button>
@@ -886,6 +891,7 @@ window.HTML_BUS_TUSSENDAG = <?= json_encode($busOptiesTussendagHTML ?? '', JSON_
 })();
 </script>
 
+<script>window.CALC_LOSSE_PAKKET_DAGEN_ENABLED=<?= $calcLossePakketDagenEnabled ? 'true' : 'false' ?>;</script>
 <script src="js/meerdere_losse_rijdagen.js?v=<?= time() ?>"></script>
 <script src="js/route_heen_segmenten.js?v=<?= time() ?>"></script>
 <script src="js/cao_toeslagen.js?v=<?= time() ?>"></script>

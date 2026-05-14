@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/route_heen_segments.php';
+require_once __DIR__ . '/calculatie_feature_flags.php';
 
 const CALCULATIE_ROUTE_V2_ROLLOVER_THRESHOLD_MIN = 180;
 
@@ -728,6 +729,46 @@ function calculatie_route_v2_resolve_dates(string $startDate, string $endDate, a
     return ['start' => $start, 'end' => $end];
 }
 
+/**
+ * Verwijdert losse-pakketdagen (extra travel-dagen met day_index ≥ 1) en zet de vlag uit.
+ * Gebruikt wanneer CALCULATIE_LOSSE_PAKKET_DAGEN_ENABLED uit staat.
+ */
+function calculatie_route_v2_remove_losse_pakket_package_data(array $payload): array
+{
+    $flags = is_array($payload['flags'] ?? null) ? $payload['flags'] : [];
+    $flags['losse_rijdagen_pakket'] = false;
+    $payload['flags'] = $flags;
+
+    $days = is_array($payload['days'] ?? null) ? $payload['days'] : [];
+    $filtered = [];
+    foreach ($days as $day) {
+        if (!is_array($day)) {
+            continue;
+        }
+        $idx = (int) ($day['day_index'] ?? 0);
+        $kind = trim((string) ($day['kind'] ?? ''));
+        if ($idx >= 1 && $kind === 'travel') {
+            continue;
+        }
+        $filtered[] = $day;
+    }
+    $reindexed = [];
+    foreach ($filtered as $i => $day) {
+        if (!is_array($day)) {
+            continue;
+        }
+        $day['seq'] = $i + 1;
+        $day['day_index'] = $i;
+        $reindexed[] = $day;
+    }
+    $payload['days'] = $reindexed;
+
+    $startDate = calculatie_route_v2_normalize_date($payload['dates']['start'] ?? '');
+    $payload['dates'] = calculatie_route_v2_resolve_dates($startDate, $startDate, $reindexed);
+
+    return $payload;
+}
+
 function calculatie_route_v2_normalize_payload(array $payload): array
 {
     $rittype = trim((string) ($payload['rittype'] ?? 'dagtocht'));
@@ -774,7 +815,7 @@ function calculatie_route_v2_normalize_payload(array $payload): array
     $resolvedDates = calculatie_route_v2_resolve_dates($startDate, $endDate, $normalizedDays);
     $flagsIn = is_array($payload['flags'] ?? null) ? $payload['flags'] : [];
 
-    return [
+    $out = [
         'schema' => 2,
         'rittype' => $rittype,
         'dates' => $resolvedDates,
@@ -787,6 +828,12 @@ function calculatie_route_v2_normalize_payload(array $payload): array
             'losse_rijdagen_pakket' => !empty($flagsIn['losse_rijdagen_pakket']),
         ],
     ];
+
+    if (!calculatie_feature_losse_pakket_dagen_enabled()) {
+        $out = calculatie_route_v2_remove_losse_pakket_package_data($out);
+    }
+
+    return $out;
 }
 
 function calculatie_route_v2_decode(?string $json): ?array
