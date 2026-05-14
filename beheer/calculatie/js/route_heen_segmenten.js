@@ -521,8 +521,12 @@
         const route1Payload = {
             label: 'Route 1',
             return_mode: (function () {
-                const chip = isRkChipActive() ? 'rk' : (isRgChipActive() ? 'rg' : '');
-                return chip || inferReturnModeFromDomRows();
+                try {
+                    const chip = isRkChipActive() ? 'rk' : (isRgChipActive() ? 'rg' : '');
+                    return chip || inferReturnModeFromDomRows();
+                } catch (e) {
+                    return '';
+                }
             })(),
             segments: buildRoute1SegmentsPayload()
         };

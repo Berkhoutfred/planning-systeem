@@ -157,20 +157,36 @@ function init() {
 
     // Eerst segment-tabel vullen (HEEN_SEGMENTS_BOOT / legacy), daarna rekenen en klant-sync.
     // Anders draait rekenen() en fillKlantCard() zonder zichtbare heen-rijen — route lijkt “leeg”.
-    if (typeof window.routeHeenSegmentenInit === 'function') {
-        const boot = typeof window.HEEN_SEGMENTS_BOOT !== 'undefined' ? window.HEEN_SEGMENTS_BOOT : null;
-        window.routeHeenSegmentenInit(Array.isArray(boot) ? boot : null);
+    try {
+        if (typeof window.routeHeenSegmentenInit === 'function') {
+            const boot = typeof window.HEEN_SEGMENTS_BOOT !== 'undefined' ? window.HEEN_SEGMENTS_BOOT : null;
+            window.routeHeenSegmentenInit(Array.isArray(boot) ? boot : null);
+        }
+    } catch (e) {
+        console.error('[calculatie] routeHeenSegmentenInit mislukt', e);
     }
 
     if (klantSelect && klantSelect.value) {
-        fillKlantCard(klantSelect);
-        loadContacts(klantSelect.value);
+        try {
+            fillKlantCard(klantSelect);
+            loadContacts(klantSelect.value);
+        } catch (e) {
+            console.error('[calculatie] klant init mislukt', e);
+        }
     }
 
-    rekenen();
+    try {
+        rekenen();
+    } catch (e) {
+        console.error('[calculatie] rekenen bij init mislukt', e);
+    }
     tryInitialRouteIfNoKm();
     if (typeof window.calculatieExtrasAfterInit === 'function') {
-        window.calculatieExtrasAfterInit();
+        try {
+            window.calculatieExtrasAfterInit();
+        } catch (e) {
+            console.error('[calculatie] calculatieExtrasAfterInit mislukt', e);
+        }
     }
     updateVisibility();
     bindGooglePlacesAutocomplete();
@@ -307,7 +323,11 @@ function terugreisSectionHasData() {
 
 // --- ZICHTBAARHEID (V3.0 Logic) ---
 function updateVisibility() {
-    const type = document.getElementById('rittype_select').value;
+    const typeEl = document.getElementById('rittype_select');
+    if (!typeEl) {
+        return;
+    }
+    const type = typeEl.value;
     const wrapCaoOb = document.getElementById('wrap_cao_onderbreking');
     if (wrapCaoOb) {
         wrapCaoOb.style.display = type === 'brenghaal' ? 'block' : 'none';
@@ -373,17 +393,21 @@ window.updateVisibility = updateVisibility;
 
 // --- ROUTE MOTOR ---
 function calculateRoute() {
-    const type = document.getElementById('rittype_select').value;
+    const typeEl = document.getElementById('rittype_select');
+    if (!typeEl) {
+        return;
+    }
+    const type = typeEl.value;
     const route1ReturnMode = getHeenRoute1ReturnMode();
 
     // HEEN: garage → vertrekadres → 1e grens → [optioneel 2e grens] → bestemming
-    const s1 = document.getElementById('addr_t_garage').value;
-    const sVl = document.getElementById('addr_t_vertrek_klant').value;
-    const sGrens = document.getElementById('addr_t_voorstaan').value;
+    const s1 = document.getElementById('addr_t_garage')?.value ?? '';
+    const sVl = document.getElementById('addr_t_vertrek_klant')?.value ?? '';
+    const sGrens = document.getElementById('addr_t_voorstaan')?.value ?? '';
     const chkG2 = document.getElementById('chk_grens2');
     const sGrens2 = document.getElementById('addr_t_grens2') ? document.getElementById('addr_t_grens2').value.trim() : '';
     const useGrens2 = chkG2 && chkG2.checked && sGrens2 !== '';
-    const s4 = document.getElementById('addr_t_aankomst_best').value;
+    const s4 = document.getElementById('addr_t_aankomst_best')?.value ?? '';
     const lastHeenStop = s4 || (useGrens2 ? sGrens2 : '') || sGrens || sVl;
     const sRetKlantHeen = document.getElementById('addr_t_retour_klant')?.value.trim() || '';
     const sEnd1 = document.getElementById('addr_t_retour_garage_heen')?.value.trim() || '';
@@ -874,8 +898,11 @@ function syncHeenSegmentPlanning() {
 }
 
 function updatePlanning() {
+    const typeElPlan = document.getElementById('rittype_select');
+    const type = typeElPlan ? typeElPlan.value : '';
     const segmentPlanningHandled = syncHeenSegmentPlanning();
-    const tVertrek = document.getElementById('time_t_vertrek_klant').value;
+    const tVertrekEl = document.getElementById('time_t_vertrek_klant');
+    const tVertrek = tVertrekEl && typeof tVertrekEl.value === 'string' ? tVertrekEl.value : '';
     if(tVertrek && !segmentPlanningHandled) {
         const dVertrek = parseTime(tVertrek);
         const tVoorrij = getHeenVoorrijTijd();
@@ -893,7 +920,10 @@ function updatePlanning() {
         const ritG1NaarG2 = useG2 ? (reisTijden['addr_t_grens2'] || 0) : 0;
         const ritLastNaarBest = reisTijden['addr_t_aankomst_best'] || 0;
         const dAankomst = addMinutes(dVertrek, ritVlNaarGrens + ritG1NaarG2 + ritLastNaarBest);
-        document.getElementById('time_t_aankomst_best').value = formatTime(dAankomst);
+        const elBestA = document.getElementById('time_t_aankomst_best');
+        if (elBestA) {
+            elBestA.value = formatTime(dAankomst);
+        }
 
         const elHiddenVs = document.getElementById('time_t_voorstaan');
         if (elHiddenVs) {
@@ -923,26 +953,37 @@ function updatePlanning() {
         if (elG2) elG2.value = '';
     }
     
-    const type = document.getElementById('rittype_select').value;
-    
     if (type === 'brenghaal') {
-        const tOphaal = document.getElementById('time_t_vertrek_best').value;
+        const tOphaalEl = document.getElementById('time_t_vertrek_best');
+        const tOphaal = tOphaalEl && typeof tOphaalEl.value === 'string' ? tOphaalEl.value : '';
         if(tOphaal) {
             const dOphaal = parseTime(tOphaal);
             const dVoorstaan2 = addMinutes(dOphaal, -BUFFER_VOORSTAAN);
-            document.getElementById('time_t_voorstaan_rit2').value = formatTime(dVoorstaan2);
+            const elVs2 = document.getElementById('time_t_voorstaan_rit2');
+            if (elVs2) {
+                elVs2.value = formatTime(dVoorstaan2);
+            }
             
             const ritVanGarage2 = reisTijden['addr_t_voorstaan_rit2'] || 30;
             const dGarageStart2 = addMinutes(dVoorstaan2, -ritVanGarage2);
-            document.getElementById('time_t_garage_rit2').value = formatTime(dGarageStart2);
+            const elG2s = document.getElementById('time_t_garage_rit2');
+            if (elG2s) {
+                elG2s.value = formatTime(dGarageStart2);
+            }
             
             const ritNaarUitstap = reisTijden['addr_t_retour_klant'] || 60;
             const dUitstap = addMinutes(dOphaal, ritNaarUitstap);
-            document.getElementById('time_t_retour_klant').value = formatTime(dUitstap);
+            const elRK = document.getElementById('time_t_retour_klant');
+            if (elRK) {
+                elRK.value = formatTime(dUitstap);
+            }
             
             const ritNaarGarageEind = reisTijden['addr_t_retour_garage'] || 30;
             const dGarageEind = addMinutes(dUitstap, ritNaarGarageEind + BUFFER_NAZORG);
-            document.getElementById('time_t_retour_garage').value = formatTime(dGarageEind);
+            const elRG = document.getElementById('time_t_retour_garage');
+            if (elRG) {
+                elRG.value = formatTime(dGarageEind);
+            }
         }
     } 
     else if (type === 'dagtocht' || type === 'schoolreis' || type === 'meerdaags' || type === 'buitenland' || type === 'trein') {
@@ -1091,7 +1132,11 @@ function countSelectedCalculatieBussen() {
 
 // --- REKENEN ---
 function rekenen() {
-    const type = document.getElementById('rittype_select').value;
+    const typeEl = document.getElementById('rittype_select');
+    if (!typeEl) {
+        return;
+    }
+    const type = typeEl.value;
     syncFiscalFromZones();
 
     let totaalKm = 0;
@@ -1100,10 +1145,14 @@ function rekenen() {
         if(i.offsetParent !== null) totaalKm += parseFloat(i.value) || 0;
     });
 
-    document.getElementById('total_km').value = totaalKm;
+    const totalKmEl = document.getElementById('total_km');
+    if (totalKmEl) {
+        totalKmEl.value = String(totaalKm);
+    }
 
     let uren = 0;
-    const t1 = document.getElementById('time_t_garage').value;
+    const tGarageEl = document.getElementById('time_t_garage');
+    const t1 = tGarageEl && typeof tGarageEl.value === 'string' ? tGarageEl.value : '';
     const tRoute1End = document.getElementById('time_t_retour_garage_heen')?.value || '';
     const tHeenEind = tRoute1End || document.getElementById('time_t_aankomst_best')?.value || '';
     const tRoute2Start = document.getElementById('time_t_garage_rit2')?.value || document.getElementById('time_t_vertrek_best')?.value || '';
@@ -1134,9 +1183,9 @@ function rekenen() {
         uren = uren1 + uren2;
     }
     else if (type === 'meerdaags' || type === 'buitenland') {
-        const t2 = document.getElementById('time_t_aankomst_best').value;
-        const t3 = document.getElementById('time_t_vertrek_best').value;
-        const t4 = document.getElementById('time_t_retour_garage').value;
+        const t2 = document.getElementById('time_t_aankomst_best')?.value || '';
+        const t3 = document.getElementById('time_t_vertrek_best')?.value || '';
+        const t4 = document.getElementById('time_t_retour_garage')?.value || '';
 
         let urenHeen = (t1 && t2) ? calcDiff(t1, t2) + 0.5 : 0;
         let urenTerug = (t3 && t4) ? calcDiff(t3, t4) : 0;
@@ -1161,7 +1210,10 @@ function rekenen() {
             uren = eersteDag + tussenliggendeDagen * 8 + laatsteDag;
         }
     }
-    document.getElementById('total_uren').value = uren.toFixed(2);
+    const totalUrenEl = document.getElementById('total_uren');
+    if (totalUrenEl) {
+        totalUrenEl.value = uren.toFixed(2);
+    }
     
     const LOON = (typeof SERVER_DATA !== 'undefined') ? SERVER_DATA.uurloon : 35.00;
     const busSelect = document.getElementById('bus_select');
