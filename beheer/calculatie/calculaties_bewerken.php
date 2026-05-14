@@ -19,6 +19,9 @@ if ($tenantId <= 0) {
 $uiBuildConf = require __DIR__ . '/includes/ui_build.php';
 $uiBuildLabel = 'nr. ' . (int) ($uiBuildConf['nr'] ?? 1) . ' · ' . htmlspecialchars((string) ($uiBuildConf['time'] ?? ''), ENT_QUOTES, 'UTF-8');
 
+require_once __DIR__ . '/includes/calculatie_feature_flags.php';
+$calcLossePakketDagenEnabled = calculatie_feature_losse_pakket_dagen_enabled();
+
 // DATA OPHALEN 
 $id = isset($_GET['id']) ? intval($_GET['id']) : 0; 
 $is_nieuw = ($id === 0); 
@@ -74,6 +77,23 @@ try {
 
     require_once __DIR__ . '/includes/route_heen_segments.php';
     require_once __DIR__ . '/includes/route_v2.php';
+
+    if (!$is_nieuw && !calculatie_feature_losse_pakket_dagen_enabled() && !empty($rit['route_v2_json'])) {
+        $dec = calculatie_route_v2_decode((string) $rit['route_v2_json']);
+        if ($dec !== null) {
+            try {
+                $enc = json_encode($dec, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+            } catch (Throwable $e) {
+                $enc = null;
+            }
+            if ($enc !== null && $enc !== (string) $rit['route_v2_json']) {
+                $pdo->prepare('UPDATE calculaties SET route_v2_json = ? WHERE id = ? AND tenant_id = ? LIMIT 1')
+                    ->execute([$enc, (int) $rit['id'], $tenantId]);
+                $rit['route_v2_json'] = $enc;
+            }
+        }
+    }
+
     $routeV2Boot = calculatie_route_v2_decode(isset($rit['route_v2_json']) ? (string) $rit['route_v2_json'] : null);
     $heenSegmentsBoot = calculatie_route_v2_extract_route1_segments($routeV2Boot);
     if ($heenSegmentsBoot === []) {
@@ -585,6 +605,7 @@ $calcCsrf = function_exists('auth_get_csrf_token') ? auth_get_csrf_token() : '';
                     </div>
                 </div>
 
+                <?php if ($calcLossePakketDagenEnabled): ?>
                 <div id="wrap_losse_rijdagen_pakket" class="route-compact tz-wrap">
                     <div class="rit-row tz-toggle-row">
                         <label class="rit-row-check-only" style="display:flex;align-items:center;gap:8px;width:100%;margin:0;">
@@ -598,6 +619,7 @@ $calcCsrf = function_exists('auth_get_csrf_token') ? auth_get_csrf_token() : '';
                         <button type="button" id="btn_calc_losse_rijdag_add">+ Rijdag</button>
                     </div>
                 </div>
+                <?php endif; ?>
 
                 <div id="terugreis_gate_bar" class="terugreis-gate-bar" style="display:none;">
                     <button type="button" id="btn_show_terugreis" class="btn-terugreis-open" title="Rit twee: terugreis en tweede rit tonen">+ Rit twee</button>
@@ -1474,6 +1496,7 @@ window.HTML_BUS_TUSSENDAG = <?= json_encode($busOptiesTussendagHTML ?? '', JSON_
 })();
 </script>
 
+<script>window.CALC_LOSSE_PAKKET_DAGEN_ENABLED=<?= $calcLossePakketDagenEnabled ? 'true' : 'false' ?>;</script>
 <script src="js/meerdere_losse_rijdagen.js?v=<?= time() ?>"></script>
 <script src="js/route_heen_segmenten.js?v=<?= time() ?>"></script>
 <script src="js/cao_toeslagen.js?v=<?= time() ?>"></script>

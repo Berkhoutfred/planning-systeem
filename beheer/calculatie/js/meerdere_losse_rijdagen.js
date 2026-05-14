@@ -6,6 +6,10 @@
 (function () {
     'use strict';
 
+    function losseFeatureEnabled() {
+        return window.CALC_LOSSE_PAKKET_DAGEN_ENABLED === true;
+    }
+
     var MAX_EXTRA_DAYS = 6;
     var MAX_SEG = 6;
     var DEFAULT_GARAGE_ADDRESS = 'Industrieweg 95a, Zutphen';
@@ -539,6 +543,11 @@
         if (!payload || typeof payload !== 'object') {
             return payload;
         }
+        if (!losseFeatureEnabled()) {
+            payload.flags = payload.flags || {};
+            payload.flags.losse_rijdagen_pakket = false;
+            return payload;
+        }
         var cb = document.getElementById('calc_losse_rijdagen_enabled');
         var pack = collectLossePakketState();
         payload.flags = payload.flags || {};
@@ -601,6 +610,9 @@
     };
 
     window.calcLosseRijdagenBootFromPayload = function (payload) {
+        if (!losseFeatureEnabled()) {
+            return;
+        }
         var cb = document.getElementById('calc_losse_rijdagen_enabled');
         if (!cb) {
             return;
@@ -651,6 +663,9 @@
     };
 
     function bindLosseRijdagenUi() {
+        if (!losseFeatureEnabled()) {
+            return;
+        }
         var cb = document.getElementById('calc_losse_rijdagen_enabled');
         var inner = document.getElementById('block_losse_rijdagen_inner');
         var btnAdd = document.getElementById('btn_calc_losse_rijdag_add');

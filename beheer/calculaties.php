@@ -345,6 +345,7 @@ try {
             <?php else: ?>
                 <a href="?maand=<?= $maand ?>&jaar=<?= $jaar ?>&view=archief" class="btn-grey"><i class="fas fa-archive"></i> Bekijk Archief</a>
             <?php endif; ?>
+            <a href="calculatie/verzamelofferte.php" class="btn-grey" style="margin-right:10px;"><i class="fas fa-layer-group"></i> Verzamelofferte</a>
             <a href="calculatie/maken.php" class="btn-green"><i class="fas fa-plus"></i> Nieuwe Offerte</a>
         </div>
     </div>
@@ -533,6 +534,7 @@ try {
                             <a href="rit-bewerken.php?id=<?= $heenRitId ?>" class="btn-edit" style="color:#c2410c;" title="Rit bewerken (planbord)"><i class="fas fa-taxi"></i></a>
                         <?php else: ?>
                             <a href="calculatie/calculaties_bewerken.php?id=<?= (int) $calcId ?>" class="btn-edit" title="Offerte Bewerken"><i class="fas fa-pen"></i></a>
+                            <a href="calculatie/calculatie_kopie.php?bron_id=<?= (int) $calcId ?>" class="btn-edit" style="color:#0d6efd;" title="Kopie met nieuwe datum"><i class="fas fa-copy"></i></a>
                         <?php endif; ?>
 
                         <?php if ($view === 'actief'): ?>
