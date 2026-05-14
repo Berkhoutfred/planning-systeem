@@ -381,6 +381,7 @@ function calculateRoute() {
 
     setTimeout(function () {
         calculateTussendagenKmAll();
+        calculateLosseRijdagenKmAll();
     }, 350);
 }
 
@@ -420,6 +421,57 @@ function calculateTussendagenKm(rowEl) {
 window.calculateTussendagenKm = calculateTussendagenKm;
 window.calculateTussendagenKmAll = calculateTussendagenKmAll;
 
+/** Losse rijdagen (#calc_losse_rijdagen_rows): per segment km + reisduur via Google Directions. */
+function calculateLosseRijdagenKmAll() {
+    if (typeof directionsService === 'undefined' || !directionsService) return;
+    document.querySelectorAll('#calc_losse_rijdagen_rows tr.heen-seg-row').forEach(function (row) {
+        calculateLosseRijdagenKmRow(row);
+    });
+}
+
+function calculateLosseRijdagenKmRow(rowEl) {
+    if (!directionsService || !rowEl) return;
+    if (!rowEl.closest('#calc_losse_rijdagen_rows')) return;
+    const van = rowEl.querySelector('.heen-van');
+    const naar = rowEl.querySelector('.heen-naar');
+    const kmInput = rowEl.querySelector('.heen-km');
+    if (!van || !naar || !kmInput) return;
+    const a = van.value.trim();
+    const b = naar.value.trim();
+    if (a.length < 4 || b.length < 4) {
+        delete rowEl.dataset.driveMinutes;
+        return;
+    }
+
+    directionsService.route({
+        origin: a,
+        destination: b,
+        travelMode: 'DRIVING',
+        unitSystem: google.maps.UnitSystem.METRIC
+    }, function (response, status) {
+        if (status !== 'OK' || !response.routes || !response.routes[0]) {
+            delete rowEl.dataset.driveMinutes;
+            return;
+        }
+        const leg = response.routes[0].legs[0];
+        if (!leg) {
+            delete rowEl.dataset.driveMinutes;
+            return;
+        }
+        kmInput.value = Math.ceil(leg.distance.value / 1000);
+        rowEl.dataset.driveMinutes = String(Math.ceil((leg.duration.value * BUS_FACTOR) / 60));
+        const tb = rowEl.closest('.lr-seg-body');
+        if (tb && typeof window.__calcApplyLosseHeenSegmentTijden === 'function') {
+            window.__calcApplyLosseHeenSegmentTijden(tb);
+        }
+        if (typeof window.updateRouteV2HiddenInput === 'function') window.updateRouteV2HiddenInput();
+        if (typeof rekenen === 'function') rekenen();
+    });
+}
+
+window.calculateLosseRijdagenKmRow = calculateLosseRijdagenKmRow;
+window.calculateLosseRijdagenKmAll = calculateLosseRijdagenKmAll;
+
 function runGoogleRoute(stopMap) {
     const origin = stopMap[0].loc;
     const destination = stopMap[stopMap.length-1].loc;
@@ -456,6 +508,7 @@ function runGoogleRoute(stopMap) {
             }
             rekenen();
             calculateTussendagenKmAll();
+            calculateLosseRijdagenKmAll();
         }
     });
 }
@@ -500,6 +553,7 @@ function runGoogleLeg(origin, destination, targetId) {
         }
         rekenen();
         calculateTussendagenKmAll();
+        calculateLosseRijdagenKmAll();
     });
 }
 

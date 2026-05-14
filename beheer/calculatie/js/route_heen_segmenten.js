@@ -33,6 +33,12 @@
         return formatHm(p - mins);
     }
 
+    function hmPlusMinutes(hm, mins) {
+        const p = parseHm(hm);
+        if (p === null) return '';
+        return formatHm(p + mins);
+    }
+
     function getEffectiveRows(rows) {
         const src = Array.isArray(rows) ? rows.slice() : getRows();
         while (src.length > 2) {
@@ -208,7 +214,16 @@
     }
 
     function refreshTerugSegmentDateLabels() {
-        refreshSegmentDateColumnInTable('terug_segmenten_body', 'tr.terug-seg-row', null, 'rit_datum_eind', 'rit_datum');
+        const rt = document.getElementById('rittype_select');
+        const t = rt ? rt.value : 'dagtocht';
+        const useEndDate = t === 'meerdaags' || t === 'buitenland';
+        refreshSegmentDateColumnInTable(
+            'terug_segmenten_body',
+            'tr.terug-seg-row',
+            null,
+            useEndDate ? 'rit_datum_eind' : 'rit_datum',
+            'rit_datum'
+        );
     }
 
     function enrichRoute1ForPlanner(route1Payload) {
@@ -804,13 +819,20 @@
             stopAankomsten.push(a && a.value ? a.value.trim().substring(0, 5) : '');
         });
 
+        const garageRefPre = normalizeGarageAddress(readTrimmedValue('addr_t_garage') || '');
+        const lastCoreRowPre = coreRows[coreRows.length - 1];
+        const lastNaarPre = lastCoreRowPre ? (lastCoreRowPre.querySelector('.heen-naar')?.value.trim() || '') : '';
+        const lastNaarNorm = normalizeGarageAddress(lastNaarPre);
+        const tripEndsAtGarage = lastNaarNorm !== '' && garageRefPre !== ''
+            && normalizeAddr(lastNaarNorm).toLowerCase() === normalizeAddr(garageRefPre).toLowerCase();
+
         for (let i = 1; i < activeRows.length; i++) {
             const vtEl = activeRows[i].querySelector('.heen-vt');
             const atEl = activeRows[i].querySelector('.heen-at');
             const kind = activeRows[i].dataset.returnKind || '';
             const coreIdxOf = coreRows.indexOf(activeRows[i]);
             const isCore = !kind && coreIdxOf >= 0;
-            const isLastCoreOnlyTrip = isCore && coreIdxOf === coreRows.length - 1 && returnRows.length === 0;
+            const isLastCoreFreeEnd = isCore && coreIdxOf === coreRows.length - 1 && returnRows.length === 0 && !tripEndsAtGarage;
 
             if (vtEl) {
                 vtEl.readOnly = true;
@@ -827,7 +849,7 @@
                 }
             }
             if (atEl) {
-                if (isLastCoreOnlyTrip) {
+                if (isLastCoreFreeEnd) {
                     atEl.readOnly = true;
                     atEl.classList.remove('heen-at--auto');
                     atEl.dataset.timeEditable = '1';
@@ -889,6 +911,27 @@
                 fillHmIfEmpty(rVt, la);
             }
         }
+
+        const driveMinFromRow = function (row) {
+            if (!row || !row.dataset) return null;
+            const n = parseInt(String(row.dataset.driveMinutes || ''), 10);
+            return Number.isFinite(n) && n > 0 ? n : null;
+        };
+        const fillAtFromVtDrive = function (row) {
+            const vtEl = row.querySelector('.heen-vt');
+            const atEl = row.querySelector('.heen-at');
+            if (!atEl || atEl.dataset.manual === '1') return;
+            const dm = driveMinFromRow(row);
+            if (dm == null) return;
+            const vt = vtEl && vtEl.value ? vtEl.value.trim().substring(0, 5) : '';
+            if (parseHm(vt) === null) return;
+            const cur = atEl.value ? atEl.value.trim() : '';
+            if (cur === '' || cur === '--:--') {
+                atEl.value = hmPlusMinutes(vt, dm);
+            }
+        };
+        coreRows.forEach(fillAtFromVtDrive);
+        returnRows.forEach(fillAtFromVtDrive);
 
         const leadFinal = vt1 && vt1.value ? vt1.value.trim().substring(0, 5) : '';
         if (at0 && at0.dataset.manual !== '1' && leadFinal && parseHm(leadFinal) !== null) {
@@ -1895,6 +1938,8 @@
             rt.addEventListener('change', function () {
                 syncZoneColumnVisibility();
                 syncLegacyFromSegments();
+                refreshHeenSegmentDateLabels();
+                refreshTerugSegmentDateLabels();
             });
         }
 

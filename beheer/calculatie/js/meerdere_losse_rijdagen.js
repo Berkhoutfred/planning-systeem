@@ -121,6 +121,7 @@
                     if (typeof window.updateRouteV2HiddenInput === 'function') {
                         window.updateRouteV2HiddenInput();
                     }
+                    requestLosseKmRecalc();
                 });
             } catch (e) {}
         });
@@ -138,6 +139,7 @@
             if (typeof window.updateRouteV2HiddenInput === 'function') {
                 window.updateRouteV2HiddenInput();
             }
+            requestLosseKmRecalc();
         };
         tr.querySelectorAll('.heen-km, .heen-zone').forEach(function (el) {
             el.addEventListener('input', flushAddressSync);
@@ -155,12 +157,14 @@
                     if (typeof window.updateRouteV2HiddenInput === 'function') {
                         window.updateRouteV2HiddenInput();
                     }
+                    requestLosseKmRecalc();
                 }, 450);
             });
             el.addEventListener('change', flushAddressSync);
             el.addEventListener('blur', function () {
                 chainLosseVanNaar(tbody, {});
                 applyLosseTijdenIfAvailable(tbody);
+                requestLosseKmRecalc();
             });
         });
         var markManual = function (el) {
@@ -388,10 +392,12 @@
             if (typeof window.updateRouteV2HiddenInput === 'function') {
                 window.updateRouteV2HiddenInput();
             }
+            requestLosseKmRecalc();
         });
 
         chainLosseVanNaar(tb, {});
         applyLosseTijdenIfAvailable(tb);
+        requestLosseKmRecalc();
         return tr;
     }
 
@@ -406,6 +412,7 @@
         syncLosseZoneColumns();
         refreshLosseDayDates(tbody.closest('.calc-losse-rijdag-row'));
         applyLosseTijdenIfAvailable(tbody);
+        requestLosseKmRecalc();
     }
 
     function defaultDateForNewRow() {
@@ -462,6 +469,7 @@
         wrap.appendChild(row);
         syncLosseZoneColumns();
         refreshLosseDayDates(row);
+        requestLosseKmRecalc();
         return row;
     }
 
@@ -498,6 +506,15 @@
         if (typeof window.updateRouteV2HiddenInput === 'function') {
             window.updateRouteV2HiddenInput();
         }
+    }
+
+    function requestLosseKmRecalc(delayMs) {
+        var d = typeof delayMs === 'number' ? delayMs : 250;
+        setTimeout(function () {
+            if (typeof window.calculateLosseRijdagenKmAll === 'function') {
+                window.calculateLosseRijdagenKmAll();
+            }
+        }, d);
     }
 
     function clearLosseRows() {
@@ -627,6 +644,7 @@
         }
         updateLosseAddButtonState();
         syncLosseZoneColumns();
+        requestLosseKmRecalc(600);
     };
 
     function bindLosseRijdagenUi() {
@@ -669,6 +687,7 @@
                     applyLosseTijdenIfAvailable(tb);
                     refreshLosseDayDates(lr);
                     triggerRouteV2Sync();
+                    requestLosseKmRecalc();
                 }
                 return;
             }
@@ -686,6 +705,7 @@
                 var tb2 = row.querySelector('.lr-seg-body');
                 copyMainRouteIntoTbody(tb2);
                 triggerRouteV2Sync();
+                requestLosseKmRecalc();
             }
         });
         wrap.addEventListener('input', function (e) {
