@@ -810,7 +810,7 @@
             const kind = activeRows[i].dataset.returnKind || '';
             const coreIdxOf = coreRows.indexOf(activeRows[i]);
             const isCore = !kind && coreIdxOf >= 0;
-            const isLastCore = isCore && coreIdxOf === coreRows.length - 1;
+            const isLastCoreOnlyTrip = isCore && coreIdxOf === coreRows.length - 1 && returnRows.length === 0;
 
             if (vtEl) {
                 vtEl.readOnly = true;
@@ -827,7 +827,7 @@
                 }
             }
             if (atEl) {
-                if (isLastCore) {
+                if (isLastCoreOnlyTrip) {
                     atEl.readOnly = true;
                     atEl.classList.remove('heen-at--auto');
                     atEl.dataset.timeEditable = '1';
@@ -842,6 +842,57 @@
                     atEl.title = kind ? 'Automatische aankomsttijd voor retourregel' : 'Automatische aankomsttijd op deze stop';
                 }
             }
+        }
+
+        const fillHmIfEmpty = function (el, val) {
+            if (!el || el.dataset.manual === '1') {
+                return;
+            }
+            const cur = el.value ? el.value.trim() : '';
+            if (cur !== '') {
+                return;
+            }
+            const v = (val || '').trim().substring(0, 5);
+            if (v === '' || parseHm(v) === null) {
+                return;
+            }
+            el.value = v;
+        };
+
+        for (let ci = 2; ci < coreRows.length; ci++) {
+            const pAt = coreRows[ci - 1].querySelector('.heen-at');
+            const cVt = coreRows[ci].querySelector('.heen-vt');
+            const pv = pAt && pAt.value ? pAt.value.trim().substring(0, 5) : '';
+            if (parseHm(pv) !== null) {
+                fillHmIfEmpty(cVt, pv);
+            }
+        }
+        for (let ci = 1; ci < coreRows.length - 1; ci++) {
+            const cAt = coreRows[ci].querySelector('.heen-at');
+            const nVt = coreRows[ci + 1].querySelector('.heen-vt');
+            const nv = nVt && nVt.value ? nVt.value.trim().substring(0, 5) : '';
+            if (parseHm(nv) !== null) {
+                fillHmIfEmpty(cAt, nv);
+            }
+        }
+        if (coreRows.length >= 1 && returnRows.length >= 1) {
+            const lastCore = coreRows[coreRows.length - 1];
+            const lastAt = lastCore.querySelector('.heen-at');
+            const r0 = returnRows[0];
+            const rVt = r0 ? r0.querySelector('.heen-vt') : null;
+            const rv = rVt && rVt.value ? rVt.value.trim().substring(0, 5) : '';
+            if (parseHm(rv) !== null) {
+                fillHmIfEmpty(lastAt, rv);
+            }
+            const la = lastAt && lastAt.value ? lastAt.value.trim().substring(0, 5) : '';
+            if (parseHm(la) !== null) {
+                fillHmIfEmpty(rVt, la);
+            }
+        }
+
+        const leadFinal = vt1 && vt1.value ? vt1.value.trim().substring(0, 5) : '';
+        if (at0 && at0.dataset.manual !== '1' && leadFinal && parseHm(leadFinal) !== null) {
+            at0.value = hmMinusMinutes(leadFinal, KLANT_VOORVERTREK_MIN);
         }
 
         clearInactiveTail();
