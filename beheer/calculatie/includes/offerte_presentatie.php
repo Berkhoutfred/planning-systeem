@@ -730,63 +730,47 @@ function offerte_presentatie_build_route2_klant_blocks(?array $payload, array $r
         return strcmp($tA, $tB);
     });
 
-    // Bouw een index op kind → eerste segment met dat kind
-    $kindMap = [];
-    foreach ($filtered as $seg) {
-        $k = trim((string) ($seg['kind'] ?? ''));
-        if ($k !== '' && !isset($kindMap[$k])) {
-            $kindMap[$k] = $seg;
-        }
-    }
-
-    $departSeg   = $kindMap['route2_depart']   ?? null;
-    $customerSeg = $kindMap['route2_customer'] ?? null;
-    $preSeg      = $kindMap['preposition']     ?? null;
-
-    // Schei interne waypoints (voorstaan) van klant-waypoints
-    $internalKinds = ['preposition'];
-    $clientWps = array_values(array_filter($filtered, static function (array $s) use ($internalKinds): bool {
-        return !in_array(trim((string) ($s['kind'] ?? '')), $internalKinds, true);
+    // Scheiding: 'preposition' waypoints leveren alleen een adres (de bus staat klaar),
+    // hun tijd is chauffeursintern en niet client-facing.
+    $preWps    = array_values(array_filter($filtered, static function (array $s): bool {
+        return trim((string) ($s['kind'] ?? '')) === 'preposition';
+    }));
+    $clientWps = array_values(array_filter($filtered, static function (array $s): bool {
+        return trim((string) ($s['kind'] ?? '')) !== 'preposition';
     }));
 
-    // Geval: alleen preposition + route2_customer (geen route2_depart ingevuld)
-    // → gebruik preposition.address als Van, maar route2_customer.time als Vertrektijd
-    //   zodat de klant "Vertrek 15:00 van Stayokay naar Isendoorn" ziet
+    // Van-adres: eerste adres uit preposition (busstandplaats) als er geen clientWp-from is,
+    // anders het eerste clientWp-adres. Naar-adres: laatste clientWp-adres.
     $segRows = [];
-    if ($departSeg === null && $customerSeg !== null && $preSeg !== null) {
-        $vanAddr  = trim((string) ($preSeg['address'] ?? ''));
-        $naarAddr = trim((string) ($customerSeg['address'] ?? ''));
-        if ($vanAddr !== '' && $naarAddr !== '') {
-            $segRows[] = [
-                'depart'         => calculatie_route_v2_normalize_hhmm($customerSeg['time'] ?? ''),
-                'depart_display' => offerte_presentatie_format_time_with_offset(
-                    (string) ($customerSeg['time'] ?? ''),
-                    max(0, (int) ($customerSeg['time_day_offset'] ?? 0))
-                ),
-                'from'           => $vanAddr,
-                'to'             => $naarAddr,
-                'arrive'         => '',
-                'arrive_display' => '',
-                'zone'           => calculatie_route_v2_normalize_zone($preSeg['zone'] ?? 'nl'),
-                'zone_display'   => offerte_presentatie_zone_label((string) ($preSeg['zone'] ?? 'nl')),
-            ];
-        }
+
+    if (count($clientWps) === 0 && count($preWps) >= 2) {
+        // Alleen preposition-punten: bouw pairwise van de preWps
+        $clientWps = $preWps;
+        $preWps    = [];
     }
 
-    // Normaal geval: bouw pairwise segmenten van client-waypoints (zonder preposition)
-    if ($segRows === []) {
-        $wps   = $clientWps !== [] ? $clientWps : $filtered;
-        $count = count($wps);
+    if (count($clientWps) >= 2) {
+        // Normaal geval: meerdere klant-waypoints → pairwise Van→Naar segmenten
+        $count = count($clientWps);
         for ($i = 0; $i < $count - 1; $i++) {
-            $wp1       = $wps[$i];
-            $wp2       = $wps[$i + 1];
+            $wp1 = $clientWps[$i];
+            $wp2 = $clientWps[$i + 1];
+
+            // Als wp1 hetzelfde adres heeft als een preposition-punt: gebruik preposition
+            // adres (zelfde, dus geen issue) maar toch check of er een voorstaan-adres
+            // als "from" gebruikt moet worden voor het eerste segment
+            $fromAddr = trim((string) ($wp1['address'] ?? ''));
+            if ($i === 0 && $fromAddr === '' && !empty($preWps[0]['address'])) {
+                $fromAddr = trim((string) ($preWps[0]['address'] ?? ''));
+            }
+
             $segRows[] = [
                 'depart'         => calculatie_route_v2_normalize_hhmm($wp1['time'] ?? ''),
                 'depart_display' => offerte_presentatie_format_time_with_offset(
                     (string) ($wp1['time'] ?? ''),
                     max(0, (int) ($wp1['time_day_offset'] ?? 0))
                 ),
-                'from'           => trim((string) ($wp1['address'] ?? '')),
+                'from'           => $fromAddr,
                 'to'             => trim((string) ($wp2['address'] ?? '')),
                 'arrive'         => calculatie_route_v2_normalize_hhmm($wp2['time'] ?? ''),
                 'arrive_display' => offerte_presentatie_format_time_with_offset(
@@ -797,9 +781,34 @@ function offerte_presentatie_build_route2_klant_blocks(?array $payload, array $r
                 'zone_display'   => offerte_presentatie_zone_label((string) ($wp1['zone'] ?? 'nl')),
             ];
         }
+    } elseif (count($clientWps) === 1) {
+        // Slechts 1 klant-waypoint: gebruik preposition-adres als Van (busstandplaats),
+        // klant-waypoint-tijd als Vertrektijd (= moment waarop reizigers instappen),
+        // klant-waypoint-adres als Naar. Aankomsttijd leeg (geen apart aankomstpunt).
+        $clientWp = $clientWps[0];
+        $vanAddr  = !empty($preWps[0]['address'])
+            ? trim((string) ($preWps[0]['address'] ?? ''))
+            : trim((string) ($clientWp['address'] ?? ''));
+        $naarAddr = trim((string) ($clientWp['address'] ?? ''));
+
+        if ($vanAddr !== '' && $naarAddr !== '' && $vanAddr !== $naarAddr) {
+            $segRows[] = [
+                'depart'         => calculatie_route_v2_normalize_hhmm($clientWp['time'] ?? ''),
+                'depart_display' => offerte_presentatie_format_time_with_offset(
+                    (string) ($clientWp['time'] ?? ''),
+                    max(0, (int) ($clientWp['time_day_offset'] ?? 0))
+                ),
+                'from'           => $vanAddr,
+                'to'             => $naarAddr,
+                'arrive'         => '',
+                'arrive_display' => '',
+                'zone'           => calculatie_route_v2_normalize_zone($clientWp['zone'] ?? 'nl'),
+                'zone_display'   => offerte_presentatie_zone_label((string) ($clientWp['zone'] ?? 'nl')),
+            ];
+        }
     }
 
-    // Fallback: slechts 1 waypoint beschikbaar → gebruik legacy tijdlijn
+    // Fallback: geen segmenten gebouwd → legacy tijdlijn (Tijd | Locatie)
     if ($segRows === []) {
         $rows = offerte_presentatie_route_table_from_legacy_points(['segments' => $filtered]);
         if ($rows === []) {
