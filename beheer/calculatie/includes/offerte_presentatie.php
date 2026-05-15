@@ -276,6 +276,115 @@ function offerte_presentatie_format_currency(float $amount): string
     return 'EUR ' . number_format($amount, 2, ',', '.');
 }
 
+/**
+ * Geeft een korte plaatsnaam terug uit een volledig adres.
+ * Strategie: strip Nederland/land → zoek postcodepatroon → neem laatste niet-straat segment.
+ */
+function offerte_presentatie_adres_naar_plaats(string $adres): string
+{
+    $s = trim($adres);
+    if ($s === '' || $s === '?') {
+        return '?';
+    }
+    // Strip land aan het einde
+    $s = (string) preg_replace('/,\s*(nederland|netherlands|belgi[eë]|belgium|duitsland|germany|france|luxemburg)\s*$/iu', '', $s);
+    $chunks = array_values(array_filter(array_map('trim', explode(',', $s)), fn ($p) => $p !== ''));
+    if ($chunks === []) {
+        return '?';
+    }
+    $streetish = static function (string $c): bool {
+        return (bool) preg_match('/straat|weg|laan|plein|dreef|singel|dijk|kade|\bpad\b|route|\bhof\b|industrieweg|stationsplein|college|school|station|airport|terminal|luchthaven/i', $c);
+    };
+    // Postcode patroon NL: 1234 AB Stad
+    foreach (array_reverse($chunks) as $chunk) {
+        if (preg_match('/\b\d{4}\s?[A-Z]{2}\s+(.+)$/u', $chunk, $m)) {
+            return trim($m[1]);
+        }
+    }
+    // Neem het laatste niet-straatachtige segment
+    foreach (array_reverse($chunks) as $chunk) {
+        if (!$streetish($chunk)) {
+            $words = preg_split('/\s+/u', $chunk, -1, PREG_SPLIT_NO_EMPTY);
+            if ($words && count($words) >= 1) {
+                // Als het een naam is zoals "Stayokay Gorssel", neem laatste woord
+                $last = (string) end($words);
+                if (preg_match('/^[A-Za-zÀ-ÿ][\w\-\']*$/u', $last) && mb_strlen($last) >= 3) {
+                    return $chunk;
+                }
+            }
+            return $chunk;
+        }
+    }
+    // Fallback: eerste segment
+    return $chunks[0];
+}
+
+/**
+ * Maakt een leesbare route-string voor in overzichten en het verzamelofferte-blad.
+ * - Standaard: "Vertrekplaats – Bestemming"
+ * - Breng & haal: "Vertrekplaats – Bestemming v.v."
+ */
+function offerte_presentatie_route_label(array $rit, array $regelMap, array $payload): string
+{
+    $rittype = trim((string) ($rit['rittype'] ?? ''));
+
+    // Probeer vertrek en bestemming uit route_v2 payload
+    $vanAdres = '';
+    $naarAdres = '';
+
+    $days = $payload['days'] ?? [];
+    if ($days !== []) {
+        $firstDay = $days[0] ?? [];
+        $routes = $firstDay['routes'] ?? [];
+        foreach ($routes as $route) {
+            $segs = $route['segments'] ?? [];
+            foreach ($segs as $seg) {
+                if ($vanAdres === '' && !empty($seg['from'])) {
+                    $kind = $seg['kind'] ?? '';
+                    // Sla garage-vertrek over voor "van"
+                    if ($kind !== 'garage_to_customer' && $kind !== 'garage_start') {
+                        $vanAdres = (string) $seg['from'];
+                    } elseif ($vanAdres === '') {
+                        $vanAdres = (string) ($seg['to'] ?? '');
+                    }
+                }
+                if (!empty($seg['to'])) {
+                    $naarAdres = (string) $seg['to'];
+                }
+            }
+            if ($vanAdres !== '') {
+                break;
+            }
+        }
+    }
+
+    // Fallback naar legacy regels
+    if ($vanAdres === '') {
+        $vanAdres = trim((string) ($regelMap['t_vertrek_klant']['adres'] ?? $regelMap['t_garage']['adres'] ?? ''));
+    }
+    if ($naarAdres === '') {
+        $naarAdres = trim((string) ($regelMap['t_aankomst_best']['adres'] ?? ''));
+    }
+
+    $van = offerte_presentatie_adres_naar_plaats($vanAdres);
+    $naar = offerte_presentatie_adres_naar_plaats($naarAdres);
+
+    // Verwijder garage-achtige defaults uit "van"
+    if (preg_match('/industrieweg|garage/i', $van) && $naar !== '?') {
+        $van = $naar;
+    }
+
+    if ($van === '?' && $naar === '?') {
+        return '';
+    }
+    if ($van === $naar || $van === '?') {
+        $suffix = $rittype === 'brenghaal' ? ' v.v.' : '';
+        return $naar . $suffix;
+    }
+    $suffix = $rittype === 'brenghaal' ? ' v.v.' : '';
+    return $van . ' \xe2\x80\x93 ' . $naar . $suffix;
+}
+
 function offerte_presentatie_format_km(float $km): string
 {
     if ($km <= 0.0) {
@@ -655,6 +764,7 @@ function offerte_presentatie_build(PDO $pdo, array $rit): array
             'start_date_display' => offerte_presentatie_format_date($startDate, true),
             'end_date' => $endDate,
             'end_date_display' => offerte_presentatie_format_date($endDate, true),
+            'route_label' => offerte_presentatie_route_label($rit, $regelMap, $payload),
         ],
         'route_days' => $routeDays,
         'notes' => $instructie,

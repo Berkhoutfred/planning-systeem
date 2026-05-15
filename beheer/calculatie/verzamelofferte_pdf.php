@@ -77,37 +77,33 @@ $pdf->Ln(12);
 $pdf->SetFont('Arial', 'B', 9);
 $pdf->SetFillColor(0, 51, 102);
 $pdf->SetTextColor(255, 255, 255);
-$pdf->Cell(22, 7, safe_iconv(' ID '), 1, 0, 'L', true);
-$pdf->Cell(78, 7, safe_iconv(' Titel '), 1, 0, 'L', true);
-$pdf->Cell(40, 7, safe_iconv(' Vertrek '), 1, 0, 'L', true);
+$pdf->Cell(40, 7, safe_iconv(' Datum '), 1, 0, 'L', true);
+$pdf->Cell(22, 7, safe_iconv(' Offertenr. '), 1, 0, 'L', true);
+$pdf->Cell(78, 7, safe_iconv(' Route '), 1, 0, 'L', true);
 $pdf->Cell(50, 7, safe_iconv(' Totaal incl. '), 1, 1, 'R', true);
 $pdf->SetTextColor(0, 0, 0);
 $pdf->SetFont('Arial', '', 9);
 
-$totIncl = 0.0;
 foreach ($rows as $r) {
     $vw = $r['view'];
-    $titel = $r['titel'] !== '' ? $r['titel'] : ('Offerte #' . (string) ($vw['offer']['order_nummer'] ?? ''));
+    $routeLabel = trim((string) ($vw['trip']['route_label'] ?? ''));
+    if ($routeLabel === '') {
+        $routeLabel = $r['titel'] !== '' ? $r['titel'] : ('Offerte #' . (string) ($vw['offer']['order_nummer'] ?? ''));
+    }
     if (function_exists('mb_substr')) {
-        $titel = mb_substr($titel, 0, 48, 'UTF-8');
+        $routeLabel = mb_substr($routeLabel, 0, 55, 'UTF-8');
     } else {
-        $titel = substr($titel, 0, 48);
+        $routeLabel = substr($routeLabel, 0, 55);
     }
     $inclCell = (string) ($vw['price']['incl_display'] ?? '');
     if ($inclCell === '') {
         $inclCell = offerte_presentatie_format_currency((float) ($vw['price']['incl'] ?? 0));
     }
-    $pdf->Cell(22, 7, safe_iconv((string) ($vw['offer']['order_nummer'] ?? '')), 1, 0, 'L');
-    $pdf->Cell(78, 7, safe_iconv($titel), 1, 0, 'L');
     $pdf->Cell(40, 7, safe_iconv((string) ($vw['trip']['start_date_display'] ?? '')), 1, 0, 'L');
+    $pdf->Cell(22, 7, safe_iconv('#' . (string) ($vw['offer']['order_nummer'] ?? '')), 1, 0, 'L');
+    $pdf->Cell(78, 7, safe_iconv($routeLabel), 1, 0, 'L');
     $pdf->Cell(50, 7, safe_iconv($inclCell), 1, 1, 'R');
-    $totIncl += (float) ($vw['price']['incl'] ?? 0);
 }
-
-$pdf->Ln(4);
-$pdf->SetFont('Arial', 'B', 10);
-$pdf->Cell(140, 7, safe_iconv('Som totaal incl. btw (indicatie)'), 0, 0, 'R');
-$pdf->Cell(50, 7, safe_iconv(offerte_presentatie_format_currency($totIncl)), 0, 1, 'R');
 
 foreach ($rows as $r) {
     $vw = $r['view'];

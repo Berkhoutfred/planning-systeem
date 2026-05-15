@@ -601,9 +601,10 @@ try {
                     }
                     $vertrekLabel = $vertrekVol === '?' ? '?' : sales_calc_plaats_from_adres_vertrek($vertrekVol);
                     $bestemmingLabel = $bestemmingVol === '?' ? '?' : sales_calc_plaats_from_adres($bestemmingVol);
+                    $routeVvSuffix = ($r['rittype'] ?? '') === 'brenghaal' ? ' v.v.' : '';
                     $routeTitle = $vertrekVol === '?' && $bestemmingVol === '?'
                         ? ''
-                        : ($vertrekVol . ' → ' . $bestemmingVol);
+                        : ($vertrekVol . ' → ' . $bestemmingVol . $routeVvSuffix);
 
                     $st_offerte = !empty($r['datum_offerte_verstuurd']) ? 'active' : '';
                     $st_bevest = !empty($r['datum_bevestiging_verstuurd']) ? 'active' : '';
@@ -689,7 +690,7 @@ try {
                         <span style="font-size:12px; color:#888;"><?= htmlspecialchars($plaats, ENT_QUOTES, 'UTF-8') ?></span>
                     </td>
                     <td class="rit-route-compact"<?= $routeTitle !== '' ? ' title="' . htmlspecialchars($routeTitle, ENT_QUOTES, 'UTF-8') . '"' : '' ?>>
-                        <span class="route-plaats"><?= htmlspecialchars($vertrekLabel, ENT_QUOTES, 'UTF-8') ?></span><span class="route-arrow">→</span><strong class="route-plaats route-plaats--naar"><?= htmlspecialchars($bestemmingLabel, ENT_QUOTES, 'UTF-8') ?></strong>
+                        <span class="route-plaats"><?= htmlspecialchars($vertrekLabel, ENT_QUOTES, 'UTF-8') ?></span><span class="route-arrow">→</span><strong class="route-plaats route-plaats--naar"><?= htmlspecialchars($bestemmingLabel . $routeVvSuffix, ENT_QUOTES, 'UTF-8') ?></strong>
                     </td>
                     <td>
                         <div style="font-weight:bold; font-size:13px; color:#333; margin-bottom:2px;"><i class="fas fa-users" style="color:#888;"></i> <?= (int) $pax ?> personen</div>
