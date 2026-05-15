@@ -723,6 +723,13 @@ function offerte_presentatie_build_route2_klant_blocks(?array $payload, array $r
         $filtered = $segs; // als alle punten garage-achtig zijn, toon ze toch
     }
 
+    // Sorteer op tijd zodat de terugrit in chronologische volgorde staat
+    usort($filtered, static function (array $a, array $b): int {
+        $tA = calculatie_route_v2_normalize_hhmm($a['time'] ?? '');
+        $tB = calculatie_route_v2_normalize_hhmm($b['time'] ?? '');
+        return strcmp($tA, $tB);
+    });
+
     $rows = offerte_presentatie_route_table_from_legacy_points(['segments' => $filtered]);
     if ($rows === []) {
         return [];

@@ -448,6 +448,11 @@ function val($data, $rij, $veld, $default = '') {
                             <tbody id="terug_segmenten_body"></tbody>
                         </table>
                         <button type="button" class="btn-add-bus" id="btn_terug_seg_add" style="margin-top:8px;font-size:11px;padding:4px 10px;">+ regel</button>
+                        <div class="heen-opt-row" role="toolbar" aria-label="Regels rit twee">
+                            <span class="heen-opt-label">Regels</span>
+                            <button type="button" class="heen-opt-mini" id="btn_rit2_rg" title="Retour garage toevoegen aan rit twee">RG</button>
+                            <button type="button" class="heen-opt-mini" id="btn_rit2_rk" title="Klantadres + retour garage toevoegen">RK</button>
+                        </div>
                         <div id="legacy_terug_mirror" class="legacy-heen-sr-only" aria-hidden="true" style="display:none;">
                         
                         <div class="rit-row" id="row_garage_rit2" style="display:none; background:#f9f9f9; padding:5px; margin-bottom:10px; border-radius:4px;">

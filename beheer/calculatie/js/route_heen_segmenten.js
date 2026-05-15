@@ -61,6 +61,10 @@
                 if (naar !== '' || km > 0 || row.dataset.returnKind) {
                     break;
                 }
+                // Bescherm rijen die net zijn toegevoegd (freshAdd) of een niet-garage van-adres hebben
+                if (row.dataset.freshAdd === '1') {
+                    break;
+                }
                 src.splice(i, 1);
             }
         }
@@ -1322,6 +1326,49 @@
         renderTerugSegmentTable();
     }
 
+    /** Voegt retour-garage toe als eindpunt van Rit Twee. */
+    function addRoute2RgRow() {
+        const garageAddr = normalizeGarageAddress(
+            document.getElementById('addr_t_garage')?.value.trim() || DEFAULT_GARAGE_ADDRESS
+        );
+        const el = document.getElementById('addr_t_retour_garage');
+        if (!el) return;
+        el.value = garageAddr;
+        delete el.dataset.route2Pending;
+        if (typeof window.calculateRoute === 'function') window.calculateRoute();
+        if (typeof window.rekenen === 'function') window.rekenen();
+        if (typeof window.updateRouteV2HiddenInput === 'function') window.updateRouteV2HiddenInput();
+        renderTerugSegmentTable();
+    }
+
+    /**
+     * Vult klantadres (uit Rit 1) in als retourbestemming van Rit Twee
+     * en voegt garage als eindpunt toe.
+     */
+    function addRoute2RkRow() {
+        const klantAddr = normalizeAddr(
+            document.getElementById('addr_t_vertrek_klant')?.value.trim() || ''
+        );
+        if (!klantAddr) {
+            window.alert('Vul eerst een klantadres in bij Rit 1 om RK te gebruiken.');
+            return;
+        }
+        const klantEl = document.getElementById('addr_t_retour_klant');
+        if (klantEl) klantEl.value = klantAddr;
+        const garageAddr = normalizeGarageAddress(
+            document.getElementById('addr_t_garage')?.value.trim() || DEFAULT_GARAGE_ADDRESS
+        );
+        const garageEl = document.getElementById('addr_t_retour_garage');
+        if (garageEl) {
+            garageEl.value = garageAddr;
+            delete garageEl.dataset.route2Pending;
+        }
+        if (typeof window.calculateRoute === 'function') window.calculateRoute();
+        if (typeof window.rekenen === 'function') window.rekenen();
+        if (typeof window.updateRouteV2HiddenInput === 'function') window.updateRouteV2HiddenInput();
+        renderTerugSegmentTable();
+    }
+
     function renderTerugSegmentTable() {
         const tbody = document.getElementById('terug_segmenten_body');
         if (!tbody) return;
@@ -1807,6 +1854,7 @@
         });
         row.querySelectorAll('.heen-naar').forEach(function (el) {
             el.addEventListener('input', function () {
+                if (el.value.trim()) delete row.dataset.freshAdd;
                 if (addressSyncTimer) {
                     clearTimeout(addressSyncTimer);
                 }
@@ -1819,8 +1867,14 @@
                     });
                 }, 450);
             });
-            el.addEventListener('change', flushAddressSync);
-            el.addEventListener('blur', flushAddressSync);
+            el.addEventListener('change', function () {
+                if (el.value.trim()) delete row.dataset.freshAdd;
+                flushAddressSync();
+            });
+            el.addEventListener('blur', function () {
+                if (el.value.trim()) delete row.dataset.freshAdd;
+                flushAddressSync();
+            });
         });
         const markManual = function (el) {
             if (!el) return;
@@ -1890,6 +1944,10 @@
         if (p.km != null) tr.querySelector('.heen-km').value = String(p.km);
         if (p.zone) tr.querySelector('.heen-zone').value = String(p.zone);
         if (p.return_kind) tr.dataset.returnKind = String(p.return_kind);
+        // Markeer rijen die niet via boot zijn geladen (zodat getEffectiveRows ze beschermt)
+        if (!p.naar && !p.van && !p.return_kind) {
+            tr.dataset.freshAdd = '1';
+        }
 
         const vanInput = tr.querySelector('.heen-van');
         const naarInput = tr.querySelector('.heen-naar');
@@ -1938,6 +1996,7 @@
                 try {
                     const ac = new google.maps.places.Autocomplete(acEl, { componentRestrictions: { country: ['nl', 'de', 'be', 'at', 'fr'] } });
                     ac.addListener('place_changed', function () {
+                        if (acEl.value.trim()) delete tr.dataset.freshAdd;
                         syncLegacyFromSegments();
                     });
                 } catch (e) {}
@@ -2143,6 +2202,14 @@
             addRoute2SegmentRow();
         });
 
+        document.getElementById('btn_rit2_rg')?.addEventListener('click', function () {
+            addRoute2RgRow();
+        });
+
+        document.getElementById('btn_rit2_rk')?.addEventListener('click', function () {
+            addRoute2RkRow();
+        });
+
         const rt = document.getElementById('rittype_select');
         if (rt) {
             rt.addEventListener('change', function () {
@@ -2171,6 +2238,12 @@
             form.addEventListener('input', syncRouteV2, true);
             form.addEventListener('change', syncRouteV2, true);
             form.addEventListener('submit', function () {
+                // Ontkoppel freshAdd-markering van rijen die toch leeg zijn gebleven
+                getRows().forEach(function (row) {
+                    if (row.dataset.freshAdd && !row.querySelector('.heen-naar')?.value.trim()) {
+                        delete row.dataset.freshAdd;
+                    }
+                });
                 syncLegacyFromSegments();
                 updateRouteV2HiddenInput();
             });
