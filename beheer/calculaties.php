@@ -106,6 +106,119 @@ function datumNL($datum) {
     return $dagen[date('w', $ts)] . ' ' . date('j', $ts) . ' ' . $maanden[date('n', $ts)] . ' ' . date('Y', $ts);
 }
 
+/** Ruwe adresregel bevat typische straat-/locatie-indicator (dashboard compacte route). */
+function sales_calc_streetish_fragment(string $s): bool
+{
+    $t = mb_strtolower($s, 'UTF-8');
+
+    return (bool) preg_match(
+        '/straat|weg|laan|plein|dreef|singel|dijk|kade|(\bpad\b)|route|(\bhof\b)|industrieweg|stationsplein|tunnel|brug|bernard|complex|college|school|station|terminal|airport|luchthaven/i',
+        $t
+    );
+}
+
+function sales_calc_trunc_plaats(string $s, int $max = 42): string
+{
+    $s = trim($s);
+    if ($s === '') {
+        return '?';
+    }
+    if (mb_strlen($s) <= $max) {
+        return $s;
+    }
+
+    return mb_substr($s, 0, $max - 1) . '…';
+}
+
+/**
+ * Laatste “woord” in segment als plaats-indicator (bijv. "Stayokay Gorssel" → Gorssel).
+ */
+function sales_calc_plaats_token_from_segment(string $segment): string
+{
+    $segment = trim($segment);
+    if ($segment === '') {
+        return '?';
+    }
+    $partsWs = preg_split('/\s+/u', $segment, -1, PREG_SPLIT_NO_EMPTY);
+    if (count($partsWs) >= 2) {
+        $last = (string) end($partsWs);
+        if (preg_match('/^[A-Za-zÀ-ÿ][A-Za-zà-ÿ\-\']*$/u', $last) && mb_strlen($last) >= 3 && !preg_match('/^\d+$/', $last)) {
+            return sales_calc_trunc_plaats($last, 36);
+        }
+    }
+
+    return sales_calc_trunc_plaats($segment, 42);
+}
+
+/**
+ * Bestemming / aankomst: korte plaats uit lang Google-adres.
+ */
+function sales_calc_plaats_from_adres(?string $adres): string
+{
+    $raw = trim((string) $adres);
+    if ($raw === '' || $raw === '?') {
+        return '?';
+    }
+    $s = preg_replace('/,\s*(Nederland|Netherlands|België|Belgium|Duitsland|Germany|France|Luxemburg)\s*$/iu', '', $raw);
+    $chunks = array_values(array_filter(array_map('trim', explode(',', $s)), static function ($p) {
+        return $p !== '';
+    }));
+    $n = count($chunks);
+    if ($n === 0) {
+        return '?';
+    }
+
+    for ($i = $n - 1; $i >= 0; $i--) {
+        if (preg_match('/\b(\d{4}\s?[A-Z]{2})\s+(.+)$/u', $chunks[$i], $m)) {
+            $city = trim((string) ($m[2] ?? ''));
+            if ($city !== '') {
+                return sales_calc_trunc_plaats($city);
+            }
+        }
+    }
+
+    if ($n >= 2 && preg_match('/\bvan\s+[A-Za-zÀ-ÿ]/u', $chunks[$n - 1]) && sales_calc_streetish_fragment($chunks[$n - 2])) {
+        return sales_calc_plaats_token_from_segment($chunks[0]);
+    }
+
+    for ($i = $n - 1; $i >= 0; $i--) {
+        if (sales_calc_streetish_fragment($chunks[$i])) {
+            continue;
+        }
+        $tok = sales_calc_plaats_token_from_segment($chunks[$i]);
+        if ($tok !== '' && $tok !== '?') {
+            return $tok;
+        }
+    }
+
+    return sales_calc_plaats_token_from_segment($chunks[0]);
+}
+
+/** Vertrek: eerste deel is vaak de plaats; anders tweede segment na straat. */
+function sales_calc_plaats_from_adres_vertrek(?string $adres): string
+{
+    $raw = trim((string) $adres);
+    if ($raw === '' || $raw === '?') {
+        return '?';
+    }
+    $s = preg_replace('/,\s*(Nederland|Netherlands|België|Belgium|Duitsland|Germany|France|Luxemburg)\s*$/iu', '', $raw);
+    $chunks = array_values(array_filter(array_map('trim', explode(',', $s)), static function ($p) {
+        return $p !== '';
+    }));
+    $n = count($chunks);
+    if ($n === 0) {
+        return '?';
+    }
+    if (!sales_calc_streetish_fragment($chunks[0])) {
+        return sales_calc_plaats_token_from_segment($chunks[0]);
+    }
+    if ($n >= 2) {
+        return sales_calc_plaats_token_from_segment($chunks[1]);
+    }
+
+    return sales_calc_plaats_from_adres($adres);
+}
+
 // --- 2. NAVIGATIE, FILTERS & VIEW LOGICA ---
 $huidigeMaand = date('n'); $huidigJaar = date('Y');
 $view = $_GET['view'] ?? 'actief'; 
@@ -270,40 +383,88 @@ try {
 
 <style>
     html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; background-color: #f4f6f9; font-family: 'Segoe UI', sans-serif; }
-    .dashboard-wrapper { display: flex; flex-direction: column; height: calc(100vh - 65px); padding: 20px; box-sizing: border-box; }
+    .dashboard-wrapper { display: flex; flex-direction: column; height: calc(100vh - 52px); padding: 8px 10px 10px; box-sizing: border-box; }
 
-    .top-bar { flex: 0 0 auto; display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 15px 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 15px; }
-    .page-title { margin: 0; color: #003366; font-size: 24px; font-weight: bold; }
-    
-    .btn-green { background: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; display:inline-block; }
-    .btn-grey { background: #6c757d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; display:inline-block; margin-right:10px; }
-    .btn-blue { background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; display:inline-block; margin-right:10px; border:none; cursor:pointer; }
+    .actie-msg-banner {
+        flex: 0 0 auto;
+        background: #d4edda;
+        color: #155724;
+        padding: 6px 10px;
+        margin-bottom: 6px;
+        border-radius: 4px;
+        border: 1px solid #c3e6cb;
+        font-weight: 600;
+        font-size: 13px;
+    }
+
+    .top-bar {
+        flex: 0 0 auto;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px 12px;
+        background: #fff;
+        padding: 8px 12px;
+        border-radius: 6px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        margin-bottom: 6px;
+    }
+    .page-title { margin: 0; color: #003366; font-size: 17px; font-weight: bold; line-height: 1.2; }
+    .top-bar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+
+    .btn-green { background: #28a745; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 13px; display:inline-block; }
+    .btn-grey { background: #6c757d; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 13px; display:inline-block; }
+    .btn-blue { background: #007bff; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 13px; display:inline-block; border:none; cursor:pointer; }
 
     /* FILTERS */
-    .filter-bar { background: #fff; padding: 15px 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 15px; display: flex; gap: 15px; align-items: center; }
-    .form-control { padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; font-size: 14px; }
+    .filter-bar {
+        flex: 0 0 auto;
+        background: #fff;
+        padding: 8px 10px;
+        border-radius: 6px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        margin-bottom: 6px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 10px;
+        align-items: center;
+    }
+    .filter-bar > strong { font-size: 12px; white-space: nowrap; }
+    .form-control { padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; font-size: 13px; }
 
-    .month-bar { flex: 0 0 auto; display: flex; justify-content: space-between; align-items: center; background: #003366; color: white; padding: 12px 20px; font-weight: bold; font-size: 16px; border-radius: 8px 8px 0 0; }
+    .month-bar { flex: 0 0 auto; display: flex; justify-content: space-between; align-items: center; background: #003366; color: white; padding: 8px 12px; font-weight: bold; font-size: 14px; border-radius: 6px 6px 0 0; }
     .nav-link { color: white; text-decoration: none; opacity: 0.8; }
     .nav-link:hover { opacity: 1; }
 
-    .table-scroll-container { flex: 1 1 auto; background: #fff; border: 1px solid #ddd; border-top: none; overflow-y: auto; border-radius: 0 0 8px 8px; }
-    .rit-table { width: 100%; border-collapse: collapse; } 
-    
-    .rit-table th { background-color: #f1f5f9; color: #003366; padding: 12px; text-align: left; font-size: 12px; text-transform: uppercase; border-bottom: 2px solid #ddd; }
-    .rit-table td { padding: 12px; border-bottom: 1px solid #f0f0f0; color: #333; font-size: 14px; vertical-align: middle; }
+    .table-scroll-container { flex: 1 1 auto; min-height: 0; background: #fff; border: 1px solid #ddd; border-top: none; overflow-y: auto; border-radius: 0 0 6px 6px; }
+    .rit-table { width: 100%; border-collapse: collapse; }
+
+    .rit-table th { background-color: #f1f5f9; color: #003366; padding: 7px 8px; text-align: left; font-size: 11px; text-transform: uppercase; border-bottom: 2px solid #ddd; letter-spacing: 0.02em; }
+    .rit-table td { padding: 7px 8px; border-bottom: 1px solid #f0f0f0; color: #333; font-size: 13px; vertical-align: middle; }
     .rit-table tr:hover td { background-color: #f1f9ff; }
-    
+
+    .rit-route-compact {
+        white-space: nowrap;
+        max-width: 280px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-size: 13px;
+    }
+    .rit-route-compact .route-plaats { color: #334155; }
+    .rit-route-compact .route-plaats--naar { color: #003366; }
+    .rit-route-compact .route-arrow { color: #94a3b8; margin: 0 5px; font-weight: 600; }
+
     .archief-row { opacity: 0.7; background-color: #fcfcfc; }
     .warning-row { background-color: #fff3cd !important; border-left: 4px solid #ffc107; }
     .sales-rit-row { border-left: 4px solid #dd6b20; background: linear-gradient(90deg, rgba(221,107,32,0.06) 0%, #fff 12px); }
     .buitenland-row { border-left: 4px solid #0d9488; background: linear-gradient(90deg, rgba(13,148,136,0.07) 0%, #fff 12px); }
 
     .status-col { text-align: center; cursor: pointer; width: 45px; border-left: 1px solid #f5f5f5; }
-    .status-icon { font-size: 18px; color: #e0e0e0; }
+    .status-icon { font-size: 16px; color: #e0e0e0; }
     .status-icon.active { color: #28a745; }
-    
-    .badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
+
+    .badge { padding: 3px 6px; border-radius: 3px; font-size: 10px; font-weight: bold; text-transform: uppercase; }
     .badge-optie { background: #e2e3e5; color: #383d41; border: 1px dashed #adb5bd; }
     .badge-definitief { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
     .badge-afgewezen { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
@@ -330,8 +491,8 @@ try {
 <div class="dashboard-wrapper">
     
     <?php if(isset($_GET['actie_msg'])): ?>
-    <div style="background:#d4edda; color:#155724; padding:15px; margin-bottom:15px; border-radius:5px; border:1px solid #c3e6cb; font-weight:bold;">
-        <i class="fas fa-check-circle"></i> <?= htmlspecialchars($_GET['actie_msg']) ?>
+    <div class="actie-msg-banner">
+        <i class="fas fa-check-circle"></i> <?= htmlspecialchars((string) $_GET['actie_msg'], ENT_QUOTES, 'UTF-8') ?>
     </div>
     <?php endif; ?>
 
@@ -339,13 +500,13 @@ try {
         <h1 class="page-title">
             <?= $view === 'archief' ? '<i class="fas fa-archive" style="color:#6c757d;"></i> Archief Offertes' : '<i class="fas fa-file-signature"></i> Sales & Offertes' ?>
         </h1>
-        <div>
+        <div class="top-bar-actions">
             <?php if($view === 'archief'): ?>
                 <a href="?maand=<?= $maand ?>&jaar=<?= $jaar ?>&view=actief" class="btn-blue"><i class="fas fa-list"></i> Terug naar Actief</a>
             <?php else: ?>
                 <a href="?maand=<?= $maand ?>&jaar=<?= $jaar ?>&view=archief" class="btn-grey"><i class="fas fa-archive"></i> Bekijk Archief</a>
             <?php endif; ?>
-            <a href="calculatie/verzamelofferte.php" class="btn-grey" style="margin-right:10px;"><i class="fas fa-layer-group"></i> Verzamelofferte</a>
+            <a href="calculatie/verzamelofferte.php" class="btn-grey"><i class="fas fa-layer-group"></i> Verzamelofferte</a>
             <a href="calculatie/maken.php" class="btn-green"><i class="fas fa-plus"></i> Nieuwe Offerte</a>
         </div>
     </div>
@@ -355,9 +516,9 @@ try {
         <input type="hidden" name="maand" value="<?= $maand ?>">
         <input type="hidden" name="jaar" value="<?= $jaar ?>">
         
-        <strong style="color:#003366;">Uitgebreid Zoeken:</strong>
-        <input type="text" name="q" placeholder="Klantnaam of Plaats..." value="<?= htmlspecialchars($search_q) ?>" class="form-control" style="margin:0; width:200px;">
-        <input type="date" name="zoek_datum" value="<?= htmlspecialchars($search_datum) ?>" class="form-control" style="margin:0; width:150px;">
+        <strong style="color:#003366;">Zoeken</strong>
+        <input type="text" name="q" placeholder="Klant of plaats…" value="<?= htmlspecialchars($search_q) ?>" class="form-control" style="margin:0; width:min(200px, 100%);">
+        <input type="date" name="zoek_datum" value="<?= htmlspecialchars($search_datum) ?>" class="form-control" style="margin:0; width:140px;">
         
         <select name="zoek_type" class="form-control" style="margin:0; width:150px;">
             <option value="">-- Soort Rit --</option>
@@ -391,7 +552,7 @@ try {
                     <th style="width:40px; padding-left:15px;">#</th>
                     <th style="width:200px;">Datum (NL)</th>
                     <th style="width:200px;">Klant</th>
-                    <th>Route (Van ➡️ Naar)</th>
+                    <th>Route <span style="font-weight:600; text-transform:none; color:#64748b;">(plaats)</span></th>
                     <th style="width:160px;">Passagiers & Vervoer</th>
                     <th style="text-align:center; width:90px;">Status</th>
                     <th style="text-align:center; width:60px;" title="Offerte Verzonden">OFF</th>
@@ -402,7 +563,7 @@ try {
             <tbody>
                 <?php if(count($ritten) == 0): ?>
                     <tr>
-                        <td colspan="9" style="text-align:center; padding: 50px; color:#999; font-size:16px;">
+                        <td colspan="9" style="text-align:center; padding: 28px 16px; color:#999; font-size:15px;">
                             <i class="fas fa-folder-open" style="font-size:30px; margin-bottom:10px; display:block; color:#ddd;"></i>
                             <?= $view === 'archief' ? 'Geen afgewezen offertes gevonden.' : 'Geen actieve aanvragen gevonden met deze filters.' ?>
                         </td>
@@ -422,8 +583,19 @@ try {
                     $plaats = $r['plaats'] ?? '';
                     $klantEmail = $r['email'] ?? '';
 
-                    $vertrek = !empty($r['vertrek_adres']) ? $r['vertrek_adres'] : '?';
-                    $bestemming = !empty($r['bestemming_adres']) ? $r['bestemming_adres'] : '?';
+                    $vertrekVol = trim((string) ($r['vertrek_adres'] ?? ''));
+                    $bestemmingVol = trim((string) ($r['bestemming_adres'] ?? ''));
+                    if ($vertrekVol === '') {
+                        $vertrekVol = '?';
+                    }
+                    if ($bestemmingVol === '') {
+                        $bestemmingVol = '?';
+                    }
+                    $vertrekLabel = $vertrekVol === '?' ? '?' : sales_calc_plaats_from_adres_vertrek($vertrekVol);
+                    $bestemmingLabel = $bestemmingVol === '?' ? '?' : sales_calc_plaats_from_adres($bestemmingVol);
+                    $routeTitle = $vertrekVol === '?' && $bestemmingVol === '?'
+                        ? ''
+                        : ($vertrekVol . ' → ' . $bestemmingVol);
 
                     $st_offerte = !empty($r['datum_offerte_verstuurd']) ? 'active' : '';
                     $st_bevest = !empty($r['datum_bevestiging_verstuurd']) ? 'active' : '';
@@ -484,7 +656,7 @@ try {
 
                     $aanhef = trim((string) ($r['voornaam'] ?? '')) !== '' ? (string) $r['voornaam'] : 'klant';
                     $mail_subject = rawurlencode('Uw aanvraag bij BusAI (' . date('d-m-Y', strtotime((string) $r['rit_datum'])) . ')');
-                    $mail_body = rawurlencode("Beste {$aanhef},\n\nWe hebben onlangs een offerte verzonden voor de busreis naar {$bestemming} op " . date('d-m-Y', strtotime((string) $r['rit_datum'])) . ".\n\nWe vroegen ons af of u hier al naar heeft kunnen kijken en of de rit definitief doorgaat?\nWe horen graag van u, zodat we de bus voor u gereserveerd kunnen houden.\n\nMet vriendelijke groet,\n\nBusAI");
+                    $mail_body = rawurlencode("Beste {$aanhef},\n\nWe hebben onlangs een offerte verzonden voor de busreis naar {$bestemmingVol} op " . date('d-m-Y', strtotime((string) $r['rit_datum'])) . ".\n\nWe vroegen ons af of u hier al naar heeft kunnen kijken en of de rit definitief doorgaat?\nWe horen graag van u, zodat we de bus voor u gereserveerd kunnen houden.\n\nMet vriendelijke groet,\n\nBusAI");
 
                     $iconOff = $isSales ? ('icon-offerte-s-' . $salesId) : ('icon-offerte-' . $calcId);
                     $iconBev = $isSales ? ('icon-bevestiging-s-' . $salesId) : ('icon-bevestiging-' . $calcId);
@@ -498,8 +670,8 @@ try {
                         <?php endif; ?>
                     </td>
                     <td>
-                        <div style="font-weight:bold; color:#003366; font-size: 15px;"><?= ucfirst(datumNL((string) $r['rit_datum'])) ?></div>
-                        <span style="font-size:11px; color:#888; text-transform:uppercase; font-weight:bold;"><?= htmlspecialchars((string) ($r['rittype'] ?? ''), ENT_QUOTES, 'UTF-8') ?></span>
+                        <div style="font-weight:bold; color:#003366; font-size: 14px; line-height:1.2;"><?= ucfirst(datumNL((string) $r['rit_datum'])) ?></div>
+                        <span style="font-size:10px; color:#888; text-transform:uppercase; font-weight:bold;"><?= htmlspecialchars((string) ($r['rittype'] ?? ''), ENT_QUOTES, 'UTF-8') ?></span>
                         <?php if (!empty($isBuitenlandCalc)): ?>
                             <div style="margin-top:6px;"><span class="badge badge-buitenland"><i class="fas fa-globe-europe"></i> Buitenland</span></div>
                         <?php endif; ?>
@@ -508,13 +680,12 @@ try {
                         <strong style="color:#333;"><?= htmlspecialchars($klantNaam, ENT_QUOTES, 'UTF-8') ?></strong><br>
                         <span style="font-size:12px; color:#888;"><?= htmlspecialchars($plaats, ENT_QUOTES, 'UTF-8') ?></span>
                     </td>
-                    <td style="color:#444; font-size:13px;">
-                        <span style="color:#888;">Van:</span> <?= htmlspecialchars($vertrek, ENT_QUOTES, 'UTF-8') ?><br>
-                        <span style="color:#888;">Naar:</span> <strong style="color:#003366;"><?= htmlspecialchars($bestemming, ENT_QUOTES, 'UTF-8') ?></strong>
+                    <td class="rit-route-compact"<?= $routeTitle !== '' ? ' title="' . htmlspecialchars($routeTitle, ENT_QUOTES, 'UTF-8') . '"' : '' ?>>
+                        <span class="route-plaats"><?= htmlspecialchars($vertrekLabel, ENT_QUOTES, 'UTF-8') ?></span><span class="route-arrow">→</span><strong class="route-plaats route-plaats--naar"><?= htmlspecialchars($bestemmingLabel, ENT_QUOTES, 'UTF-8') ?></strong>
                     </td>
                     <td>
-                        <div style="font-weight:bold; font-size:14px; color:#333; margin-bottom:2px;"><i class="fas fa-users" style="color:#888;"></i> <?= (int) $pax ?> Personen</div>
-                        <div style="font-size:11px; color:#666; background:#e9ecef; padding:2px 6px; border-radius:3px; display:inline-block; border:1px solid #ccc;">
+                        <div style="font-weight:bold; font-size:13px; color:#333; margin-bottom:2px;"><i class="fas fa-users" style="color:#888;"></i> <?= (int) $pax ?> pax</div>
+                        <div style="font-size:10px; color:#666; background:#e9ecef; padding:2px 5px; border-radius:3px; display:inline-block; border:1px solid #ccc;">
                             <?= $vervoerBlok ?>
                         </div>
                         <?= $waarschuwing ?>
