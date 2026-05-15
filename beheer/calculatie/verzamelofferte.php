@@ -150,7 +150,7 @@ require_once __DIR__ . '/../includes/header.php';
                                 <td style="padding:6px;"><?= htmlspecialchars((string) ($row['rit_datum'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
                                 <td style="padding:6px;"><?= htmlspecialchars($klant !== '' ? $klant : '—', ENT_QUOTES, 'UTF-8') ?></td>
                                 <td style="padding:6px;"><?= htmlspecialchars((string) ($row['titel'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
-                                <td style="padding:6px;text-align:right;">€ <?= number_format((float) ($row['prijs'] ?? 0) * 1.09, 2, ',', '.') ?></td>
+                                <td style="padding:6px;text-align:right;">€ <?= number_format((float) ($row['prijs'] ?? 0), 2, ',', '.') ?></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>

@@ -221,10 +221,12 @@ $pdf->Cell($w_totaal, 8, 'Bedrag  ', 0, 1, 'R', true);
 $pdf->SetTextColor(0);
 $pdf->SetFont('Arial', '', 10);
 
-$prijsExcl = (float) ($rit['prijs'] ?? 0);
+// DB-kolom `prijs` is LEIDEND inclusief BTW.
+$prijsIncl = (float) ($rit['prijs'] ?? 0);
 $btwPerc = 9;
-$btwBedrag = $prijsExcl * ($btwPerc / 100);
-$totaal = $prijsExcl + $btwBedrag;
+$prijsExcl = round($prijsIncl / (1 + $btwPerc / 100), 2);
+$btwBedrag = round($prijsIncl - $prijsExcl, 2);
+$totaal = $prijsIncl;
 $totaalAfgerond = round($totaal / 5) * 5;
 
 $currentY = $pdf->GetY();

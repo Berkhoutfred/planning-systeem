@@ -855,7 +855,7 @@ $calcCsrf = function_exists('auth_get_csrf_token') ? auth_get_csrf_token() : '';
                     </div> 
                     <div class="profit-box" style="background:#e3f2fd; border:1px solid #90caf9;"> 
                         <div style="font-size:12px; color:#0056b3;">TOTAAL VERKOOPPRIJS (Incl. BTW)</div> 
-                        <input type="number" step="0.01" name="verkoopprijs" id="verkoopprijs" class="form-control" style="font-size:20px; text-align:center; margin-top:5px;" value="<?= number_format(round((float) ($rit['prijs'] ?? 0) * $btwMul, 2), 2, '.', '') ?>"> 
+                        <input type="number" step="0.01" name="verkoopprijs" id="verkoopprijs" class="form-control" style="font-size:20px; text-align:center; margin-top:5px;" value="<?= number_format((float) ($rit['prijs'] ?? 0), 2, '.', '') ?>"> 
                         <div id="display_excl_btw" style="font-size:11px; margin-top:5px;">Excl. BTW: € 0,00</div>
                         <div id="display_btw_bedrag" style="font-size:11px; margin-top:5px;">BTW-bedrag: € 0,00</div>
                     </div> 

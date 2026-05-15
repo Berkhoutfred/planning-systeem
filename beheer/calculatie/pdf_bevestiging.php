@@ -305,9 +305,11 @@ $pdf->Cell(40, 7, 'BEDRAG', 0, 1, 'R', true);
 $pdf->SetTextColor(0);
 $pdf->SetFont('Arial','',10);
 
-$prijsExcl = $rit['prijs'] ?? 0; 
-$btw = $prijsExcl * 0.09;
-$totaal = round(($prijsExcl + $btw) / 5) * 5; 
+// DB-kolom `prijs` is LEIDEND inclusief BTW.
+$prijsIncl = (float) ($rit['prijs'] ?? 0);
+$prijsExcl = round($prijsIncl / 1.09, 2);
+$btw = round($prijsIncl - $prijsExcl, 2);
+$totaal = round($prijsIncl / 5) * 5; 
 
 $pdf->Ln(2);
 $pdf->Cell(150, 6, '  Vervoerskosten (1 touringcar) - Excl. BTW', 0, 0);

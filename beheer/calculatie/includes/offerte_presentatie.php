@@ -590,9 +590,10 @@ function offerte_presentatie_build(PDO $pdo, array $rit): array
     $postcodePlaats = trim((string) ($rit['postcode'] ?? '') . ' ' . (string) ($rit['plaats'] ?? ''));
     $instructie = pdf_filter_instructie_voor_klant(isset($rit['instructie_kantoor']) ? (string) $rit['instructie_kantoor'] : null);
 
-    $prijsExcl = round((float) ($rit['prijs'] ?? 0), 2);
-    $btwBedrag = round($prijsExcl * 0.09, 2);
-    $prijsIncl = round($prijsExcl + $btwBedrag, 2);
+    // DB-kolom `prijs` is LEIDEND inclusief BTW; excl. en btw berekenen we hieruit.
+    $prijsIncl = round((float) ($rit['prijs'] ?? 0), 2);
+    $prijsExcl = round($prijsIncl / 1.09, 2);
+    $btwBedrag = round($prijsIncl - $prijsExcl, 2);
 
     $startDate = calculatie_route_v2_normalize_date($payload['dates']['start'] ?? ($rit['rit_datum'] ?? ''));
     $endDate = calculatie_route_v2_normalize_date($payload['dates']['end'] ?? ($rit['rit_datum_eind'] ?? $rit['rit_datum'] ?? ''));

@@ -102,12 +102,12 @@ if (!$rit) {
                     <strong>€ <?php echo number_format($rit['prijs'], 2, ',', '.'); ?></strong>
                 </div>
                 <div style="display: flex; justify-content: space-between; color: #666; font-size: 0.9em; margin-bottom: 15px;">
-                    <span>(excl. BTW)</span>
+                    <span>(incl. BTW)</span>
                 </div>
 
                 <div style="background: #e9ecef; padding: 10px; border-radius: 4px; text-align: center;">
-                    <small>Winstmarge</small><br>
-                    <strong style="color: #28a745;"><?php echo number_format($rit['prijs'] - $rit['kostprijs'], 2, ',', '.'); ?></strong>
+                    <small>Winstmarge (excl. BTW)</small><br>
+                    <strong style="color: #28a745;"><?php echo number_format(($rit['prijs'] / 1.09) - $rit['kostprijs'], 2, ',', '.'); ?></strong>
                 </div>
             </div>
         </div>

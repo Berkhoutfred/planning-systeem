@@ -31,8 +31,9 @@ try {
     $instellingen = tenant_calculatie_instellingen_merged($pdo, $tenantId);
     $btwMul = 1 + ($instellingen['btw_nl'] / 100.0);
 
-    $opgeslagen_prijs_excl = (float) $rit['prijs'];
-    $opgeslagen_prijs_incl = $opgeslagen_prijs_excl * $btwMul;
+    // DB-kolom `prijs` is LEIDEND inclusief BTW.
+    $opgeslagen_prijs_incl = (float) $rit['prijs'];
+    $opgeslagen_prijs_excl = $btwMul > 0 ? round($opgeslagen_prijs_incl / $btwMul, 2) : $opgeslagen_prijs_incl;
     $opgeslagen_prijs_incl_afgerond = ceil($opgeslagen_prijs_incl / 5.0) * 5.0;
 
     $stmtRegels = $pdo->prepare(

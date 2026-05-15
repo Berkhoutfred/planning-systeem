@@ -88,7 +88,8 @@ try {
         $btwMul = 1.09;
     }
     $prijsIsInclusiefBtw = isset($_POST['verkoopprijs_is_inclusief_btw']) && $_POST['verkoopprijs_is_inclusief_btw'] === '1';
-    $prijsExcl = $prijsIsInclusiefBtw ? round($formPrijsRaw / $btwMul, 2) : round($formPrijsRaw, 2);
+    // DB-kolom `prijs` is LEIDEND in inclusief BTW (gebruiker tikt incl. in, dat is wat we opslaan).
+    $prijsIncl = round($formPrijsRaw, 2);
 
     $metaPack = calculatie_parse_meta_from_post($_POST, $rittype);
 
@@ -227,7 +228,7 @@ try {
             $extraVoertuigenString,
             $totaalKm,
             $totaalUren,
-            $prijsExcl,
+            $prijsIncl,
             $kmTussen,
             $kmNl,
             $kmDe,
@@ -259,7 +260,7 @@ try {
             $extraVoertuigenString,
             $totaalKm,
             $totaalUren,
-            $prijsExcl,
+            $prijsIncl,
             $kmTussen,
             $kmNl,
             $kmDe,
