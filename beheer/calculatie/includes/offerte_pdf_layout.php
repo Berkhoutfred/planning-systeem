@@ -41,6 +41,23 @@ function offerte_pdf_section_header(FPDF $pdf, string $title): void
     $pdf->SetTextColor(0, 0, 0);
 }
 
+/**
+ * Lichte sectie-scheiding: blauw vetgedrukte titel + dunne blauwe lijn; geen gevuld blok.
+ */
+function offerte_pdf_section_rule(FPDF $pdf, string $title): void
+{
+    $pdf->Ln(5);
+    $pdf->SetFont('Arial', 'B', 10);
+    $pdf->SetTextColor(0, 51, 102);
+    $pdf->Cell(190, 5, safe_iconv($title), 0, 1, 'L');
+    $pdf->SetDrawColor(0, 51, 102);
+    $pdf->SetLineWidth(0.35);
+    $pdf->Line(10, $pdf->GetY(), 200, $pdf->GetY());
+    $pdf->SetLineWidth(0.2);
+    $pdf->SetTextColor(0, 0, 0);
+    $pdf->Ln(3);
+}
+
 function offerte_pdf_meta_row(FPDF $pdf, string $label, string $value): void
 {
     $pdf->SetFont('Arial', 'B', 9);
@@ -334,7 +351,7 @@ function offerte_pdf_render_offer_body(OffertePDF $pdf, array $view): void
     $pdf->SetX(125);
     offerte_pdf_meta_row($pdf, 'Vervaldatum', (string) ($view['offer']['expiry_date_display'] ?? ''));
 
-    offerte_pdf_section_header($pdf, 'Aanhef');
+    offerte_pdf_section_rule($pdf, 'Aanhef');
     $pdf->SetFont('Arial', 'B', 10);
     $pdf->Cell(190, 5, safe_iconv((string) ($view['salutation'] ?? '')), 0, 1, 'L');
     $pdf->Ln(1);
@@ -352,7 +369,7 @@ function offerte_pdf_render_offer_body(OffertePDF $pdf, array $view): void
         offerte_pdf_kv_row($pdf, 'Meerdere losse rijdagen', 'Ja (één offerte, route per dag)', $fill);
     }
 
-    offerte_pdf_section_header($pdf, 'Routeplanning');
+    offerte_pdf_section_rule($pdf, 'Routeplanning');
     if (($view['route_days'] ?? []) === []) {
         $pdf->SetFont('Arial', '', 9);
         $pdf->Cell(190, 6, safe_iconv('Er zijn nog geen routegegevens beschikbaar.'), 0, 1, 'L');
@@ -397,15 +414,26 @@ function offerte_pdf_render_offer_body(OffertePDF $pdf, array $view): void
     $pdf->Cell(70, 6, safe_iconv((string) ($view['price']['excl_display'] ?? '')), 0, 1, 'R');
     $pdf->Cell(120, 6, safe_iconv('  BTW-bedrag'), 0, 0, 'L');
     $pdf->Cell(70, 6, safe_iconv((string) ($view['price']['btw_display'] ?? '')), 0, 1, 'R');
-    $pdf->Ln(1);
+    // Dunne scheidingslijn boven het totaalregel
+    $pdf->SetDrawColor(180, 200, 220);
+    $pdf->SetLineWidth(0.3);
+    $pdf->Line(10, $pdf->GetY() + 1, 200, $pdf->GetY() + 1);
+    $pdf->SetLineWidth(0.2);
+    $pdf->Ln(2);
     $pdf->SetFont('Arial', 'B', 11);
     $pdf->SetTextColor(217, 119, 6);
     $pdf->Cell(120, 8, safe_iconv('  Totaal incl. btw'), 0, 0, 'L');
     $pdf->Cell(70, 8, safe_iconv((string) ($view['price']['incl_display'] ?? '')), 0, 1, 'R');
     $pdf->SetTextColor(0, 0, 0);
-    $pdf->SetFont('Arial', '', 10);
-    $pdf->MultiCell(190, 5.2, safe_iconv('Wij vertrouwen erop u hiermee een passende aanbieding te hebben gedaan en zien uw reactie graag tegemoet.'));
+    $pdf->SetFont('Arial', '', 9);
     $pdf->Ln(5);
+    $slottekst = 'Indien van het bovenstaande programma wordt afgeweken, kan er een prijsaanpassing volgen. '
+        . 'Wij vertrouwen erop u met deze offerte een passende aanbieding te hebben gedaan en zien uw reactie gaarne tegemoet. '
+        . 'De aanbieding is exclusief eventuele parkeer-, tol- en/of verblijfskosten. '
+        . 'Wij behouden ons het recht voor onze reissommen te wijzigen, indien daartoe aanleiding bestaat door prijs en/of brandstofverhogingen door derden.';
+    $pdf->MultiCell(190, 5.0, safe_iconv($slottekst));
+    $pdf->Ln(5);
+    $pdf->SetFont('Arial', '', 10);
     $pdf->Cell(190, 5, safe_iconv('Met vriendelijke groet,'), 0, 1, 'L');
     $pdf->Ln(1);
     $pdf->SetFont('Arial', 'B', 10);
