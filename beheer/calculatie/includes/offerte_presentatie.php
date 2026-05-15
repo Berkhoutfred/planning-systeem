@@ -730,17 +730,51 @@ function offerte_presentatie_build_route2_klant_blocks(?array $payload, array $r
         return strcmp($tA, $tB);
     });
 
-    $rows = offerte_presentatie_route_table_from_legacy_points(['segments' => $filtered]);
-    if ($rows === []) {
-        return [];
+    // Converteer opeenvolgende waypoints naar Van→Naar segmentrijen (zelfde formaat als heenrit)
+    $segRows = [];
+    $count   = count($filtered);
+    for ($i = 0; $i < $count - 1; $i++) {
+        $wp1       = $filtered[$i];
+        $wp2       = $filtered[$i + 1];
+        $segRows[] = [
+            'depart'         => calculatie_route_v2_normalize_hhmm($wp1['time'] ?? ''),
+            'depart_display' => offerte_presentatie_format_time_with_offset(
+                (string) ($wp1['time'] ?? ''),
+                max(0, (int) ($wp1['time_day_offset'] ?? 0))
+            ),
+            'from'           => trim((string) ($wp1['address'] ?? '')),
+            'to'             => trim((string) ($wp2['address'] ?? '')),
+            'arrive'         => calculatie_route_v2_normalize_hhmm($wp2['time'] ?? ''),
+            'arrive_display' => offerte_presentatie_format_time_with_offset(
+                (string) ($wp2['time'] ?? ''),
+                max(0, (int) ($wp2['time_day_offset'] ?? 0))
+            ),
+            'zone'           => calculatie_route_v2_normalize_zone($wp1['zone'] ?? 'nl'),
+            'zone_display'   => offerte_presentatie_zone_label((string) ($wp1['zone'] ?? 'nl')),
+        ];
+    }
+
+    // Fallback: slechts 1 waypoint beschikbaar → gebruik legacy tijdlijn
+    if ($segRows === []) {
+        $rows = offerte_presentatie_route_table_from_legacy_points(['segments' => $filtered]);
+        if ($rows === []) {
+            return [];
+        }
+        return [[
+            'label'                   => 'Terugrit',
+            'table_type'              => 'legacy_route',
+            'show_zone'               => false,
+            'inline_with_day_heading' => false,
+            'rows'                    => $rows,
+        ]];
     }
 
     return [[
-        'label'                  => 'Terugrit',
-        'table_type'             => 'legacy_route',
-        'show_zone'              => false,
+        'label'                   => 'Terugrit',
+        'table_type'              => 'segment_table',
+        'show_zone'               => false,
         'inline_with_day_heading' => false,
-        'rows'                   => $rows,
+        'rows'                    => $segRows,
     ]];
 }
 

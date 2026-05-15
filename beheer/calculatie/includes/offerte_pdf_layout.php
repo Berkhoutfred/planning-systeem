@@ -407,27 +407,27 @@ function offerte_pdf_render_offer_body(OffertePDF $pdf, array $view): void
     }
 
     offerte_pdf_section_header($pdf, 'Prijs');
-    $pdf->SetFont('Arial', 'B', 9);
-    $pdf->SetFillColor(248, 251, 254);
-    $pdf->Cell(120, 7, safe_iconv('  Omschrijving'), 0, 0, 'L', true);
-    $pdf->Cell(70, 7, safe_iconv('Bedrag'), 0, 1, 'R', true);
     $pdf->SetDrawColor(235, 235, 235);
     $pdf->SetFont('Arial', '', 10);
     $pdf->SetTextColor(0, 0, 0);
-    $pdf->Cell(120, 6, safe_iconv('  Excl. btw'), 0, 0, 'L');
-    $pdf->Cell(70, 6, safe_iconv((string) ($view['price']['excl_display'] ?? '')), 0, 1, 'R');
-    $pdf->Cell(120, 6, safe_iconv('  BTW-bedrag'), 0, 0, 'L');
-    $pdf->Cell(70, 6, safe_iconv((string) ($view['price']['btw_display'] ?? '')), 0, 1, 'R');
-    // Dunne scheidingslijn boven het totaalregel
+    // Labels rechts uitlijnen, direct voor de bedragen (spacer 90 + label 60 + bedrag 40 = 190mm)
+    $pdf->Cell(90, 6, '', 0, 0);
+    $pdf->Cell(60, 6, safe_iconv('Excl. btw'), 0, 0, 'R');
+    $pdf->Cell(40, 6, safe_iconv((string) ($view['price']['excl_display'] ?? '')), 0, 1, 'R');
+    $pdf->Cell(90, 6, '', 0, 0);
+    $pdf->Cell(60, 6, safe_iconv('BTW-bedrag'), 0, 0, 'R');
+    $pdf->Cell(40, 6, safe_iconv((string) ($view['price']['btw_display'] ?? '')), 0, 1, 'R');
+    // Dunne scheidingslijn boven het totaalregel (alleen rechterhelft)
     $pdf->SetDrawColor(180, 200, 220);
     $pdf->SetLineWidth(0.3);
-    $pdf->Line(10, $pdf->GetY() + 1, 200, $pdf->GetY() + 1);
+    $pdf->Line(100, $pdf->GetY() + 1, 200, $pdf->GetY() + 1);
     $pdf->SetLineWidth(0.2);
     $pdf->Ln(2);
     $pdf->SetFont('Arial', 'B', 11);
     $pdf->SetTextColor(217, 119, 6);
-    $pdf->Cell(120, 8, safe_iconv('  Totaal incl. btw'), 0, 0, 'L');
-    $pdf->Cell(70, 8, safe_iconv((string) ($view['price']['incl_display'] ?? '')), 0, 1, 'R');
+    $pdf->Cell(90, 8, '', 0, 0);
+    $pdf->Cell(60, 8, safe_iconv('Totaal incl. btw'), 0, 0, 'R');
+    $pdf->Cell(40, 8, safe_iconv((string) ($view['price']['incl_display'] ?? '')), 0, 1, 'R');
     $pdf->SetTextColor(0, 0, 0);
     $pdf->SetFont('Arial', '', 9);
     $pdf->Ln(5);
