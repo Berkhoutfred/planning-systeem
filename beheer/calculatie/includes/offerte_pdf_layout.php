@@ -357,7 +357,7 @@ function offerte_pdf_render_offer_body(OffertePDF $pdf, array $view): void
         $pdf->Cell(190, 5, safe_iconv((string) $view['customer']['postcode_city']), 0, 1, 'L');
     }
 
-    $pdf->Ln(4);
+    $pdf->Ln(10);
     $pdf->SetFont('Arial', 'B', 10);
     $pdf->Cell(190, 5, safe_iconv((string) ($view['salutation'] ?? '')), 0, 1, 'L');
     $pdf->Ln(1);

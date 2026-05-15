@@ -110,6 +110,9 @@ offerte_pdf_meta_row($pdf, 'Aantal offertes', (string) count($rows));
 $pdf->SetX(125);
 offerte_pdf_meta_row($pdf, 'Vervaldatum', date('d-m-Y', strtotime('+14 days')));
 
+// Zorg dat cursor onder de bundel-info-box uitkomt
+$pdf->SetY(max($pdf->GetY(), 76));
+
 // Aanhef van eerste klant
 $pdf->SetFont('Arial', 'B', 10);
 $pdf->Cell(190, 5, safe_iconv((string) ($firstView['salutation'] ?? '')), 0, 1, 'L');
@@ -133,6 +136,7 @@ $pdf->Cell(50, 7, safe_iconv(' Totaal incl. '), 1, 1, 'R', true);
 $pdf->SetTextColor(0, 0, 0);
 $pdf->SetFont('Arial', '', 9);
 
+$totIncl = 0.0;
 foreach ($rows as $r) {
     $vw = $r['view'];
     $routeLabel = trim((string) ($vw['trip']['route_label'] ?? ''));
@@ -148,6 +152,7 @@ foreach ($rows as $r) {
     if ($inclCell === '') {
         $inclCell = offerte_presentatie_format_currency((float) ($vw['price']['incl'] ?? 0));
     }
+    $totIncl += (float) ($vw['price']['incl'] ?? 0);
     $fill = false;
     $pdf->SetFillColor(248, 251, 254);
     $pdf->Cell(40, 7, safe_iconv((string) ($vw['trip']['start_date_display'] ?? '')), 1, 0, 'R', $fill);
@@ -155,6 +160,33 @@ foreach ($rows as $r) {
     $pdf->Cell(78, 7, safe_iconv($routeLabel), 1, 0, 'L', $fill);
     $pdf->Cell(50, 7, safe_iconv($inclCell), 1, 1, 'R', $fill);
 }
+
+// Dunne scheidingslijn + totaalregel
+$pdf->SetDrawColor(180, 200, 220);
+$pdf->SetLineWidth(0.3);
+$pdf->Line(10, $pdf->GetY() + 1, 200, $pdf->GetY() + 1);
+$pdf->SetLineWidth(0.2);
+$pdf->Ln(3);
+$pdf->SetFont('Arial', 'B', 11);
+$pdf->SetTextColor(217, 119, 6);
+$pdf->Cell(140, 8, safe_iconv('  Totaal incl. btw'), 0, 0, 'R');
+$pdf->Cell(50, 8, safe_iconv(offerte_presentatie_format_currency($totIncl)), 0, 1, 'R');
+$pdf->SetTextColor(0, 0, 0);
+
+// Slottekst
+$pdf->SetFont('Arial', '', 9);
+$pdf->Ln(6);
+$slottekst = 'Indien van het bovenstaande programma wordt afgeweken, kan er een prijsaanpassing volgen. '
+    . 'Wij vertrouwen erop u met deze offerte een passende aanbieding te hebben gedaan en zien uw reactie gaarne tegemoet. '
+    . 'De aanbieding is exclusief eventuele parkeer-, tol- en/of verblijfskosten. '
+    . 'Wij behouden ons het recht voor onze reissommen te wijzigen, indien daartoe aanleiding bestaat door prijs en/of brandstofverhogingen door derden.';
+$pdf->MultiCell(190, 5.0, safe_iconv($slottekst));
+$pdf->Ln(6);
+$pdf->SetFont('Arial', '', 10);
+$pdf->Cell(190, 5, safe_iconv('Met vriendelijke groet,'), 0, 1, 'L');
+$pdf->Ln(1);
+$pdf->SetFont('Arial', 'B', 10);
+$pdf->Cell(190, 5, safe_iconv((string) ($firstView['company']['name'] ?? '')), 0, 1, 'L');
 
 // --- Individuele volledige offertes ---
 foreach ($rows as $r) {
