@@ -105,11 +105,11 @@ class OffertePDF extends FPDF
         }
 
         if ($this->page_type === 'offerte' && !empty($offer['order_nummer'])) {
-            // Meta-infobox rechtsboven: vervangt "Offerteoverzicht"
+            // Meta-infobox rechtsboven iets hoger zodat er ruimte is boven de oranjelijn
             $this->SetFillColor(248, 251, 254);
             $this->SetDrawColor(220, 228, 236);
-            $this->Rect(118, 9, 82, 22, 'FD');
-            $this->SetXY(122, 11);
+            $this->Rect(118, 7, 82, 21, 'FD');
+            $this->SetXY(122, 8);
             offerte_pdf_meta_row($this, 'Offertenummer', '#' . (string) ($offer['order_nummer'] ?? ''));
             $this->SetX(122);
             offerte_pdf_meta_row($this, 'Offertedatum', (string) ($offer['date_display'] ?? ''));
@@ -357,7 +357,7 @@ function offerte_pdf_render_offer_body(OffertePDF $pdf, array $view): void
         $pdf->Cell(190, 5, safe_iconv((string) $view['customer']['postcode_city']), 0, 1, 'L');
     }
 
-    offerte_pdf_section_rule($pdf, 'Aanhef');
+    $pdf->Ln(4);
     $pdf->SetFont('Arial', 'B', 10);
     $pdf->Cell(190, 5, safe_iconv((string) ($view['salutation'] ?? '')), 0, 1, 'L');
     $pdf->Ln(1);
@@ -383,13 +383,10 @@ function offerte_pdf_render_offer_body(OffertePDF $pdf, array $view): void
             $pdf->SetFillColor(248, 251, 254);
             $pdf->SetDrawColor(226, 234, 242);
             $pdf->Rect(10, $pdf->GetY(), 190, 8, 'FD');
-            // Datum links, route-label gecentreerd
+            // Alleen datum, geen route-label
             $pdf->SetFont('Arial', 'B', 9);
             $pdf->SetTextColor(0, 51, 102);
-            $pdf->Cell(70, 8, safe_iconv((string) ($day['date_display'] ?? '')), 0, 0, 'L');
-            $pdf->SetFont('Arial', '', 9);
-            $pdf->SetTextColor(60, 60, 60);
-            $pdf->Cell(120, 8, safe_iconv((string) ($day['heading_label'] ?? $day['label'] ?? 'Route')), 0, 1, 'C');
+            $pdf->Cell(190, 8, safe_iconv((string) ($day['date_display'] ?? '')), 0, 1, 'L');
             $pdf->SetTextColor(0, 0, 0);
             $pdf->Ln(2);
 

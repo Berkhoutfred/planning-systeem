@@ -745,7 +745,7 @@ function offerte_presentatie_build(PDO $pdo, array $rit): array
             'email' => trim((string) ($rit['email'] ?? '')),
             'phone' => trim((string) ($rit['telefoon'] ?? '')),
         ],
-        'salutation' => 'Geachte ' . $aanhefNaam . ',',
+        'salutation' => 'Beste ' . $aanhefNaam . ',',
         'intro' => $intro,
         'trip' => [
             'rittype' => trim((string) ($rit['rittype'] ?? '')),
