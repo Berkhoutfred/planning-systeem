@@ -328,48 +328,40 @@ function offerte_presentatie_route_label(array $rit, array $regelMap, array $pay
 {
     $rittype = trim((string) ($rit['rittype'] ?? ''));
 
-    // Probeer vertrek en bestemming uit route_v2 payload
-    $vanAdres = '';
-    $naarAdres = '';
+    // Primaire bron: calculatie_regels (meest betrouwbaar)
+    $vanAdres = trim((string) ($regelMap['t_vertrek_klant']['adres'] ?? ''));
+    $naarAdres = trim((string) ($regelMap['t_aankomst_best']['adres'] ?? ''));
 
-    $days = $payload['days'] ?? [];
-    if ($days !== []) {
-        $firstDay = $days[0] ?? [];
-        $routes = $firstDay['routes'] ?? [];
-        foreach ($routes as $route) {
-            $segs = $route['segments'] ?? [];
-            foreach ($segs as $seg) {
-                if ($vanAdres === '' && !empty($seg['from'])) {
-                    $kind = $seg['kind'] ?? '';
-                    // Sla garage-vertrek over voor "van"
-                    if ($kind !== 'garage_to_customer' && $kind !== 'garage_start') {
+    // Fallback: route_v2 payload — neem eerste niet-garage segment als vertrek,
+    // en het laatste segment-doel als bestemming
+    if ($vanAdres === '' || $naarAdres === '') {
+        $days = $payload['days'] ?? [];
+        if ($days !== []) {
+            $firstDay = $days[0] ?? [];
+            $routes = $firstDay['routes'] ?? [];
+            foreach ($routes as $route) {
+                $segs = $route['segments'] ?? [];
+                foreach ($segs as $seg) {
+                    $kind = (string) ($seg['kind'] ?? '');
+                    $isGarageKind = in_array($kind, ['garage_to_customer', 'garage_start', 'garage_end', 'customer_to_garage'], true);
+                    if ($vanAdres === '' && !$isGarageKind && !empty($seg['from'])) {
                         $vanAdres = (string) $seg['from'];
-                    } elseif ($vanAdres === '') {
-                        $vanAdres = (string) ($seg['to'] ?? '');
+                    }
+                    if (!empty($seg['to']) && !in_array($kind, ['garage_end', 'customer_to_garage'], true)) {
+                        $naarAdres = (string) $seg['to'];
                     }
                 }
-                if (!empty($seg['to'])) {
-                    $naarAdres = (string) $seg['to'];
+                if ($vanAdres !== '') {
+                    break;
                 }
             }
-            if ($vanAdres !== '') {
-                break;
-            }
         }
-    }
-
-    // Fallback naar legacy regels
-    if ($vanAdres === '') {
-        $vanAdres = trim((string) ($regelMap['t_vertrek_klant']['adres'] ?? $regelMap['t_garage']['adres'] ?? ''));
-    }
-    if ($naarAdres === '') {
-        $naarAdres = trim((string) ($regelMap['t_aankomst_best']['adres'] ?? ''));
     }
 
     $van = offerte_presentatie_adres_naar_plaats($vanAdres);
     $naar = offerte_presentatie_adres_naar_plaats($naarAdres);
 
-    // Verwijder garage-achtige defaults uit "van"
+    // Negeer garage-achtige vertreklocaties als we een bestemming hebben
     if (preg_match('/industrieweg|garage/i', $van) && $naar !== '?') {
         $van = $naar;
     }
@@ -377,12 +369,12 @@ function offerte_presentatie_route_label(array $rit, array $regelMap, array $pay
     if ($van === '?' && $naar === '?') {
         return '';
     }
+    $suffix = $rittype === 'brenghaal' ? ' v.v.' : '';
     if ($van === $naar || $van === '?') {
-        $suffix = $rittype === 'brenghaal' ? ' v.v.' : '';
         return $naar . $suffix;
     }
-    $suffix = $rittype === 'brenghaal' ? ' v.v.' : '';
-    return $van . ' \xe2\x80\x93 ' . $naar . $suffix;
+    // Gebruik gewone koppeltekens die door windows-1252 (FPDF) correct worden weergegeven
+    return $van . ' - ' . $naar . $suffix;
 }
 
 function offerte_presentatie_format_km(float $km): string

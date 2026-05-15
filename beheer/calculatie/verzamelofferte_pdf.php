@@ -77,7 +77,7 @@ $pdf->Ln(12);
 $pdf->SetFont('Arial', 'B', 9);
 $pdf->SetFillColor(0, 51, 102);
 $pdf->SetTextColor(255, 255, 255);
-$pdf->Cell(40, 7, safe_iconv(' Datum '), 1, 0, 'L', true);
+$pdf->Cell(40, 7, safe_iconv(' Datum '), 1, 0, 'R', true);
 $pdf->Cell(22, 7, safe_iconv(' Offertenr. '), 1, 0, 'L', true);
 $pdf->Cell(78, 7, safe_iconv(' Route '), 1, 0, 'L', true);
 $pdf->Cell(50, 7, safe_iconv(' Totaal incl. '), 1, 1, 'R', true);
@@ -99,7 +99,7 @@ foreach ($rows as $r) {
     if ($inclCell === '') {
         $inclCell = offerte_presentatie_format_currency((float) ($vw['price']['incl'] ?? 0));
     }
-    $pdf->Cell(40, 7, safe_iconv((string) ($vw['trip']['start_date_display'] ?? '')), 1, 0, 'L');
+    $pdf->Cell(40, 7, safe_iconv((string) ($vw['trip']['start_date_display'] ?? '')), 1, 0, 'R');
     $pdf->Cell(22, 7, safe_iconv('#' . (string) ($vw['offer']['order_nummer'] ?? '')), 1, 0, 'L');
     $pdf->Cell(78, 7, safe_iconv($routeLabel), 1, 0, 'L');
     $pdf->Cell(50, 7, safe_iconv($inclCell), 1, 1, 'R');
