@@ -652,6 +652,91 @@ function offerte_presentatie_build_klant_route_days(array $rit, ?array $payload,
     ]];
 }
 
+/**
+ * Bouw de klant-zichtbare terugrit-blokken voor een brenghaal-rit.
+ * Probeert achtereenvolgens: payload days route2, payload['route2'], legacy regelMap.
+ * Garage-starts en garage-ends worden eruit gefilterd.
+ *
+ * @return list<array<string, mixed>>
+ */
+function offerte_presentatie_build_route2_klant_blocks(?array $payload, array $regelMap): array
+{
+    // Segmenten ophalen
+    $segs = [];
+
+    if (is_array($payload)) {
+        // 1) Zoek in payload['days'] → routes → route_index = 2
+        foreach ($payload['days'] ?? [] as $day) {
+            if (!is_array($day)) {
+                continue;
+            }
+            foreach ($day['routes'] ?? [] as $route) {
+                if (!is_array($route)) {
+                    continue;
+                }
+                if ((int) ($route['route_index'] ?? 0) === 2 && !empty($route['enabled'])) {
+                    $rawSegs = is_array($route['segments'] ?? null) ? $route['segments'] : [];
+                    if ($rawSegs !== []) {
+                        $segs = $rawSegs;
+                        break 2;
+                    }
+                }
+            }
+        }
+
+        // 2) Fallback: payload['route2']['segments']
+        if ($segs === []) {
+            $r2 = $payload['route2'] ?? [];
+            if (!empty($r2['enabled']) && !empty($r2['segments']) && is_array($r2['segments'])) {
+                $segs = $r2['segments'];
+            }
+        }
+    }
+
+    // 3) Fallback: legacy regelMap (t_vertrek_best, t_retour_klant)
+    if ($segs === []) {
+        $legacyMap = [
+            ['type' => 't_vertrek_best',  'kind' => 'route2_depart'],
+            ['type' => 't_retour_klant',  'kind' => 'route2_customer'],
+        ];
+        foreach ($legacyMap as $cfg) {
+            $regel = $regelMap[$cfg['type']] ?? [];
+            $time  = calculatie_route_v2_normalize_hhmm($regel['tijd'] ?? '');
+            $adres = trim((string) ($regel['adres'] ?? ''));
+            if ($time !== '' || $adres !== '') {
+                $segs[] = ['kind' => $cfg['kind'], 'time' => $time, 'time_day_offset' => 0, 'address' => $adres, 'km' => 0, 'zone' => 'nl'];
+            }
+        }
+    }
+
+    if ($segs === []) {
+        return [];
+    }
+
+    // Filter garage-starts en garage-ends (niet relevant voor klant)
+    $garageKinds = ['garage_start', 'route2_garage_end', 'garage_end'];
+    $filtered = array_values(array_filter($segs, static function (array $s) use ($garageKinds): bool {
+        return !in_array(trim((string) ($s['kind'] ?? '')), $garageKinds, true);
+    }));
+
+    if ($filtered === []) {
+        $filtered = $segs; // als alle punten garage-achtig zijn, toon ze toch
+    }
+
+    $rows = offerte_presentatie_route_table_from_legacy_points(['segments' => $filtered]);
+    if ($rows === []) {
+        return [];
+    }
+
+    return [[
+        'label'                  => 'Terugrit',
+        'table_type'             => 'legacy_route',
+        'show_zone'              => false,
+        'inline_with_day_heading' => false,
+        'rows'                   => $rows,
+    ]];
+}
+
 function offerte_presentatie_logo_web_src(string $logoPad): string
 {
     $logoPad = trim($logoPad);
@@ -709,6 +794,13 @@ function offerte_presentatie_build(PDO $pdo, array $rit): array
         $routeDays = offerte_presentatie_build_klant_route_days($rit, $payload, $regelMap);
         if ($routeDays === []) {
             $routeDays = offerte_presentatie_build_route_days($payload);
+        }
+        // Voeg terugrit toe aan eerste dag bij brenghaal
+        if ($rittypeNorm === 'brenghaal' && isset($routeDays[0])) {
+            $route2Blocks = offerte_presentatie_build_route2_klant_blocks($payload, $regelMap);
+            if ($route2Blocks !== []) {
+                $routeDays[0]['routes'] = array_merge($routeDays[0]['routes'], $route2Blocks);
+            }
         }
     }
     $intro = 'Hartelijk dank voor uw aanvraag. Wij doen u hierbij graag onze vrijblijvende offerte toekomen op basis van actuele beschikbaarheid. Hieronder vindt u de besproken ritgegevens, routeplanning en prijsopbouw.';
