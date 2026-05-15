@@ -242,34 +242,36 @@ function offerte_pdf_render_route_table(OffertePDF $pdf, array $route, bool $sho
     }
 
     if (($route['table_type'] ?? 'segment_table') === 'legacy_route') {
-        $widths = $showZone ? [26, 112, 16, 24] : [26, 128, 24];
-        $header = $showZone ? ['Tijd', 'Locatie', 'Zone', 'Km'] : ['Tijd', 'Locatie', 'Km'];
-        $aligns = $showZone ? ['L', 'L', 'C', 'R'] : ['L', 'L', 'R'];
+        // Km niet tonen op klantenofferte
+        $widths = $showZone ? [26, 128, 16] : [26, 164];
+        $header = $showZone ? ['Tijd', 'Locatie', 'Zone'] : ['Tijd', 'Locatie'];
+        $aligns = $showZone ? ['L', 'L', 'C'] : ['L', 'L'];
         $pdf->SetWidths($widths);
         $pdf->SetAligns($aligns);
         $pdf->Row($header, true);
 
         foreach ($route['rows'] as $row) {
             $cells = $showZone
-                ? [(string) $row['time_display'], (string) $row['location'], (string) $row['zone_display'], (string) $row['km_display']]
-                : [(string) $row['time_display'], (string) $row['location'], (string) $row['km_display']];
+                ? [(string) $row['time_display'], (string) $row['location'], (string) $row['zone_display']]
+                : [(string) $row['time_display'], (string) $row['location']];
             $pdf->Row($cells);
         }
         $pdf->Ln(2);
         return;
     }
 
-    $widths = $showZone ? [22, 44, 58, 24, 16, 26] : [22, 50, 66, 24, 28];
-    $header = $showZone ? ['Vertrek', 'Van', 'Naar', 'Aankomst', 'Zone', 'Km'] : ['Vertrek', 'Van', 'Naar', 'Aankomst', 'Km'];
-    $aligns = $showZone ? ['L', 'L', 'L', 'L', 'C', 'R'] : ['L', 'L', 'L', 'L', 'R'];
+    // Km niet tonen op klantenofferte; tijden wel
+    $widths = $showZone ? [22, 50, 72, 30, 16] : [22, 56, 80, 32];
+    $header = $showZone ? ['Vertrek', 'Van', 'Naar', 'Aankomst', 'Zone'] : ['Vertrek', 'Van', 'Naar', 'Aankomst'];
+    $aligns = $showZone ? ['L', 'L', 'L', 'L', 'C'] : ['L', 'L', 'L', 'L'];
     $pdf->SetWidths($widths);
     $pdf->SetAligns($aligns);
     $pdf->Row($header, true);
 
     foreach ($route['rows'] as $row) {
         $cells = $showZone
-            ? [(string) $row['depart_display'], (string) $row['from'], (string) $row['to'], (string) $row['arrive_display'], (string) $row['zone_display'], (string) $row['km_display']]
-            : [(string) $row['depart_display'], (string) $row['from'], (string) $row['to'], (string) $row['arrive_display'], (string) $row['km_display']];
+            ? [(string) $row['depart_display'], (string) $row['from'], (string) $row['to'], (string) $row['arrive_display'], (string) $row['zone_display']]
+            : [(string) $row['depart_display'], (string) $row['from'], (string) $row['to'], (string) $row['arrive_display']];
         $pdf->Row($cells);
     }
     $pdf->Ln(2);
@@ -286,17 +288,18 @@ function offerte_pdf_render_event_table(OffertePDF $pdf, array $day): void
     $pdf->Cell(190, 6, safe_iconv('Dagactiviteiten'), 0, 1, 'L');
 
     $showZone = !empty($day['show_zone']);
-    $widths = $showZone ? [22, 38, 18, 40, 40, 14, 18] : [22, 44, 20, 46, 46, 20];
-    $header = $showZone ? ['Type', 'Datum', 'Tijd', 'Van', 'Naar', 'Zone', 'Km'] : ['Type', 'Datum', 'Tijd', 'Van', 'Naar', 'Km'];
-    $aligns = $showZone ? ['L', 'L', 'L', 'L', 'L', 'C', 'R'] : ['L', 'L', 'L', 'L', 'L', 'R'];
+    // Km niet tonen op klantenofferte
+    $widths = $showZone ? [22, 38, 18, 46, 50, 16] : [22, 44, 20, 52, 52];
+    $header = $showZone ? ['Type', 'Datum', 'Tijd', 'Van', 'Naar', 'Zone'] : ['Type', 'Datum', 'Tijd', 'Van', 'Naar'];
+    $aligns = $showZone ? ['L', 'L', 'L', 'L', 'L', 'C'] : ['L', 'L', 'L', 'L', 'L'];
     $pdf->SetWidths($widths);
     $pdf->SetAligns($aligns);
     $pdf->Row($header, true);
 
     foreach ($day['events'] as $row) {
         $cells = $showZone
-            ? [(string) $row['label'], (string) $row['date_display'], (string) $row['time_display'], (string) $row['from'], (string) $row['to'], (string) $row['zone_display'], (string) $row['km_display']]
-            : [(string) $row['label'], (string) $row['date_display'], (string) $row['time_display'], (string) $row['from'], (string) $row['to'], (string) $row['km_display']];
+            ? [(string) $row['label'], (string) $row['date_display'], (string) $row['time_display'], (string) $row['from'], (string) $row['to'], (string) $row['zone_display']]
+            : [(string) $row['label'], (string) $row['date_display'], (string) $row['time_display'], (string) $row['from'], (string) $row['to']];
         $pdf->Row($cells);
     }
     $pdf->Ln(2);
