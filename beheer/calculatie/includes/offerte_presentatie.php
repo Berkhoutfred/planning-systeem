@@ -730,28 +730,73 @@ function offerte_presentatie_build_route2_klant_blocks(?array $payload, array $r
         return strcmp($tA, $tB);
     });
 
-    // Converteer opeenvolgende waypoints naar Van→Naar segmentrijen (zelfde formaat als heenrit)
+    // Bouw een index op kind → eerste segment met dat kind
+    $kindMap = [];
+    foreach ($filtered as $seg) {
+        $k = trim((string) ($seg['kind'] ?? ''));
+        if ($k !== '' && !isset($kindMap[$k])) {
+            $kindMap[$k] = $seg;
+        }
+    }
+
+    $departSeg   = $kindMap['route2_depart']   ?? null;
+    $customerSeg = $kindMap['route2_customer'] ?? null;
+    $preSeg      = $kindMap['preposition']     ?? null;
+
+    // Schei interne waypoints (voorstaan) van klant-waypoints
+    $internalKinds = ['preposition'];
+    $clientWps = array_values(array_filter($filtered, static function (array $s) use ($internalKinds): bool {
+        return !in_array(trim((string) ($s['kind'] ?? '')), $internalKinds, true);
+    }));
+
+    // Geval: alleen preposition + route2_customer (geen route2_depart ingevuld)
+    // → gebruik preposition.address als Van, maar route2_customer.time als Vertrektijd
+    //   zodat de klant "Vertrek 15:00 van Stayokay naar Isendoorn" ziet
     $segRows = [];
-    $count   = count($filtered);
-    for ($i = 0; $i < $count - 1; $i++) {
-        $wp1       = $filtered[$i];
-        $wp2       = $filtered[$i + 1];
-        $segRows[] = [
-            'depart'         => calculatie_route_v2_normalize_hhmm($wp1['time'] ?? ''),
-            'depart_display' => offerte_presentatie_format_time_with_offset(
-                (string) ($wp1['time'] ?? ''),
-                max(0, (int) ($wp1['time_day_offset'] ?? 0))
-            ),
-            'from'           => trim((string) ($wp1['address'] ?? '')),
-            'to'             => trim((string) ($wp2['address'] ?? '')),
-            'arrive'         => calculatie_route_v2_normalize_hhmm($wp2['time'] ?? ''),
-            'arrive_display' => offerte_presentatie_format_time_with_offset(
-                (string) ($wp2['time'] ?? ''),
-                max(0, (int) ($wp2['time_day_offset'] ?? 0))
-            ),
-            'zone'           => calculatie_route_v2_normalize_zone($wp1['zone'] ?? 'nl'),
-            'zone_display'   => offerte_presentatie_zone_label((string) ($wp1['zone'] ?? 'nl')),
-        ];
+    if ($departSeg === null && $customerSeg !== null && $preSeg !== null) {
+        $vanAddr  = trim((string) ($preSeg['address'] ?? ''));
+        $naarAddr = trim((string) ($customerSeg['address'] ?? ''));
+        if ($vanAddr !== '' && $naarAddr !== '') {
+            $segRows[] = [
+                'depart'         => calculatie_route_v2_normalize_hhmm($customerSeg['time'] ?? ''),
+                'depart_display' => offerte_presentatie_format_time_with_offset(
+                    (string) ($customerSeg['time'] ?? ''),
+                    max(0, (int) ($customerSeg['time_day_offset'] ?? 0))
+                ),
+                'from'           => $vanAddr,
+                'to'             => $naarAddr,
+                'arrive'         => '',
+                'arrive_display' => '',
+                'zone'           => calculatie_route_v2_normalize_zone($preSeg['zone'] ?? 'nl'),
+                'zone_display'   => offerte_presentatie_zone_label((string) ($preSeg['zone'] ?? 'nl')),
+            ];
+        }
+    }
+
+    // Normaal geval: bouw pairwise segmenten van client-waypoints (zonder preposition)
+    if ($segRows === []) {
+        $wps   = $clientWps !== [] ? $clientWps : $filtered;
+        $count = count($wps);
+        for ($i = 0; $i < $count - 1; $i++) {
+            $wp1       = $wps[$i];
+            $wp2       = $wps[$i + 1];
+            $segRows[] = [
+                'depart'         => calculatie_route_v2_normalize_hhmm($wp1['time'] ?? ''),
+                'depart_display' => offerte_presentatie_format_time_with_offset(
+                    (string) ($wp1['time'] ?? ''),
+                    max(0, (int) ($wp1['time_day_offset'] ?? 0))
+                ),
+                'from'           => trim((string) ($wp1['address'] ?? '')),
+                'to'             => trim((string) ($wp2['address'] ?? '')),
+                'arrive'         => calculatie_route_v2_normalize_hhmm($wp2['time'] ?? ''),
+                'arrive_display' => offerte_presentatie_format_time_with_offset(
+                    (string) ($wp2['time'] ?? ''),
+                    max(0, (int) ($wp2['time_day_offset'] ?? 0))
+                ),
+                'zone'           => calculatie_route_v2_normalize_zone($wp1['zone'] ?? 'nl'),
+                'zone_display'   => offerte_presentatie_zone_label((string) ($wp1['zone'] ?? 'nl')),
+            ];
+        }
     }
 
     // Fallback: slechts 1 waypoint beschikbaar → gebruik legacy tijdlijn
