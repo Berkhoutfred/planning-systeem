@@ -1594,13 +1594,20 @@ function customFinancieleBerekening() {
     if(!prijsInVeld) return;
     
     let prijsIn = parseFloat(prijsInVeld.value) || 0;
+    const origineelPrijs = prijsIn;
     
     if(!userManuallyChangedPrice && totaleKostprijs > 0) {
         let marge = (type === 'meerdaags' || type === 'buitenland') ? 1.35 : 1.25;
         let prijsEx = totaleKostprijs * marge;
         prijsIn = prijsEx * 1.09; 
-        prijsIn = Math.ceil(prijsIn / 5) * 5; 
-        prijsInVeld.value = prijsIn.toFixed(2);
+        prijsIn = Math.ceil(prijsIn / 5) * 5;
+        
+        if (origineelPrijs > 0 && Math.abs(origineelPrijs - prijsIn) > 5) {
+            prijsIn = origineelPrijs;
+            userManuallyChangedPrice = true;
+        } else {
+            prijsInVeld.value = prijsIn.toFixed(2);
+        }
     }
     
     let prijsEx = prijsIn / 1.09; 

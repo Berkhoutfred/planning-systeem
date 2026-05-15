@@ -132,7 +132,7 @@ require_once __DIR__ . '/../includes/header.php';
                             <th style="padding:8px;text-align:left;">Datum</th>
                             <th style="padding:8px;text-align:left;">Klant</th>
                             <th style="padding:8px;text-align:left;">Titel</th>
-                            <th style="padding:8px;text-align:right;">Prijs excl.</th>
+                            <th style="padding:8px;text-align:right;">Prijs incl. BTW</th>
                         </tr>
                     </thead>
                     <tbody>

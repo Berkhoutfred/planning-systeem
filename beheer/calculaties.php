@@ -352,7 +352,15 @@ try {
 
     $ritten = array_merge($calcRows, $salesRows);
     usort($ritten, static function ($a, $b) {
-        return strcmp((string) ($a['rit_datum'] ?? ''), (string) ($b['rit_datum'] ?? ''));
+        $datumA = (string) ($a['rit_datum'] ?? '');
+        $datumB = (string) ($b['rit_datum'] ?? '');
+        $dateComp = strcmp($datumA, $datumB);
+        if ($dateComp !== 0) {
+            return $dateComp;
+        }
+        $idA = (int) ($a['id'] ?? 0);
+        $idB = (int) ($b['id'] ?? 0);
+        return $idA <=> $idB;
     });
 
     // --- 4. CAPACITEITSCHECKER (POTLOODBOEKINGEN) ---
