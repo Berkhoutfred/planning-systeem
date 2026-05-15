@@ -84,12 +84,15 @@ function offerte_pdf_kv_row(FPDF $pdf, string $label, string $value, bool $fill 
 class OffertePDF extends FPDF
 {
     public array $vm = [];
+    /** 'offerte' = individueel offerte-blad (meta-box in header); anders = cover/default */
+    public string $page_type = 'default';
     private array $widths = [];
     private array $aligns = [];
 
     public function Header(): void
     {
         $company = $this->vm['company'] ?? [];
+        $offer   = $this->vm['offer']   ?? [];
         $logoPath = offerte_pdf_logo_path((string) ($company['logo_pad'] ?? ''));
 
         if ($logoPath !== '') {
@@ -101,10 +104,24 @@ class OffertePDF extends FPDF
             $this->Cell(95, 8, safe_iconv((string) ($company['name'] ?? 'Offerte')), 0, 0, 'L');
         }
 
-        $this->SetXY(120, 14);
-        $this->SetFont('Arial', 'I', 12);
-        $this->SetTextColor(217, 119, 6);
-        $this->Cell(80, 5, safe_iconv('Offerteoverzicht'), 0, 1, 'R');
+        if ($this->page_type === 'offerte' && !empty($offer['order_nummer'])) {
+            // Meta-infobox rechtsboven: vervangt "Offerteoverzicht"
+            $this->SetFillColor(248, 251, 254);
+            $this->SetDrawColor(220, 228, 236);
+            $this->Rect(118, 9, 82, 22, 'FD');
+            $this->SetXY(122, 11);
+            offerte_pdf_meta_row($this, 'Offertenummer', '#' . (string) ($offer['order_nummer'] ?? ''));
+            $this->SetX(122);
+            offerte_pdf_meta_row($this, 'Offertedatum', (string) ($offer['date_display'] ?? ''));
+            $this->SetX(122);
+            offerte_pdf_meta_row($this, 'Vervaldatum', (string) ($offer['expiry_date_display'] ?? ''));
+        } else {
+            // Cover-pagina: bewaar het italic label rechts
+            $this->SetXY(120, 14);
+            $this->SetFont('Arial', 'I', 12);
+            $this->SetTextColor(217, 119, 6);
+            $this->Cell(80, 5, safe_iconv('Offerteoverzicht'), 0, 1, 'R');
+        }
 
         $this->Ln(8);
         $this->SetDrawColor(217, 119, 6);
@@ -327,29 +344,18 @@ function offerte_pdf_render_offer_body(OffertePDF $pdf, array $view): void
     $pdf->SetY(42);
     $pdf->SetFont('Arial', 'B', 11);
     $pdf->SetTextColor(0, 0, 0);
-    $pdf->Cell(100, 5, safe_iconv((string) ($view['customer']['display_name'] ?? '')), 0, 1, 'L');
+    $pdf->Cell(190, 5, safe_iconv((string) ($view['customer']['display_name'] ?? '')), 0, 1, 'L');
     if (!empty($view['customer']['company_name']) && !empty($view['customer']['contact_name'])) {
         $pdf->SetFont('Arial', '', 11);
-        $pdf->Cell(100, 5, safe_iconv('t.a.v. ' . (string) $view['customer']['contact_name']), 0, 1, 'L');
+        $pdf->Cell(190, 5, safe_iconv('t.a.v. ' . (string) $view['customer']['contact_name']), 0, 1, 'L');
     }
     if (!empty($view['customer']['address'])) {
         $pdf->SetFont('Arial', '', 11);
-        $pdf->Cell(100, 5, safe_iconv((string) $view['customer']['address']), 0, 1, 'L');
+        $pdf->Cell(190, 5, safe_iconv((string) $view['customer']['address']), 0, 1, 'L');
     }
     if (!empty($view['customer']['postcode_city'])) {
-        $pdf->Cell(100, 5, safe_iconv((string) $view['customer']['postcode_city']), 0, 1, 'L');
+        $pdf->Cell(190, 5, safe_iconv((string) $view['customer']['postcode_city']), 0, 1, 'L');
     }
-
-    $pdf->SetXY(120, 44);
-    $pdf->SetFillColor(248, 251, 254);
-    $pdf->SetDrawColor(220, 228, 236);
-    $pdf->Rect(120, 42, 80, 24, 'FD');
-    $pdf->SetXY(125, 45);
-    offerte_pdf_meta_row($pdf, 'Offertenummer', '#' . (string) ($view['offer']['order_nummer'] ?? ''));
-    $pdf->SetX(125);
-    offerte_pdf_meta_row($pdf, 'Offertedatum', (string) ($view['offer']['date_display'] ?? ''));
-    $pdf->SetX(125);
-    offerte_pdf_meta_row($pdf, 'Vervaldatum', (string) ($view['offer']['expiry_date_display'] ?? ''));
 
     offerte_pdf_section_rule($pdf, 'Aanhef');
     $pdf->SetFont('Arial', 'B', 10);
@@ -369,7 +375,6 @@ function offerte_pdf_render_offer_body(OffertePDF $pdf, array $view): void
         offerte_pdf_kv_row($pdf, 'Meerdere losse rijdagen', 'Ja (één offerte, route per dag)', $fill);
     }
 
-    offerte_pdf_section_rule($pdf, 'Routeplanning');
     if (($view['route_days'] ?? []) === []) {
         $pdf->SetFont('Arial', '', 9);
         $pdf->Cell(190, 6, safe_iconv('Er zijn nog geen routegegevens beschikbaar.'), 0, 1, 'L');
@@ -378,11 +383,13 @@ function offerte_pdf_render_offer_body(OffertePDF $pdf, array $view): void
             $pdf->SetFillColor(248, 251, 254);
             $pdf->SetDrawColor(226, 234, 242);
             $pdf->Rect(10, $pdf->GetY(), 190, 8, 'FD');
+            // Datum links, route-label gecentreerd
             $pdf->SetFont('Arial', 'B', 9);
             $pdf->SetTextColor(0, 51, 102);
-            $pdf->Cell(95, 8, safe_iconv((string) ($day['heading_label'] ?? $day['label'] ?? 'Dag')), 0, 0, 'L');
+            $pdf->Cell(70, 8, safe_iconv((string) ($day['date_display'] ?? '')), 0, 0, 'L');
             $pdf->SetFont('Arial', '', 9);
-            $pdf->Cell(95, 8, safe_iconv((string) ($day['date_display'] ?? '')), 0, 1, 'R');
+            $pdf->SetTextColor(60, 60, 60);
+            $pdf->Cell(120, 8, safe_iconv((string) ($day['heading_label'] ?? $day['label'] ?? 'Route')), 0, 1, 'C');
             $pdf->SetTextColor(0, 0, 0);
             $pdf->Ln(2);
 

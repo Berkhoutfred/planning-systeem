@@ -75,6 +75,7 @@ $bundleTitel = trim((string) ($bundle['titel'] ?? 'Verzamelofferte'));
 $pdf = new OffertePDF();
 $pdf->SetMargins(10, 10, 10);
 $pdf->SetAutoPageBreak(true, 25);
+$pdf->page_type = 'cover';
 $pdf->vm = $firstView;
 $pdf->AddPage();
 
@@ -109,9 +110,6 @@ offerte_pdf_meta_row($pdf, 'Aantal offertes', (string) count($rows));
 $pdf->SetX(125);
 offerte_pdf_meta_row($pdf, 'Vervaldatum', date('d-m-Y', strtotime('+14 days')));
 
-// Sectieheader met bundeltitel
-offerte_pdf_section_header($pdf, $bundleTitel !== '' ? $bundleTitel : 'Verzamelofferte');
-
 // Aanhef van eerste klant
 $pdf->SetFont('Arial', 'B', 10);
 $pdf->Cell(190, 5, safe_iconv((string) ($firstView['salutation'] ?? '')), 0, 1, 'L');
@@ -122,8 +120,8 @@ $intro = 'Bijgaand ontvangt u een overzicht van de voor u uitgebrachte offerte(s
     . 'Wij vertrouwen erop u hiermee een passend aanbod te hebben gedaan.';
 $pdf->MultiCell(190, 5.5, safe_iconv($intro));
 
-// Sectieheader overzichtstabel
-offerte_pdf_section_header($pdf, 'Offerteoverzicht');
+// Lichte scheiding boven tabel
+offerte_pdf_section_rule($pdf, 'Offerteoverzicht');
 
 $pdf->SetFont('Arial', 'B', 9);
 $pdf->SetFillColor(0, 51, 102);
@@ -161,6 +159,7 @@ foreach ($rows as $r) {
 // --- Individuele volledige offertes ---
 foreach ($rows as $r) {
     $vw = $r['view'];
+    $pdf->page_type = 'offerte';
     $pdf->vm = $vw;
     $pdf->AddPage();
     offerte_pdf_render_offer_body($pdf, $vw);

@@ -29,6 +29,7 @@ if (!$rit) {
 $view = offerte_presentatie_build($pdo, $rit);
 $pdf = new OffertePDF();
 $pdf->vm = $view;
+$pdf->page_type = 'offerte';
 $pdf->SetMargins(10, 10, 10);
 $pdf->SetAutoPageBreak(true, 25);
 $pdf->AddPage();
