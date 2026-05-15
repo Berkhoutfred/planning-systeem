@@ -96,7 +96,10 @@ try {
         ? (float) str_replace(',', '.', (string) $_POST['verkoopprijs'])
         : 0.0;
     $prijsIsInclusiefBtw = isset($_POST['verkoopprijs_is_inclusief_btw']) && $_POST['verkoopprijs_is_inclusief_btw'] === '1';
-    $prijsExcl = $prijsIsInclusiefBtw ? ($btwMul > 0.0 ? $formPrijsRaw / $btwMul : $formPrijsRaw) : $formPrijsRaw;
+    if ($btwMul <= 0.0) {
+        $btwMul = 1.09;
+    }
+    $prijsExcl = $prijsIsInclusiefBtw ? round($formPrijsRaw / $btwMul, 2) : round($formPrijsRaw, 2);
 
     $kmTussen = isset($_POST['km_tussen']) && $_POST['km_tussen'] !== ''
         ? (float) str_replace(',', '.', (string) $_POST['km_tussen'])

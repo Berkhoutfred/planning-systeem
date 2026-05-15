@@ -81,9 +81,16 @@ try {
     $formPrijsRaw = isset($_POST['verkoopprijs']) && $_POST['verkoopprijs'] !== ''
         ? (float) str_replace(',', '.', (string) $_POST['verkoopprijs'])
         : 0.0;
+    require_once __DIR__ . '/includes/calculatie_meta.php';
+    $instellingen = tenant_calculatie_instellingen_merged($pdo, $tenantId);
     $btwMul = 1 + ((float) ($instellingen['btw_nl'] ?? 9) / 100.0);
+    if ($btwMul <= 0.0) {
+        $btwMul = 1.09;
+    }
     $prijsIsInclusiefBtw = isset($_POST['verkoopprijs_is_inclusief_btw']) && $_POST['verkoopprijs_is_inclusief_btw'] === '1';
-    $prijsExcl = $prijsIsInclusiefBtw ? ($btwMul > 0.0 ? $formPrijsRaw / $btwMul : $formPrijsRaw) : $formPrijsRaw;
+    $prijsExcl = $prijsIsInclusiefBtw ? round($formPrijsRaw / $btwMul, 2) : round($formPrijsRaw, 2);
+
+    $metaPack = calculatie_parse_meta_from_post($_POST, $rittype);
 
     $kmTussen = isset($_POST['km_tussen']) && $_POST['km_tussen'] !== ''
         ? (float) str_replace(',', '.', (string) $_POST['km_tussen'])
@@ -109,7 +116,6 @@ try {
     }
 
     require_once __DIR__ . '/includes/calculatie_meta.php';
-    $metaPack = calculatie_parse_meta_from_post($_POST, $rittype);
     $instructie = calculatie_append_buitenland_dagprogramma($instructie, $rittype, $_POST);
     $instructie = calculatie_append_tussendagen_to_instructie($instructie, $metaPack['tussendagen_json']);
 
