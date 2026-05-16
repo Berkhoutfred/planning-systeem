@@ -13,7 +13,7 @@ declare(strict_types=1);
  * @return array{nr:int,date?:string,time?:string}
  */
 return [
-    'nr' => 87,
+    'nr' => 88,
     'date' => '2026-05-16',
     'time' => '',
 ];

@@ -826,6 +826,7 @@ function offerte_presentatie_build_route2_klant_blocks(?array $payload, array $r
     return [[
         'label'                   => 'Terugrit',
         'table_type'              => 'segment_table',
+        'show_header'             => false,
         'show_zone'               => false,
         'inline_with_day_heading' => false,
         'rows'                    => $segRows,

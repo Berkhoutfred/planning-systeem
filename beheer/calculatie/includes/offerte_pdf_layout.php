@@ -295,13 +295,16 @@ function offerte_pdf_render_route_table(OffertePDF $pdf, array $route, bool $sho
     }
 
     // Aankomsttijd niet tonen in offerte (vertrektijd is de commitment; aankomst is schatting)
-    // Kolombreedte: Vertrek 22 + Van 84 + Naar 84 = 190mm (geen zone) | met zone: 22+76+76+16=190
-    $widths = $showZone ? [22, 76, 76, 16] : [22, 84, 84];
+    // Kolombreedte: Vertrek 26 + Van 82 + Naar 82 = 190mm (geen zone) | met zone: 26+74+74+16=190
+    $widths = $showZone ? [26, 74, 74, 16] : [26, 82, 82];
     $header = $showZone ? ['Vertrek', 'Van', 'Naar', 'Zone'] : ['Vertrek', 'Van', 'Naar'];
     $aligns = $showZone ? ['L', 'L', 'L', 'C'] : ['L', 'L', 'L'];
     $pdf->SetWidths($widths);
     $pdf->SetAligns($aligns);
-    $pdf->Row($header, true);
+    // Headerrij weglaten als de vorige tabel dezelfde structuur al toonde (bijv. terugrit na heenrit)
+    if (!isset($route['show_header']) || $route['show_header'] !== false) {
+        $pdf->Row($header, true);
+    }
 
     foreach ($route['rows'] as $row) {
         $cells = $showZone
