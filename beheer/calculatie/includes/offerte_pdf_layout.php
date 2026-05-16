@@ -295,8 +295,8 @@ function offerte_pdf_render_route_table(OffertePDF $pdf, array $route, bool $sho
     }
 
     // Aankomsttijd niet tonen in offerte (vertrektijd is de commitment; aankomst is schatting)
-    // Kolombreedte: Vertrek 22 + Van 64 + Naar 104 = 190mm (geen zone) | met zone: 22+56+96+16=190
-    $widths = $showZone ? [22, 56, 96, 16] : [22, 64, 104];
+    // Kolombreedte: Vertrek 22 + Van 84 + Naar 84 = 190mm (geen zone) | met zone: 22+76+76+16=190
+    $widths = $showZone ? [22, 76, 76, 16] : [22, 84, 84];
     $header = $showZone ? ['Vertrek', 'Van', 'Naar', 'Zone'] : ['Vertrek', 'Van', 'Naar'];
     $aligns = $showZone ? ['L', 'L', 'L', 'C'] : ['L', 'L', 'L'];
     $pdf->SetWidths($widths);
