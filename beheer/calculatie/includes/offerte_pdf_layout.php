@@ -294,18 +294,19 @@ function offerte_pdf_render_route_table(OffertePDF $pdf, array $route, bool $sho
         return;
     }
 
-    // Km niet tonen op klantenofferte; tijden wel
-    $widths = $showZone ? [22, 50, 72, 30, 16] : [22, 56, 80, 32];
-    $header = $showZone ? ['Vertrek', 'Van', 'Naar', 'Aankomst', 'Zone'] : ['Vertrek', 'Van', 'Naar', 'Aankomst'];
-    $aligns = $showZone ? ['L', 'L', 'L', 'L', 'C'] : ['L', 'L', 'L', 'L'];
+    // Aankomsttijd niet tonen in offerte (vertrektijd is de commitment; aankomst is schatting)
+    // Kolombreedte: Vertrek 22 + Van 64 + Naar 104 = 190mm (geen zone) | met zone: 22+56+96+16=190
+    $widths = $showZone ? [22, 56, 96, 16] : [22, 64, 104];
+    $header = $showZone ? ['Vertrek', 'Van', 'Naar', 'Zone'] : ['Vertrek', 'Van', 'Naar'];
+    $aligns = $showZone ? ['L', 'L', 'L', 'C'] : ['L', 'L', 'L'];
     $pdf->SetWidths($widths);
     $pdf->SetAligns($aligns);
     $pdf->Row($header, true);
 
     foreach ($route['rows'] as $row) {
         $cells = $showZone
-            ? [(string) $row['depart_display'], (string) $row['from'], (string) $row['to'], (string) $row['arrive_display'], (string) $row['zone_display']]
-            : [(string) $row['depart_display'], (string) $row['from'], (string) $row['to'], (string) $row['arrive_display']];
+            ? [(string) $row['depart_display'], (string) $row['from'], (string) $row['to'], (string) $row['zone_display']]
+            : [(string) $row['depart_display'], (string) $row['from'], (string) $row['to']];
         $pdf->Row($cells);
     }
     $pdf->Ln(2);
