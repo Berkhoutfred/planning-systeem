@@ -102,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$csrf = auth_generate_csrf_token();
+$csrf = auth_get_csrf_token();
 $inst = tenant_instellingen_get($pdo, $tenantId);
 
 include 'includes/header.php';
