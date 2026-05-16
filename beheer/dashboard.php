@@ -891,13 +891,13 @@ include 'includes/header.php';
     <div class="main-grid">
 
         <div class="actie-lijst">
-            <button type="button" class="action-card card-nieuw" id="btn-open-nieuwe-opdracht" aria-haspopup="dialog">
-                <i class="fas fa-plus-circle"></i>
+            <a href="calculatie/maken.php" class="action-card card-sales">
+                <i class="fas fa-file-invoice"></i>
                 <div class="action-text">
-                    <h3>Nieuwe Opdracht</h3>
-                    <p>Start een nieuwe rit, offerte of treinstremming.</p>
+                    <h3>Nieuwe Offerte</h3>
+                    <p>Maak een nieuwe offerte met routeberekening en prijsopbouw.</p>
                 </div>
-            </button>
+            </a>
 
             <a href="live_planbord.php" class="action-card card-planbord">
                 <i class="fas fa-map-marked-alt"></i>
@@ -907,13 +907,13 @@ include 'includes/header.php';
                 </div>
             </a>
 
-            <a href="calculaties.php" class="action-card card-sales">
-                <i class="fas fa-chart-line"></i>
+            <button type="button" class="action-card card-nieuw" id="btn-open-nieuwe-opdracht" aria-haspopup="dialog">
+                <i class="fas fa-bolt"></i>
                 <div class="action-text">
-                    <h3>Offertes &amp; Sales</h3>
-                    <p>Beheer lopende offertes en wachtende klanten.</p>
+                    <h3>Snelle Nieuwe Opdracht</h3>
+                    <p>Direct inplannen: taxi, touringcar of treinstremming.</p>
                 </div>
-            </a>
+            </button>
         </div>
 
         <div class="info-kolom">
