@@ -69,6 +69,7 @@ $mijn_adres = trim((string) ($tenantInst['adres'] ?? ''));
 $mijn_postcode_plaats = trim((string) ($tenantInst['postcode'] ?? '') . ' ' . (string) ($tenantInst['plaats'] ?? ''));
 $mijn_telefoon = trim((string) ($tenantInst['telefoon'] ?? ''));
 $mijn_email = trim((string) ($tenantInst['email'] ?? ''));
+$mijn_kvk = trim((string) ($tenantInst['kvk_nummer'] ?? ''));
 $mijn_logo = trim((string) ($tenantInst['logo_pad'] ?? ''));
 
 if (!empty($rit['klant_id'])) {
@@ -140,29 +141,31 @@ class PDF extends FPDF {
     }
 
     function Footer() {
-        global $mijn_bedrijfsnaam, $mijn_adres, $mijn_postcode_plaats, $mijn_telefoon, $mijn_email;
-        $this->SetY(-22);
-        
-        // Grijze lijn boven footer
+        global $mijn_bedrijfsnaam, $mijn_adres, $mijn_postcode_plaats, $mijn_telefoon, $mijn_email, $mijn_kvk;
+        $sep = '  |  ';
+
+        // Rij 1: bedrijfsnaam | adres, postcode+stad | KvK
+        $r1 = [];
+        if ($mijn_bedrijfsnaam !== '')  $r1[] = $mijn_bedrijfsnaam;
+        if ($mijn_adres !== '' && $mijn_postcode_plaats !== '') $r1[] = $mijn_adres . ', ' . $mijn_postcode_plaats;
+        elseif ($mijn_adres !== '')     $r1[] = $mijn_adres;
+        elseif ($mijn_postcode_plaats !== '') $r1[] = $mijn_postcode_plaats;
+        if ($mijn_kvk !== '')           $r1[] = 'KvK ' . $mijn_kvk;
+
+        // Rij 2: telefoon | e-mail
+        $r2 = [];
+        if ($mijn_telefoon !== '') $r2[] = 'T ' . $mijn_telefoon;
+        if ($mijn_email !== '')    $r2[] = $mijn_email;
+
+        $this->SetY(-27);
         $this->SetDrawColor(200, 200, 200);
         $this->SetLineWidth(0.2);
-        $this->Line(10, 275, 200, 275);
-        
-        // BEDRIJFSGEGEVENS IN DE BREEDTE
-        $this->SetFont('Arial','',8.5);
+        $this->Line(10, 270, 200, 270);
+        $this->SetFont('Arial', '', 8);
         $this->SetTextColor(80, 80, 80);
-        $chunks = [];
-        if ($mijn_adres !== '') { $chunks[] = $mijn_adres; }
-        if ($mijn_postcode_plaats !== '') { $chunks[] = $mijn_postcode_plaats; }
-        if ($mijn_telefoon !== '') { $chunks[] = 'T: ' . $mijn_telefoon; }
-        if ($mijn_email !== '') { $chunks[] = 'E: ' . $mijn_email; }
-        $bedrijfsInfo = $chunks !== [] ? implode('  |  ', $chunks) : $mijn_bedrijfsnaam;
-        $this->Cell(0, 5, safe_iconv($bedrijfsInfo), 0, 1, 'C');
-        
-        // Pagina aanduiding / Document tekst
-        $this->SetFont('Arial','I',8);
-        $this->SetTextColor(150);
-        $this->Cell(0, 5, safe_iconv('Ritbevestiging ' . $mijn_bedrijfsnaam), 0, 0, 'C');
+        $this->Cell(0, 5, safe_iconv($r1 !== [] ? implode($sep, $r1) : ''), 0, 1, 'C');
+        $this->SetTextColor(130, 130, 130);
+        $this->Cell(0, 5, safe_iconv($r2 !== [] ? implode($sep, $r2) : ''), 0, 0, 'C');
     }
 }
 

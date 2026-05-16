@@ -912,6 +912,7 @@ function offerte_presentatie_build(PDO $pdo, array $rit): array
             'city' => trim((string) ($tenantInst['plaats'] ?? '')),
             'phone' => trim((string) ($tenantInst['telefoon'] ?? '')),
             'email' => trim((string) ($tenantInst['email'] ?? '')),
+            'kvk' => trim((string) ($tenantInst['kvk_nummer'] ?? '')),
             'logo_pad' => trim((string) ($tenantInst['logo_pad'] ?? '')),
             'logo_web_src' => offerte_presentatie_logo_web_src((string) ($tenantInst['logo_pad'] ?? '')),
         ],

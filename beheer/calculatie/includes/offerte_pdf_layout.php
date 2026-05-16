@@ -132,31 +132,32 @@ class OffertePDF extends FPDF
     public function Footer(): void
     {
         $company = $this->vm['company'] ?? [];
-        $chunks = [];
-        if (!empty($company['address'])) {
-            $chunks[] = (string) $company['address'];
-        }
-        $postcodeCity = trim((string) ($company['postcode'] ?? '') . ' ' . (string) ($company['city'] ?? ''));
-        if ($postcodeCity !== '') {
-            $chunks[] = $postcodeCity;
-        }
-        if (!empty($company['phone'])) {
-            $chunks[] = 'T: ' . (string) $company['phone'];
-        }
-        if (!empty($company['email'])) {
-            $chunks[] = 'E: ' . (string) $company['email'];
-        }
+        $sep = '  |  ';
 
-        $this->SetY(-22);
+        // Rij 1: bedrijfsnaam · adres, postcode+stad · KvK
+        $r1 = [];
+        if (!empty($company['name']))    $r1[] = (string) $company['name'];
+        $adres = trim((string) ($company['address'] ?? ''));
+        $pc    = trim(trim((string) ($company['postcode'] ?? '')) . ' ' . trim((string) ($company['city'] ?? '')));
+        if ($adres !== '' && $pc !== '') $r1[] = $adres . ', ' . $pc;
+        elseif ($adres !== '')           $r1[] = $adres;
+        elseif ($pc !== '')              $r1[] = $pc;
+        if (!empty($company['kvk']))     $r1[] = 'KvK ' . (string) $company['kvk'];
+
+        // Rij 2: telefoon · e-mail
+        $r2 = [];
+        if (!empty($company['phone'])) $r2[] = 'T ' . (string) $company['phone'];
+        if (!empty($company['email'])) $r2[] = (string) $company['email'];
+
+        $this->SetY(-27);
         $this->SetDrawColor(200, 200, 200);
         $this->SetLineWidth(0.2);
-        $this->Line(10, 275, 200, 275);
-        $this->SetFont('Arial', '', 8.5);
+        $this->Line(10, 270, 200, 270);
+        $this->SetFont('Arial', '', 8);
         $this->SetTextColor(80, 80, 80);
-        $this->Cell(0, 5, safe_iconv($chunks !== [] ? implode('  |  ', $chunks) : (string) ($company['name'] ?? '')), 0, 1, 'C');
-        $this->SetFont('Arial', 'I', 8);
-        $this->SetTextColor(150);
-        $this->Cell(0, 5, safe_iconv('Offerte ' . (string) ($company['name'] ?? '')), 0, 0, 'C');
+        $this->Cell(0, 5, safe_iconv($r1 !== [] ? implode($sep, $r1) : ''), 0, 1, 'C');
+        $this->SetTextColor(130, 130, 130);
+        $this->Cell(0, 5, safe_iconv($r2 !== [] ? implode($sep, $r2) : ''), 0, 0, 'C');
     }
 
     public function SetWidths(array $widths): void

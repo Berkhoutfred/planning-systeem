@@ -144,12 +144,32 @@ class PDF extends FPDF {
     }
 
     public function Footer() {
-        global $mijn_bedrijfsnaam, $mijn_kvk, $mijn_btw, $mijn_iban;
-        $this->SetY(-20);
+        global $mijn_bedrijfsnaam, $mijn_adres, $mijn_postcode_plaats, $mijn_telefoon, $mijn_email, $mijn_kvk, $mijn_btw, $mijn_iban;
+        $sep = '  |  ';
+
+        // Rij 1: bedrijfsnaam | adres, postcode+stad | KvK
+        $r1 = [];
+        if ($mijn_bedrijfsnaam !== '')  $r1[] = $mijn_bedrijfsnaam;
+        if ($mijn_adres !== '' && $mijn_postcode_plaats !== '') $r1[] = $mijn_adres . ', ' . $mijn_postcode_plaats;
+        elseif ($mijn_adres !== '')     $r1[] = $mijn_adres;
+        if ($mijn_kvk !== '')           $r1[] = 'KvK ' . $mijn_kvk;
+
+        // Rij 2: telefoon | e-mail | IBAN | BTW
+        $r2 = [];
+        if ($mijn_telefoon !== '') $r2[] = 'T ' . $mijn_telefoon;
+        if ($mijn_email !== '')    $r2[] = $mijn_email;
+        if ($mijn_iban !== '')     $r2[] = 'IBAN ' . $mijn_iban;
+        if ($mijn_btw !== '')      $r2[] = 'BTW ' . $mijn_btw;
+
+        $this->SetY(-27);
+        $this->SetDrawColor(200, 200, 200);
+        $this->SetLineWidth(0.2);
+        $this->Line(10, 270, 200, 270);
         $this->SetFont('Arial', '', 8);
-        $this->SetTextColor(100);
-        $this->Cell(0, 5, safe($mijn_bedrijfsnaam . " | KvK: $mijn_kvk | BTW: $mijn_btw | IBAN: $mijn_iban"), 0, 1, 'C');
-        $this->Cell(0, 5, 'Pagina ' . $this->PageNo() . '/{nb}', 0, 0, 'C');
+        $this->SetTextColor(80, 80, 80);
+        $this->Cell(0, 5, safe($r1 !== [] ? implode($sep, $r1) : ''), 0, 1, 'C');
+        $this->SetTextColor(130, 130, 130);
+        $this->Cell(0, 5, safe($r2 !== [] ? implode($sep, $r2) : ''), 0, 0, 'C');
     }
 }
 
