@@ -107,111 +107,280 @@ $inst = tenant_instellingen_get($pdo, $tenantId);
 
 include 'includes/header.php';
 ?>
-<script src="https://cdn.tailwindcss.com"></script>
+<style>
+.bi-card {
+    max-width: 860px;
+    margin: 28px auto 40px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    border: 1px solid #e2e8f0;
+    font-family: 'Segoe UI', sans-serif;
+}
+.bi-card-header {
+    padding: 20px 28px 18px;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+.bi-card-header h1 {
+    margin: 0 0 3px;
+    font-size: 20px;
+    font-weight: 700;
+    color: #1e293b;
+}
+.bi-card-header p {
+    margin: 0;
+    font-size: 13px;
+    color: #64748b;
+}
+.bi-back-btn {
+    display: inline-block;
+    padding: 7px 14px;
+    border-radius: 7px;
+    background: #f1f5f9;
+    color: #475569;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    border: 1px solid #e2e8f0;
+    transition: background 0.15s;
+}
+.bi-back-btn:hover { background: #e2e8f0; }
+.bi-alert {
+    margin: 16px 28px 0;
+    padding: 11px 16px;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 500;
+}
+.bi-alert-ok  { background: #f0fdf4; border: 1px solid #86efac; color: #166534; }
+.bi-alert-err { background: #fff1f2; border: 1px solid #fca5a5; color: #991b1b; }
+.bi-form {
+    padding: 24px 28px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px 24px;
+}
+@media (max-width: 600px) { .bi-form { grid-template-columns: 1fr; } }
+.bi-field { display: flex; flex-direction: column; }
+.bi-field.full { grid-column: 1 / -1; }
+.bi-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 5px;
+    letter-spacing: 0.01em;
+}
+.bi-input {
+    padding: 8px 11px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #1e293b;
+    background: #fff;
+    width: 100%;
+    box-sizing: border-box;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+.bi-input:focus {
+    outline: none;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+}
+.bi-hint {
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 4px;
+}
+.bi-form-footer {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+    padding-top: 6px;
+    border-top: 1px solid #e2e8f0;
+    margin-top: 4px;
+}
+.bi-btn-cancel {
+    padding: 8px 18px;
+    border-radius: 7px;
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    color: #475569;
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.bi-btn-cancel:hover { background: #f8fafc; }
+.bi-btn-save {
+    padding: 8px 22px;
+    border-radius: 7px;
+    border: none;
+    background: #4f46e5;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.bi-btn-save:hover { background: #4338ca; }
+.bi-logo-preview {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 10px;
+}
+.bi-logo-preview img {
+    height: 48px;
+    width: auto;
+    border-radius: 5px;
+    border: 1px solid #e2e8f0;
+}
+.bi-logo-preview span { font-size: 12px; color: #94a3b8; }
+.bi-danger-zone {
+    margin: 0 28px 28px;
+    padding: 16px 20px;
+    border-radius: 8px;
+    background: #fff5f5;
+    border: 1px solid #fca5a5;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+}
+.bi-danger-zone h2 { margin: 0 0 4px; font-size: 15px; font-weight: 600; color: #7f1d1d; }
+.bi-danger-zone p  { margin: 0; font-size: 13px; color: #b91c1c; }
+.bi-btn-danger {
+    padding: 8px 18px;
+    border-radius: 7px;
+    border: none;
+    background: #dc2626;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s;
+}
+.bi-btn-danger:hover { background: #b91c1c; }
+</style>
 
-<div class="max-w-5xl mx-auto mt-8 mb-10 bg-white rounded-xl shadow-sm border border-slate-200">
-    <div class="px-7 py-5 border-b border-slate-200 flex items-center justify-between">
+<div class="bi-card">
+    <div class="bi-card-header">
         <div>
-            <h1 class="text-2xl font-bold text-slate-800">Bedrijfsinstellingen</h1>
-            <p class="text-sm text-slate-500 mt-1">Tenant #<?php echo (int) $tenantId; ?> - stel je BusAI bedrijfsgegevens in.</p>
+            <h1>Bedrijfsinstellingen</h1>
+            <p>Tenant #<?php echo (int) $tenantId; ?> &mdash; stel je BusAI bedrijfsgegevens in.</p>
         </div>
-        <a href="dashboard.php" class="text-sm px-4 py-2 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200">Terug naar dashboard</a>
+        <a href="dashboard.php" class="bi-back-btn">&larr; Dashboard</a>
     </div>
 
     <?php if ($melding !== ''): ?>
-        <div class="mx-7 mt-5 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-800 px-4 py-3 text-sm font-medium">
-            <?php echo htmlspecialchars($melding, ENT_QUOTES, 'UTF-8'); ?>
-        </div>
+        <div class="bi-alert bi-alert-ok"><?php echo htmlspecialchars($melding, ENT_QUOTES, 'UTF-8'); ?></div>
     <?php endif; ?>
     <?php if ($fout !== ''): ?>
-        <div class="mx-7 mt-5 rounded-lg border border-rose-200 bg-rose-50 text-rose-800 px-4 py-3 text-sm font-medium">
-            <?php echo htmlspecialchars($fout, ENT_QUOTES, 'UTF-8'); ?>
-        </div>
+        <div class="bi-alert bi-alert-err"><?php echo htmlspecialchars($fout, ENT_QUOTES, 'UTF-8'); ?></div>
     <?php endif; ?>
 
-    <form method="post" enctype="multipart/form-data" class="px-7 py-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+    <form method="post" enctype="multipart/form-data" class="bi-form">
         <input type="hidden" name="auth_csrf_token" value="<?php echo htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>">
 
-        <label class="block">
-            <span class="text-sm font-semibold text-slate-700">Bedrijfsnaam *</span>
-            <input name="bedrijfsnaam" required maxlength="190" class="mt-1 w-full rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-indigo-500" value="<?php echo htmlspecialchars((string) $inst['bedrijfsnaam'], ENT_QUOTES, 'UTF-8'); ?>">
-        </label>
+        <div class="bi-field">
+            <label class="bi-label">Bedrijfsnaam *</label>
+            <input class="bi-input" name="bedrijfsnaam" required maxlength="190"
+                   value="<?php echo htmlspecialchars((string) $inst['bedrijfsnaam'], ENT_QUOTES, 'UTF-8'); ?>">
+        </div>
 
-        <label class="block">
-            <span class="text-sm font-semibold text-slate-700">E-mailadres</span>
-            <input type="email" name="email" maxlength="190" class="mt-1 w-full rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-indigo-500" value="<?php echo htmlspecialchars((string) $inst['email'], ENT_QUOTES, 'UTF-8'); ?>">
-        </label>
+        <div class="bi-field">
+            <label class="bi-label">E-mailadres</label>
+            <input class="bi-input" type="email" name="email" maxlength="190"
+                   value="<?php echo htmlspecialchars((string) $inst['email'], ENT_QUOTES, 'UTF-8'); ?>">
+        </div>
 
-        <label class="block md:col-span-2">
-            <span class="text-sm font-semibold text-slate-700">Adres</span>
-            <input name="adres" maxlength="255" class="mt-1 w-full rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-indigo-500" value="<?php echo htmlspecialchars((string) $inst['adres'], ENT_QUOTES, 'UTF-8'); ?>">
-        </label>
+        <div class="bi-field full">
+            <label class="bi-label">Adres</label>
+            <input class="bi-input" name="adres" maxlength="255"
+                   value="<?php echo htmlspecialchars((string) $inst['adres'], ENT_QUOTES, 'UTF-8'); ?>">
+        </div>
 
-        <label class="block">
-            <span class="text-sm font-semibold text-slate-700">Postcode</span>
-            <input name="postcode" maxlength="32" class="mt-1 w-full rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-indigo-500" value="<?php echo htmlspecialchars((string) $inst['postcode'], ENT_QUOTES, 'UTF-8'); ?>">
-        </label>
+        <div class="bi-field">
+            <label class="bi-label">Postcode</label>
+            <input class="bi-input" name="postcode" maxlength="32"
+                   value="<?php echo htmlspecialchars((string) $inst['postcode'], ENT_QUOTES, 'UTF-8'); ?>">
+        </div>
 
-        <label class="block">
-            <span class="text-sm font-semibold text-slate-700">Plaats</span>
-            <input name="plaats" maxlength="120" class="mt-1 w-full rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-indigo-500" value="<?php echo htmlspecialchars((string) $inst['plaats'], ENT_QUOTES, 'UTF-8'); ?>">
-        </label>
+        <div class="bi-field">
+            <label class="bi-label">Plaats</label>
+            <input class="bi-input" name="plaats" maxlength="120"
+                   value="<?php echo htmlspecialchars((string) $inst['plaats'], ENT_QUOTES, 'UTF-8'); ?>">
+        </div>
 
-        <label class="block">
-            <span class="text-sm font-semibold text-slate-700">Telefoon</span>
-            <input name="telefoon" maxlength="60" class="mt-1 w-full rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-indigo-500" value="<?php echo htmlspecialchars((string) $inst['telefoon'], ENT_QUOTES, 'UTF-8'); ?>">
-        </label>
+        <div class="bi-field">
+            <label class="bi-label">Telefoon</label>
+            <input class="bi-input" name="telefoon" maxlength="60"
+                   value="<?php echo htmlspecialchars((string) $inst['telefoon'], ENT_QUOTES, 'UTF-8'); ?>">
+        </div>
 
-        <label class="block">
-            <span class="text-sm font-semibold text-slate-700">KVK-nummer</span>
-            <input name="kvk_nummer" maxlength="64" class="mt-1 w-full rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-indigo-500" value="<?php echo htmlspecialchars((string) $inst['kvk_nummer'], ENT_QUOTES, 'UTF-8'); ?>">
-        </label>
+        <div class="bi-field">
+            <label class="bi-label">KVK-nummer</label>
+            <input class="bi-input" name="kvk_nummer" maxlength="64"
+                   value="<?php echo htmlspecialchars((string) $inst['kvk_nummer'], ENT_QUOTES, 'UTF-8'); ?>">
+        </div>
 
-        <label class="block">
-            <span class="text-sm font-semibold text-slate-700">Boekhoud/BCC e-mailadres (optioneel)</span>
-            <input type="email" name="boekhoud_email" maxlength="190" class="mt-1 w-full rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-indigo-500" value="<?php echo htmlspecialchars((string) $inst['boekhoud_email'], ENT_QUOTES, 'UTF-8'); ?>">
-            <span class="mt-1 block text-xs text-slate-500">Wordt automatisch als BCC gebruikt bij factuurmails voor deze tenant.</span>
-        </label>
+        <div class="bi-field">
+            <label class="bi-label">BTW-nummer</label>
+            <input class="bi-input" name="btw_nummer" maxlength="64"
+                   value="<?php echo htmlspecialchars((string) $inst['btw_nummer'], ENT_QUOTES, 'UTF-8'); ?>">
+        </div>
 
-        <label class="block">
-            <span class="text-sm font-semibold text-slate-700">BTW-nummer</span>
-            <input name="btw_nummer" maxlength="64" class="mt-1 w-full rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-indigo-500" value="<?php echo htmlspecialchars((string) $inst['btw_nummer'], ENT_QUOTES, 'UTF-8'); ?>">
-        </label>
+        <div class="bi-field">
+            <label class="bi-label">IBAN</label>
+            <input class="bi-input" name="iban" maxlength="64"
+                   value="<?php echo htmlspecialchars((string) $inst['iban'], ENT_QUOTES, 'UTF-8'); ?>">
+        </div>
 
-        <label class="block">
-            <span class="text-sm font-semibold text-slate-700">IBAN</span>
-            <input name="iban" maxlength="64" class="mt-1 w-full rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-indigo-500" value="<?php echo htmlspecialchars((string) $inst['iban'], ENT_QUOTES, 'UTF-8'); ?>">
-        </label>
+        <div class="bi-field full">
+            <label class="bi-label">Boekhoud / BCC e-mailadres <span style="font-weight:400;color:#94a3b8;">(optioneel)</span></label>
+            <input class="bi-input" type="email" name="boekhoud_email" maxlength="190"
+                   value="<?php echo htmlspecialchars((string) $inst['boekhoud_email'], ENT_QUOTES, 'UTF-8'); ?>">
+            <span class="bi-hint">Wordt automatisch als BCC toegevoegd bij factuurmails voor deze tenant.</span>
+        </div>
 
-        <div class="block md:col-span-2">
-            <span class="text-sm font-semibold text-slate-700">Logo upload</span>
-            <input type="file" name="logo_bestand" accept=".png,.jpg,.jpeg,.webp,.gif" class="mt-2 block w-full text-sm text-slate-700 file:mr-4 file:rounded-lg file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-sm file:font-semibold hover:file:bg-slate-200">
+        <div class="bi-field full">
+            <label class="bi-label">Logo uploaden <span style="font-weight:400;color:#94a3b8;">(.png, .jpg, .webp, .gif)</span></label>
+            <input type="file" name="logo_bestand" accept=".png,.jpg,.jpeg,.webp,.gif"
+                   style="font-size:13px; color:#475569; margin-top:2px;">
             <?php if (!empty($inst['logo_pad'])): ?>
-                <div class="mt-3 flex items-center gap-3">
-                    <img src="<?php echo htmlspecialchars((string) $inst['logo_pad'], ENT_QUOTES, 'UTF-8'); ?>" alt="Huidig logo" class="h-12 w-auto rounded border border-slate-200">
-                    <span class="text-xs text-slate-500"><?php echo htmlspecialchars((string) $inst['logo_pad'], ENT_QUOTES, 'UTF-8'); ?></span>
+                <div class="bi-logo-preview">
+                    <img src="<?php echo htmlspecialchars((string) $inst['logo_pad'], ENT_QUOTES, 'UTF-8'); ?>" alt="Huidig logo">
+                    <span><?php echo htmlspecialchars((string) $inst['logo_pad'], ENT_QUOTES, 'UTF-8'); ?></span>
                 </div>
             <?php endif; ?>
         </div>
 
-        <div class="md:col-span-2 flex items-center justify-end gap-3 border-t border-slate-200 pt-5">
-            <a href="dashboard.php" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50">Annuleren</a>
-            <button type="submit" class="px-5 py-2 rounded-lg bg-indigo-600 text-white font-semibold hover:bg-indigo-700">Opslaan</button>
+        <div class="bi-form-footer">
+            <a href="dashboard.php" class="bi-btn-cancel">Annuleren</a>
+            <button type="submit" class="bi-btn-save">Opslaan</button>
         </div>
     </form>
 
     <?php if ($tenantId === 2): ?>
-        <div class="px-7 pb-7">
-            <div class="rounded-lg border border-rose-200 bg-rose-50 p-4 flex items-center justify-between gap-4">
-                <div>
-                    <h2 class="font-semibold text-rose-900">Schone lei testomgeving</h2>
-                    <p class="text-sm text-rose-700">Wist alle ritten, calculaties, sales-dossiers en factuurdata van tenant 2. Klanten en tenant-instellingen blijven intact.</p>
-                </div>
-                <form method="post" action="reset_testdata.php" onsubmit="return confirm('Weet je zeker dat je alle test-ritten/calculaties/sales/facturen wilt wissen voor tenant 2?');">
-                    <input type="hidden" name="auth_csrf_token" value="<?php echo htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>">
-                    <button type="submit" class="px-4 py-2 rounded-lg bg-rose-600 text-white font-semibold hover:bg-rose-700 whitespace-nowrap">Reset tenant 2</button>
-                </form>
+        <div class="bi-danger-zone">
+            <div>
+                <h2>Schone lei testomgeving</h2>
+                <p>Wist alle ritten, calculaties, sales-dossiers en factuurdata van tenant 2. Klanten en instellingen blijven intact.</p>
             </div>
+            <form method="post" action="reset_testdata.php"
+                  onsubmit="return confirm('Weet je zeker dat je alle test-ritten/calculaties/sales/facturen wilt wissen voor tenant 2?');">
+                <input type="hidden" name="auth_csrf_token" value="<?php echo htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>">
+                <button type="submit" class="bi-btn-danger">Reset tenant 2</button>
+            </form>
         </div>
     <?php endif; ?>
 </div>
