@@ -411,37 +411,37 @@ try {
         justify-content: space-between;
         align-items: center;
         flex-wrap: wrap;
-        gap: 8px 12px;
+        gap: 6px 10px;
         background: #fff;
-        padding: 8px 12px;
+        padding: 6px 10px;
         border-radius: 6px;
         box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-        margin-bottom: 6px;
+        margin-bottom: 5px;
     }
-    .page-title { margin: 0; color: #003366; font-size: 17px; font-weight: bold; line-height: 1.2; }
-    .top-bar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+    .page-title { margin: 0; color: #003366; font-size: 16px; font-weight: bold; line-height: 1.2; }
+    .top-bar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
 
-    .btn-green { background: #28a745; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 13px; display:inline-block; }
-    .btn-grey { background: #6c757d; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 13px; display:inline-block; }
-    .btn-blue { background: #007bff; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 13px; display:inline-block; border:none; cursor:pointer; }
+    .btn-green { background: #28a745; color: white; padding: 5px 10px; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 12px; display:inline-block; }
+    .btn-grey { background: #6c757d; color: white; padding: 5px 10px; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 12px; display:inline-block; }
+    .btn-blue { background: #007bff; color: white; padding: 5px 10px; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 12px; display:inline-block; border:none; cursor:pointer; }
 
     /* FILTERS */
     .filter-bar {
         flex: 0 0 auto;
         background: #fff;
-        padding: 8px 10px;
+        padding: 6px 8px;
         border-radius: 6px;
         box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-        margin-bottom: 6px;
+        margin-bottom: 5px;
         display: flex;
         flex-wrap: wrap;
-        gap: 8px 10px;
+        gap: 6px 8px;
         align-items: center;
     }
-    .filter-bar > strong { font-size: 12px; white-space: nowrap; }
-    .form-control { padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; font-size: 13px; }
+    .filter-bar > strong { font-size: 11px; white-space: nowrap; }
+    .form-control { padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; font-size: 12px; }
 
-    .month-bar { flex: 0 0 auto; display: flex; justify-content: space-between; align-items: center; background: #003366; color: white; padding: 8px 12px; font-weight: bold; font-size: 14px; border-radius: 6px 6px 0 0; }
+    .month-bar { flex: 0 0 auto; display: flex; justify-content: space-between; align-items: center; background: #003366; color: white; padding: 6px 10px; font-weight: bold; font-size: 13px; border-radius: 6px 6px 0 0; }
     .nav-link { color: white; text-decoration: none; opacity: 0.8; }
     .nav-link:hover { opacity: 1; }
 

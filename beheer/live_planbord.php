@@ -159,10 +159,10 @@ $nu_tijd = time();
     .tabel-planbord td.links { text-align: left; }
     .tabel-planbord td.midden { text-align: center; }
     
-    .kolom-datum { min-width: 170px; }
-    .kolom-klant { min-width: 170px; }
-    .kolom-route { min-width: 180px; line-height: 1.5; }
-    .kolom-chauf { min-width: 190px; }
+    .kolom-datum { min-width: 130px; }
+    .kolom-klant { min-width: 140px; }
+    .kolom-route { min-width: 150px; line-height: 1.5; }
+    .kolom-chauf { min-width: 160px; }
 
     .bus-kolom { width: 22px; cursor: pointer; padding: 2px !important; }
     .bus-kolom:hover { background-color: #e9ecef; }
@@ -175,24 +175,24 @@ $nu_tijd = time();
     .btn-wijzig { background: #f8f9fa; color: #003366; border: 1px solid #ccc; padding: 4px 0; border-radius: 4px; font-size: 11px; font-weight: bold; text-decoration: none; width: 100%; text-align: center; transition: 0.2s; display: inline-block; box-sizing: border-box; }
     .btn-wijzig:hover { background: #e2e6ea; border-color: #adb5bd; }
     
-    .nav-balk { background: #f8f9fa; padding: 15px; border-radius: 5px; border: 1px solid #ddd; margin-bottom: 15px; display: flex; flex-wrap: wrap; align-items: center; gap: 20px; font-size: 13px; }
-    .nav-sectie { display: flex; align-items: center; gap: 10px; border-right: 2px solid #ddd; padding-right: 20px; }
+    .nav-balk { background: #f8f9fa; padding: 8px 12px; border-radius: 5px; border: 1px solid #ddd; margin-bottom: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 12px; }
+    .nav-sectie { display: flex; align-items: center; gap: 8px; border-right: 2px solid #ddd; padding-right: 12px; }
     .nav-sectie:last-child { border-right: none; }
     
-    .btn-snel { background: #6c757d; color: white; border: none; padding: 6px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; text-decoration: none; font-size: 12px; }
-    .input-sm { padding: 5px; border: 1px solid #ccc; border-radius: 4px; width: 70px; }
-    .input-date { padding: 5px; border: 1px solid #ccc; border-radius: 4px; }
-    .btn-actie { background: #28a745; color: white; border: none; padding: 6px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    .btn-snel { background: #6c757d; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; text-decoration: none; font-size: 11px; }
+    .input-sm { padding: 4px; border: 1px solid #ccc; border-radius: 4px; width: 60px; font-size: 11px; }
+    .input-date { padding: 4px; border: 1px solid #ccc; border-radius: 4px; font-size: 11px; }
+    .btn-actie { background: #28a745; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 11px; }
 </style>
 
 <div style="max-width: 100%; margin: 15px; padding: 0 5px;">
 
-    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 10px;">
-        <h1 style="color: #003366; margin: 0; font-size: 22px;">🗺️ Live Planbord</h1>
-        <p style="margin: 0; color: #555; font-size: 12px; display: flex; align-items: center; gap: 15px;">
-            <span><span style="display:inline-block; width:10px; height:10px; background:#dc3545; margin-right:4px;"></span> Incompleet</span>
-            <span><span style="display:inline-block; width:10px; height:10px; background:#fd7e14; margin-right:4px;"></span> Wacht op acceptatie</span>
-            <span><span style="display:inline-block; width:10px; height:10px; background:#28a745; margin-right:4px;"></span> 100% Rond</span>
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px;">
+        <h1 style="color: #003366; margin: 0; font-size: 20px;">🗺️ Live Planbord</h1>
+        <p style="margin: 0; color: #555; font-size: 11px; display: flex; align-items: center; gap: 12px;">
+            <span><span style="display:inline-block; width:9px; height:9px; background:#dc3545; margin-right:3px;"></span> Incompleet</span>
+            <span><span style="display:inline-block; width:9px; height:9px; background:#fd7e14; margin-right:3px;"></span> Wacht op acceptatie</span>
+            <span><span style="display:inline-block; width:9px; height:9px; background:#28a745; margin-right:3px;"></span> 100% Rond</span>
         </p>
     </div>
 
@@ -227,10 +227,10 @@ $nu_tijd = time();
             <span>t/m</span>
             <input type="date" name="datum_tot" class="input-date" value="<?= $filter_tot ?>" required>
             
-            <label style="cursor: pointer; font-size: 12px; margin-left: 5px;">
+            <label style="cursor: pointer; font-size: 11px; margin-left: 3px;">
                 <input type="checkbox" name="verberg_groen" value="1" <?= $verberg_groen ? 'checked' : '' ?>> Verberg compleet
             </label>
-            <label style="cursor: pointer; font-size: 12px; font-weight: bold; color: #003366; background: #e6f2ff; padding: 4px 8px; border-radius: 4px; border: 1px solid #b8daff;">
+            <label style="cursor: pointer; font-size: 11px; font-weight: bold; color: #003366; background: #e6f2ff; padding: 3px 6px; border-radius: 3px; border: 1px solid #b8daff;">
                 <input type="checkbox" name="alleen_akkoord" value="1" <?= $alleen_akkoord ? 'checked' : '' ?>> Wacht op Bevestiging
             </label>
             <button type="submit" class="btn-actie">Toepassen</button>
