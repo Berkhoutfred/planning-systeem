@@ -159,7 +159,8 @@ $nu_tijd = time();
     .tabel-planbord td.links { text-align: left; }
     .tabel-planbord td.midden { text-align: center; }
     
-    .kolom-datum { min-width: 130px; }
+    .kolom-datum { min-width: 95px; }
+    .kolom-tijd { min-width: 50px; }
     .kolom-klant { min-width: 140px; }
     .kolom-route { min-width: 150px; line-height: 1.3; }
     .kolom-chauf { min-width: 160px; }
@@ -258,7 +259,8 @@ $nu_tijd = time();
         <table class="tabel-planbord">
             <thead>
                 <tr>
-                    <th class="links kolom-datum">Datum & Tijd</th>
+                    <th class="links kolom-datum">Datum</th>
+                    <th class="midden kolom-tijd">Tijd</th>
                     <th class="links kolom-klant">Klant / Rit</th>
                     <th class="links kolom-route">Route</th>
                     <th class="midden" style="width: 40px;">PAX</th>
@@ -343,11 +345,12 @@ $nu_tijd = time();
                     ?>
                     <tr class="<?= $rij_klasse ?> <?= $extra_klasse ?>">
                         
-                        <td class="links" style="white-space: nowrap; font-size: 12px;">
-                            <div style="display: flex; align-items: center;">
-                                <span style="color:#444; font-weight:600; display:inline-block; width: 125px;"><?= $datum_weergave ?></span>
-                                <?= $tijd_html ?>
-                            </div>
+                        <td class="links" style="white-space: nowrap; font-size: 11px; color:#444; font-weight:600;">
+                            <?= $datum_weergave ?>
+                        </td>
+                        
+                        <td class="midden" style="white-space: nowrap; font-size: 12px;">
+                            <?= $tijd_html ?>
                         </td>
                         
                         <td class="links" style="font-weight: 500; font-size: 13px; color: #222;">
