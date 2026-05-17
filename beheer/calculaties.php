@@ -445,11 +445,11 @@ try {
     .nav-link { color: white; text-decoration: none; opacity: 0.8; }
     .nav-link:hover { opacity: 1; }
 
-    .table-scroll-container { flex: 1 1 auto; min-height: 0; background: #fff; border: 1px solid #ddd; border-top: none; overflow-y: auto; border-radius: 0 0 6px 6px; }
+    .table-scroll-container { flex: 1 1 auto; min-height: 0; background: #fff; border: 1px solid #dee2e6; border-top: none; overflow-y: auto; border-radius: 0 0 6px 6px; }
     .rit-table { width: 100%; border-collapse: collapse; }
 
-    .rit-table th { background-color: #f1f5f9; color: #003366; padding: 5px 8px; text-align: left; font-size: 11px; text-transform: uppercase; border-bottom: 2px solid #ddd; letter-spacing: 0.02em; }
-    .rit-table td { padding: 5px 8px; border-bottom: 1px solid #f0f0f0; color: #333; font-size: 12px; vertical-align: middle; }
+    .rit-table th { background-color: #003366; color: white; padding: 5px 8px; text-align: left; font-size: 11px; text-transform: uppercase; border: 1px solid #dee2e6; letter-spacing: 0.02em; }
+    .rit-table td { padding: 5px 8px; border: 1px solid #dee2e6; color: #333; font-size: 12px; vertical-align: middle; }
     .rit-table tr:hover td { background-color: #f1f9ff; }
 
     .rit-route-compact {
@@ -468,7 +468,7 @@ try {
     .sales-rit-row { border-left: 4px solid #dd6b20; background: linear-gradient(90deg, rgba(221,107,32,0.06) 0%, #fff 12px); }
     .buitenland-row { border-left: 4px solid #0d9488; background: linear-gradient(90deg, rgba(13,148,136,0.07) 0%, #fff 12px); }
 
-    .status-col { text-align: center; cursor: pointer; width: 45px; border-left: 1px solid #f5f5f5; }
+    .status-col { text-align: center; cursor: pointer; width: 45px; }
     .status-icon { font-size: 16px; color: #e0e0e0; }
     .status-icon.active { color: #28a745; }
 
@@ -561,7 +561,7 @@ try {
                     <th style="width:200px;">Datum (NL)</th>
                     <th style="width:200px;">Klant</th>
                     <th>Route <span style="font-weight:600; text-transform:none; color:#64748b;">(plaats)</span></th>
-                    <th style="width:160px;">Passagiers & Vervoer</th>
+                    <th style="width:100px;">Aantal</th>
                     <th style="text-align:center; width:60px;" title="Offerte Verzonden">OFF</th>
                     <th style="text-align:center; width:60px;" title="Bevestiging Verzonden">BEV</th>
                     <th style="text-align:center; width:90px;">Status</th>
@@ -637,7 +637,7 @@ try {
                         $bus_naam = !empty($r['bus_type']) ? $r['bus_type'] : 'Onbekend';
                         $bussen_nodig = ($cap > 0 && $pax > $cap) ? (int) ceil($pax / $cap) : 1;
                         $waarschuwing = '';
-                        $vervoerBlok = 'Calculatie: <strong>' . $bussen_nodig . 'x</strong> ' . htmlspecialchars($bus_naam, ENT_QUOTES, 'UTF-8');
+                        $vervoerBlok = '';
                     }
 
                     $row_class = $view === 'archief' ? 'archief-row' : '';
@@ -693,10 +693,12 @@ try {
                         <span class="route-plaats"><?= htmlspecialchars($vertrekLabel, ENT_QUOTES, 'UTF-8') ?></span><span class="route-arrow">→</span><strong class="route-plaats route-plaats--naar"><?= htmlspecialchars($bestemmingLabel . $routeVvSuffix, ENT_QUOTES, 'UTF-8') ?></strong>
                     </td>
                     <td>
-                        <div style="font-weight:bold; font-size:12px; color:#333; margin-bottom:2px;"><i class="fas fa-users" style="color:#888;"></i> <?= (int) $pax ?> personen</div>
-                        <div style="font-size:10px; color:#666; background:#e9ecef; padding:2px 5px; border-radius:3px; display:inline-block; border:1px solid #ccc;">
-                            <?= $vervoerBlok ?>
-                        </div>
+                        <div style="font-weight:bold; font-size:12px; color:#333;"><i class="fas fa-users" style="color:#888;"></i> <?= (int) $pax ?> personen</div>
+                        <?php if ($isSales): ?>
+                            <div style="font-size:10px; color:#666; background:#e9ecef; padding:2px 5px; border-radius:3px; display:inline-block; border:1px solid #ccc; margin-top:2px;">
+                                <?= $vervoerBlok ?>
+                            </div>
+                        <?php endif; ?>
                         <?= $waarschuwing ?>
                     </td>
 

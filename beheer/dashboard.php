@@ -910,7 +910,7 @@ include 'includes/header.php';
             <button type="button" class="action-card card-nieuw" id="btn-open-nieuwe-opdracht" aria-haspopup="dialog">
                 <i class="fas fa-bolt"></i>
                 <div class="action-text">
-                    <h3>Snelle Nieuwe Opdracht</h3>
+                    <h3>Snelle Rit</h3>
                     <p>Direct inplannen: taxi, touringcar of treinstremming.</p>
                 </div>
             </button>
