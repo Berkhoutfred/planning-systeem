@@ -154,25 +154,25 @@ $nu_tijd = time();
     @keyframes pulse { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 5px rgba(220, 53, 69, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); } }
 
     .tabel-planbord { width: 100%; border-collapse: collapse; background: white; font-size: 12px; }
-    .tabel-planbord th, .tabel-planbord td { border: 1px solid #dee2e6; padding: 5px 8px; vertical-align: middle; transition: all 0.2s; }
-    .tabel-planbord th { background-color: #003366; color: white; text-align: center; font-size: 11px; padding: 8px 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .tabel-planbord th, .tabel-planbord td { border: 1px solid #dee2e6; padding: 4px 6px; vertical-align: middle; transition: all 0.2s; }
+    .tabel-planbord th { background-color: #003366; color: white; text-align: center; font-size: 11px; padding: 5px 6px; text-transform: uppercase; letter-spacing: 0.5px; }
     .tabel-planbord td.links { text-align: left; }
     .tabel-planbord td.midden { text-align: center; }
     
     .kolom-datum { min-width: 130px; }
     .kolom-klant { min-width: 140px; }
-    .kolom-route { min-width: 150px; line-height: 1.5; }
+    .kolom-route { min-width: 150px; line-height: 1.3; }
     .kolom-chauf { min-width: 160px; }
 
     .bus-kolom { width: 22px; cursor: pointer; padding: 2px !important; }
     .bus-kolom:hover { background-color: #e9ecef; }
     input[type="radio"] { cursor: pointer; margin: 0; transform: scale(1.1); }
     
-    .btn-opslaan { background: #007bff; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.2s; }
+    .btn-opslaan { background: #007bff; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 11px; transition: 0.2s; }
     .btn-opslaan:hover { background: #0056b3; }
-    .btn-bevestig { background: #28a745; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 11px; width: 100%; transition: 0.2s; }
+    .btn-bevestig { background: #28a745; color: white; border: none; padding: 5px 8px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 10px; width: 100%; transition: 0.2s; }
     .btn-bevestig:hover { background: #218838; transform: translateY(-1px); }
-    .btn-wijzig { background: #f8f9fa; color: #003366; border: 1px solid #ccc; padding: 4px 0; border-radius: 4px; font-size: 11px; font-weight: bold; text-decoration: none; width: 100%; text-align: center; transition: 0.2s; display: inline-block; box-sizing: border-box; }
+    .btn-wijzig { background: #f8f9fa; color: #003366; border: 1px solid #ccc; padding: 3px 0; border-radius: 4px; font-size: 10px; font-weight: bold; text-decoration: none; width: 100%; text-align: center; transition: 0.2s; display: inline-block; box-sizing: border-box; }
     .btn-wijzig:hover { background: #e2e6ea; border-color: #adb5bd; }
     
     /* Titel rij met snelle keuzes */
