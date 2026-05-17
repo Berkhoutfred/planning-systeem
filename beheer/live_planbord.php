@@ -175,62 +175,79 @@ $nu_tijd = time();
     .btn-wijzig { background: #f8f9fa; color: #003366; border: 1px solid #ccc; padding: 4px 0; border-radius: 4px; font-size: 11px; font-weight: bold; text-decoration: none; width: 100%; text-align: center; transition: 0.2s; display: inline-block; box-sizing: border-box; }
     .btn-wijzig:hover { background: #e2e6ea; border-color: #adb5bd; }
     
-    .nav-balk { background: #f8f9fa; padding: 8px 12px; border-radius: 5px; border: 1px solid #ddd; margin-bottom: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 12px; }
-    .nav-sectie { display: flex; align-items: center; gap: 8px; border-right: 2px solid #ddd; padding-right: 12px; }
-    .nav-sectie:last-child { border-right: none; }
+    /* Titel rij met snelle keuzes */
+    .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 10px; }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .page-title-planbord { color: #003366; margin: 0; font-size: 20px; font-weight: bold; display: flex; align-items: center; gap: 8px; }
+    .page-title-planbord i { color: #0066cc; }
     
-    .btn-snel { background: #6c757d; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; text-decoration: none; font-size: 11px; }
-    .input-sm { padding: 4px; border: 1px solid #ccc; border-radius: 4px; width: 60px; font-size: 11px; }
-    .input-date { padding: 4px; border: 1px solid #ccc; border-radius: 4px; font-size: 11px; }
-    .btn-actie { background: #28a745; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 11px; }
+    .btn-snel-outline { background: transparent; color: #003366; border: 1.5px solid #003366; padding: 4px 12px; border-radius: 4px; text-decoration: none; font-size: 11px; font-weight: 600; transition: all 0.2s; display: inline-block; }
+    .btn-snel-outline:hover { background: #003366; color: white; }
+    
+    .legend-bar { display: flex; align-items: center; gap: 15px; font-size: 12px; color: #555; }
+    .legend-bar span { display: flex; align-items: center; gap: 5px; }
+    .legend-dot { display: inline-block; width: 11px; height: 11px; border-radius: 50%; }
+    
+    /* Filter balk - compacter, zonder borders */
+    .nav-balk { background: #f8f9fa; padding: 6px 12px; border-radius: 5px; border: 1px solid #e0e0e0; margin-bottom: 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 11px; color: #555; }
+    .nav-sectie { display: flex; align-items: center; gap: 6px; }
+    .nav-bullet { color: #ccc; font-weight: bold; margin: 0 4px; user-select: none; }
+    
+    .input-sm { padding: 4px 6px; border: 1px solid #ccc; border-radius: 3px; width: 55px; font-size: 11px; }
+    .input-date { padding: 4px 6px; border: 1px solid #ccc; border-radius: 3px; font-size: 11px; }
+    .btn-actie { background: #28a745; color: white; border: none; padding: 4px 10px; border-radius: 3px; cursor: pointer; font-weight: 600; font-size: 11px; transition: 0.2s; }
+    .btn-actie:hover { background: #218838; }
+    .btn-actie-info { background: #17a2b8; }
+    .btn-actie-info:hover { background: #138496; }
 </style>
 
 <div style="max-width: 100%; margin: 15px; padding: 0 5px;">
 
-    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px;">
-        <h1 style="color: #003366; margin: 0; font-size: 20px;">🗺️ Live Planbord</h1>
-        <p style="margin: 0; color: #555; font-size: 11px; display: flex; align-items: center; gap: 12px;">
-            <span><span style="display:inline-block; width:9px; height:9px; background:#dc3545; margin-right:3px;"></span> Incompleet</span>
-            <span><span style="display:inline-block; width:9px; height:9px; background:#fd7e14; margin-right:3px;"></span> Wacht op acceptatie</span>
-            <span><span style="display:inline-block; width:9px; height:9px; background:#28a745; margin-right:3px;"></span> 100% Rond</span>
-        </p>
+    <!-- Rij 1: Titel + Snelle keuzes + Legend -->
+    <div class="header-row">
+        <div class="header-left">
+            <h1 class="page-title-planbord"><i class="fas fa-clipboard-list"></i> Live Planbord</h1>
+            <a href="?datum_van=<?= $vandaag ?>&datum_tot=<?= $vandaag ?><?= $chk_url ?>" class="btn-snel-outline">Vandaag</a>
+            <a href="?datum_van=<?= $morgen ?>&datum_tot=<?= $morgen ?><?= $chk_url ?>" class="btn-snel-outline">Morgen</a>
+        </div>
+        <div class="legend-bar">
+            <span><span class="legend-dot" style="background:#dc3545;"></span> Incompleet</span>
+            <span><span class="legend-dot" style="background:#fd7e14;"></span> Wacht op acceptatie</span>
+            <span><span class="legend-dot" style="background:#28a745;"></span> 100% Rond</span>
+        </div>
     </div>
 
+    <!-- Rij 2: Filters -->
     <div class="nav-balk">
-        <div class="nav-sectie">
-            <strong>Snel:</strong>
-            <a href="?datum_van=<?= $vandaag ?>&datum_tot=<?= $vandaag ?><?= $chk_url ?>" class="btn-snel">Vandaag</a>
-            <a href="?datum_van=<?= $morgen ?>&datum_tot=<?= $morgen ?><?= $chk_url ?>" class="btn-snel">Morgen</a>
-        </div>
-        
         <form method="GET" class="nav-sectie" style="margin:0;">
             <strong>1 Dag:</strong>
-            <input type="date" name="specifieke_datum" class="input-date" style="border-color:#17a2b8;" title="Kies een specifieke datum om direct heen te gaan" value="<?= ($filter_van == $filter_tot) ? $filter_van : '' ?>" onchange="this.form.submit()">
-            
+            <input type="date" name="specifieke_datum" class="input-date" title="Kies een specifieke datum" value="<?= ($filter_van == $filter_tot) ? $filter_van : '' ?>" onchange="this.form.submit()">
             <?php if($verberg_groen): ?><input type="hidden" name="verberg_groen" value="1"><?php endif; ?>
             <?php if($alleen_akkoord): ?><input type="hidden" name="alleen_akkoord" value="1"><?php endif; ?>
         </form>
+
+        <span class="nav-bullet">•</span>
 
         <form method="GET" class="nav-sectie" style="margin:0;">
             <strong>Week:</strong>
             <input type="number" name="week" class="input-sm" placeholder="Nr" min="1" max="53" required>
             <input type="number" name="jaar" class="input-sm" value="<?= $huidig_jaar ?>" required>
-            
             <?php if($verberg_groen): ?><input type="hidden" name="verberg_groen" value="1"><?php endif; ?>
             <?php if($alleen_akkoord): ?><input type="hidden" name="alleen_akkoord" value="1"><?php endif; ?>
-            <button type="submit" class="btn-actie" style="background: #17a2b8; padding: 5px 10px;">Toon</button>
+            <button type="submit" class="btn-actie btn-actie-info">Toon</button>
         </form>
 
-        <form method="GET" class="nav-sectie" style="margin:0; border:none; display:flex; align-items:center; flex-wrap:wrap; gap:10px;">
+        <span class="nav-bullet">•</span>
+
+        <form method="GET" class="nav-sectie" style="margin:0; display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
             <strong>Periode:</strong>
             <input type="date" name="datum_van" class="input-date" value="<?= $filter_van ?>" required>
-            <span>t/m</span>
+            <span style="color:#999;">t/m</span>
             <input type="date" name="datum_tot" class="input-date" value="<?= $filter_tot ?>" required>
-            
-            <label style="cursor: pointer; font-size: 11px; margin-left: 3px;">
+            <label style="cursor: pointer; font-size: 11px; margin-left: 4px;">
                 <input type="checkbox" name="verberg_groen" value="1" <?= $verberg_groen ? 'checked' : '' ?>> Verberg compleet
             </label>
-            <label style="cursor: pointer; font-size: 11px; font-weight: bold; color: #003366; background: #e6f2ff; padding: 3px 6px; border-radius: 3px; border: 1px solid #b8daff;">
+            <label style="cursor: pointer; font-size: 11px; font-weight: 600; color: #003366; background: #e6f2ff; padding: 2px 6px; border-radius: 3px; border: 1px solid #b8daff;">
                 <input type="checkbox" name="alleen_akkoord" value="1" <?= $alleen_akkoord ? 'checked' : '' ?>> Wacht op Bevestiging
             </label>
             <button type="submit" class="btn-actie">Toepassen</button>
