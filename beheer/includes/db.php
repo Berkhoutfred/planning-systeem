@@ -60,7 +60,20 @@ if (!function_exists('env_value')) {
 }
 
 $__erpRoot = dirname(__DIR__, 2);
-load_env_file($__erpRoot . '/.env');
+
+// Probeer eerst lokale .env (development), dan server .env (production)
+$__envPaths = [
+    $__erpRoot . '/.env',                           // Lokaal: project root
+    dirname($__erpRoot) . '/.env',                  // Server: één niveau boven public_html
+    '/home/u473845697/.env'                         // Server: absolute fallback
+];
+
+foreach ($__envPaths as $__envPath) {
+    if (is_file($__envPath)) {
+        load_env_file($__envPath);
+        break;
+    }
+}
 
 $__envPhp = $__erpRoot . '/env.php';
 if (is_file($__envPhp)) {
