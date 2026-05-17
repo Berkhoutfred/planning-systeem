@@ -153,9 +153,9 @@ $nu_tijd = time();
     .pulse-dot { display: inline-block; width: 8px; height: 8px; background-color: #dc3545; border-radius: 50%; margin-right: 5px; animation: pulse 1.5s infinite; }
     @keyframes pulse { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 5px rgba(220, 53, 69, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); } }
 
-    .tabel-planbord { width: 100%; border-collapse: collapse; background: white; font-size: 13px; }
-    .tabel-planbord th, .tabel-planbord td { border: 1px solid #dee2e6; padding: 6px 8px; vertical-align: middle; transition: all 0.2s; }
-    .tabel-planbord th { background-color: #003366; color: white; text-align: center; font-size: 11px; padding: 10px 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .tabel-planbord { width: 100%; border-collapse: collapse; background: white; font-size: 12px; }
+    .tabel-planbord th, .tabel-planbord td { border: 1px solid #dee2e6; padding: 5px 8px; vertical-align: middle; transition: all 0.2s; }
+    .tabel-planbord th { background-color: #003366; color: white; text-align: center; font-size: 11px; padding: 8px 8px; text-transform: uppercase; letter-spacing: 0.5px; }
     .tabel-planbord td.links { text-align: left; }
     .tabel-planbord td.midden { text-align: center; }
     

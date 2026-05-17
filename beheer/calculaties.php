@@ -448,8 +448,8 @@ try {
     .table-scroll-container { flex: 1 1 auto; min-height: 0; background: #fff; border: 1px solid #ddd; border-top: none; overflow-y: auto; border-radius: 0 0 6px 6px; }
     .rit-table { width: 100%; border-collapse: collapse; }
 
-    .rit-table th { background-color: #f1f5f9; color: #003366; padding: 7px 8px; text-align: left; font-size: 11px; text-transform: uppercase; border-bottom: 2px solid #ddd; letter-spacing: 0.02em; }
-    .rit-table td { padding: 7px 8px; border-bottom: 1px solid #f0f0f0; color: #333; font-size: 13px; vertical-align: middle; }
+    .rit-table th { background-color: #f1f5f9; color: #003366; padding: 5px 8px; text-align: left; font-size: 11px; text-transform: uppercase; border-bottom: 2px solid #ddd; letter-spacing: 0.02em; }
+    .rit-table td { padding: 5px 8px; border-bottom: 1px solid #f0f0f0; color: #333; font-size: 12px; vertical-align: middle; }
     .rit-table tr:hover td { background-color: #f1f9ff; }
 
     .rit-route-compact {
@@ -457,7 +457,7 @@ try {
         max-width: 280px;
         overflow: hidden;
         text-overflow: ellipsis;
-        font-size: 13px;
+        font-size: 12px;
     }
     .rit-route-compact .route-plaats { color: #334155; }
     .rit-route-compact .route-plaats--naar { color: #003366; }
@@ -562,9 +562,9 @@ try {
                     <th style="width:200px;">Klant</th>
                     <th>Route <span style="font-weight:600; text-transform:none; color:#64748b;">(plaats)</span></th>
                     <th style="width:160px;">Passagiers & Vervoer</th>
-                    <th style="text-align:center; width:90px;">Status</th>
                     <th style="text-align:center; width:60px;" title="Offerte Verzonden">OFF</th>
                     <th style="text-align:center; width:60px;" title="Bevestiging Verzonden">BEV</th>
+                    <th style="text-align:center; width:90px;">Status</th>
                     <th style="text-align:right; padding-right:15px; width: 140px;">Actie</th>
                 </tr>
             </thead>
@@ -679,10 +679,10 @@ try {
                         <?php endif; ?>
                     </td>
                     <td>
-                        <div style="font-weight:bold; color:#003366; font-size: 14px; line-height:1.2;"><?= ucfirst(datumNL((string) $r['rit_datum'])) ?></div>
+                        <div style="font-weight:bold; color:#003366; font-size: 13px; line-height:1.2;"><?= ucfirst(datumNL((string) $r['rit_datum'])) ?></div>
                         <span style="font-size:10px; color:#888; text-transform:uppercase; font-weight:bold;"><?= htmlspecialchars((string) ($r['rittype'] ?? ''), ENT_QUOTES, 'UTF-8') ?></span>
                         <?php if (!empty($isBuitenlandCalc)): ?>
-                            <div style="margin-top:6px;"><span class="badge badge-buitenland"><i class="fas fa-globe-europe"></i> Buitenland</span></div>
+                            <div style="margin-top:4px;"><span class="badge badge-buitenland"><i class="fas fa-globe-europe"></i> Buitenland</span></div>
                         <?php endif; ?>
                     </td>
                     <td>
@@ -693,14 +693,12 @@ try {
                         <span class="route-plaats"><?= htmlspecialchars($vertrekLabel, ENT_QUOTES, 'UTF-8') ?></span><span class="route-arrow">→</span><strong class="route-plaats route-plaats--naar"><?= htmlspecialchars($bestemmingLabel . $routeVvSuffix, ENT_QUOTES, 'UTF-8') ?></strong>
                     </td>
                     <td>
-                        <div style="font-weight:bold; font-size:13px; color:#333; margin-bottom:2px;"><i class="fas fa-users" style="color:#888;"></i> <?= (int) $pax ?> personen</div>
+                        <div style="font-weight:bold; font-size:12px; color:#333; margin-bottom:2px;"><i class="fas fa-users" style="color:#888;"></i> <?= (int) $pax ?> personen</div>
                         <div style="font-size:10px; color:#666; background:#e9ecef; padding:2px 5px; border-radius:3px; display:inline-block; border:1px solid #ccc;">
                             <?= $vervoerBlok ?>
                         </div>
                         <?= $waarschuwing ?>
                     </td>
-
-                    <td style="text-align:center;"><?= $status_badge ?></td>
 
                     <td class="status-col" onclick='openStatusSlim(<?= (int) $statusModalId ?>, "offerte", <?= json_encode($st_offerte, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>, 0, <?= json_encode((string) ($r['token'] ?? ''), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>, <?= json_encode($entityArg, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)'>
                         <i id="<?= htmlspecialchars($iconOff, ENT_QUOTES, 'UTF-8') ?>" class="fas fa-check-circle status-icon <?= htmlspecialchars($st_offerte, ENT_QUOTES, 'UTF-8') ?>"></i>
@@ -708,6 +706,8 @@ try {
                     <td class="status-col" onclick='openStatusSlim(<?= (int) $statusModalId ?>, "bevestiging", <?= json_encode($st_bevest, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>, 0, <?= json_encode((string) ($r['token'] ?? ''), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>, <?= json_encode($entityArg, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)'>
                         <i id="<?= htmlspecialchars($iconBev, ENT_QUOTES, 'UTF-8') ?>" class="fas fa-check-circle status-icon <?= htmlspecialchars($st_bevest, ENT_QUOTES, 'UTF-8') ?>"></i>
                     </td>
+
+                    <td style="text-align:center;"><?= $status_badge ?></td>
 
                     <td style="text-align:right; padding-right:15px;" class="action-icons">
                         <?php if ($isSales): ?>
