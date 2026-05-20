@@ -68,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['actie']) && $_POST['ac
             $maanden_nl = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
             $maanden_en = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
             
-            $actieve_chauffeur = 'Onbekend'; // Het slimme geheugen voor de namen
+            $actieve_chauffeur = 'Onbekend';
             
             foreach ($regels as $regel) {
                 $regel = trim($regel);
@@ -79,22 +79,56 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['actie']) && $_POST['ac
                 $waarde_a = trim($data[0] ?? '', " \t\n\r\0\x0B\xEF\xBB\xBF\"");
                 $waarde_b = trim($data[1] ?? '');
                 
-                // DE SLIMME DETECTIE: Is dit een header-regel met een naam?
-                if (strpos(strtoupper($waarde_b), 'VAN (A)') !== false) {
-                    $actieve_chauffeur = $waarde_a; // Onthoud deze naam!
-                    continue; // Sla deze regel over en ga direct naar de tijden eronder
+                // Header-regel: bevat VAN (A) ergens in de rij
+                $is_header = false;
+                foreach ($data as $cel) {
+                    if (stripos(trim($cel), 'VAN (A)') !== false) {
+                        $is_header = true;
+                        break;
+                    }
+                }
+                if ($is_header) {
+                    if ($waarde_a === '' || strcasecmp($waarde_a, 'Naam') === 0 || strcasecmp($waarde_a, 'Kolom1') === 0) {
+                        $actieve_chauffeur = $waarde_b;
+                    } else {
+                        $actieve_chauffeur = $waarde_a;
+                    }
+                    continue;
                 }
                 
-                // Controleer of de regel wel begint met een geldige datum (een maandnaam)
-                $is_datum = false;
-                foreach($maanden_nl as $m) { if(stripos($waarde_a, $m) !== false) $is_datum = true; }
-                
-                if (!$is_datum) {
-                    continue; // Sla over, dit is geen gewerkte dag
+                // Teller- of lege regels (;20;;;;) overslaan
+                if ($waarde_a === '' && ($waarde_b === '' || is_numeric($waarde_b))) {
+                    continue;
+                }
+                if (stripos($waarde_a, 'reiskosten') !== false || stripos($waarde_b, 'reiskosten') !== false) {
+                    continue;
                 }
                 
-                $huidige_chauffeur = $actieve_chauffeur;
-                $datum_veld = $waarde_a;
+                // Nieuw formaat: naam in kolom A, datum in kolom B
+                // Oud formaat: datum in kolom A, chauffeur uit header-geheugen
+                $is_nieuw_formaat = false;
+                $is_oud_formaat = false;
+                foreach ($maanden_nl as $m) {
+                    if (stripos($waarde_b, $m) !== false) $is_nieuw_formaat = true;
+                    if (stripos($waarde_a, $m) !== false) $is_oud_formaat = true;
+                }
+                
+                if (!$is_nieuw_formaat && !$is_oud_formaat) {
+                    continue;
+                }
+                
+                if ($is_nieuw_formaat) {
+                    $huidige_chauffeur = $waarde_a !== '' ? $waarde_a : $actieve_chauffeur;
+                    if ($waarde_a !== '') $actieve_chauffeur = $waarde_a;
+                    $datum_veld = $waarde_b;
+                    $van_a = trim($data[2] ?? ''); $tot_a = trim($data[3] ?? '');
+                    $van_b = trim($data[4] ?? ''); $tot_b = trim($data[5] ?? '');
+                } else {
+                    $huidige_chauffeur = $actieve_chauffeur;
+                    $datum_veld = $waarde_a;
+                    $van_a = trim($data[1] ?? ''); $tot_a = trim($data[2] ?? '');
+                    $van_b = trim($data[5] ?? ''); $tot_b = trim($data[6] ?? '');
+                }
                 
                 if (!isset($alle_data_per_chauffeur[$huidige_chauffeur])) {
                     $alle_data_per_chauffeur[$huidige_chauffeur] = [];
@@ -104,15 +138,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['actie']) && $_POST['ac
                 $vertaald = str_ireplace($dagen_nl, '', $datum_veld);
                 $vertaald = str_ireplace($maanden_nl, $maanden_en, $vertaald);
                 $echte_datum = date('Y-m-d', strtotime(trim($vertaald)));
-                if (!$echte_datum || $echte_datum == '1970-01-01') continue; 
+                if (!$echte_datum || $echte_datum == '1970-01-01') continue;
                 
-                // Haal de tijden op vanaf de juiste kolommen (Nieuwe layout)
-                $van_a = trim($data[1] ?? ''); $tot_a = trim($data[2] ?? '');
-                $van_b = trim($data[5] ?? ''); $tot_b = trim($data[6] ?? '');
                 $van_c = ''; $tot_c = '';
                 
                 if ($van_a === $tot_a) { $van_a = ''; $tot_a = ''; }
                 if ($van_b === $tot_b) { $van_b = ''; $tot_b = ''; }
+                if ($van_a === '00:00' && $tot_a === '00:00') { $van_a = ''; $tot_a = ''; }
+                if ($van_b === '00:00' && $tot_b === '00:00') { $van_b = ''; $tot_b = ''; }
+                if (empty($van_a) && empty($van_b) && empty($van_c)) continue;
                 
                 $is_ov = false;
                 foreach ($data as $cel) {
