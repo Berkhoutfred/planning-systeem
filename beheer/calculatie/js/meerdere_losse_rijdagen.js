@@ -577,7 +577,11 @@
             return payload;
         }
         var head = days.slice(0, firstTravelIdx + 1);
-        var tail = days.slice(firstTravelIdx + 1);
+        // Alleen rust/extra-dagen uit tail; extra travel-dagen komen uitsluitend uit de UI (inserted).
+        // Anders ontstaan bij elke bewerking dubbele rijdagen (oude travel-dagen uit opgeslagen JSON + inserted).
+        var tail = days.slice(firstTravelIdx + 1).filter(function (d) {
+            return d && d.kind !== 'travel';
+        });
         var baseRoute1 = payload.route1 || { label: 'Route 1', return_mode: '', segments: [] };
         var inserted = [];
         validRows.forEach(function (row, idx) {

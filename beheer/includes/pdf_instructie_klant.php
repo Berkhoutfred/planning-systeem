@@ -18,5 +18,11 @@ function pdf_filter_instructie_voor_klant(?string $instructieKantoor): string
         return '';
     }
 
-    return $t;
+    // Tussenritten horen in routeplanning (route_v2 / tussendagen_meta), niet in bijzonderheden.
+    $pos = strpos($t, "\n[Tussenritten]");
+    if ($pos !== false) {
+        $t = substr($t, 0, $pos);
+    }
+
+    return trim($t);
 }

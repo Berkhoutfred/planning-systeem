@@ -118,7 +118,7 @@ try {
 
     require_once __DIR__ . '/includes/calculatie_meta.php';
     $instructie = calculatie_append_buitenland_dagprogramma($instructie, $rittype, $_POST);
-    $instructie = calculatie_append_tussendagen_to_instructie($instructie, $metaPack['tussendagen_json']);
+    // Tussenritten: alleen in tussendagen_meta / route_v2_json (offerte toont ze per dag in routeplanning).
 
     $labels = $_POST['label'] ?? [];
     $times = $_POST['time'] ?? [];

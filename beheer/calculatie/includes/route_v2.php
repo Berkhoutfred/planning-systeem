@@ -764,6 +764,72 @@ function calculatie_route_v2_resolve_dates(string $startDate, string $endDate, a
 }
 
 /**
+ * Verwijdert dubbele travel-dagen na de eerste rijdag (bug: merge hield oude travel in tail + UI-insert).
+ * Behoudt volgorde van rust/extra-dagen; travel-dagen met dezelfde datum worden één keer geteld.
+ *
+ * @param list<array<string, mixed>> $days
+ * @return list<array<string, mixed>>
+ */
+function calculatie_route_v2_losse_pakket_repair_days(array $days): array
+{
+    $firstTravelIdx = null;
+    foreach ($days as $i => $day) {
+        if (!is_array($day)) {
+            continue;
+        }
+        if (trim((string) ($day['kind'] ?? '')) === 'travel') {
+            $firstTravelIdx = $i;
+            break;
+        }
+    }
+    if ($firstTravelIdx === null) {
+        return $days;
+    }
+
+    $head = array_slice($days, 0, $firstTravelIdx + 1);
+    $tail = array_slice($days, $firstTravelIdx + 1);
+    $seenDates = [];
+    $firstTravel = $head[$firstTravelIdx] ?? null;
+    if (is_array($firstTravel)) {
+        $firstDate = calculatie_route_v2_normalize_date($firstTravel['date'] ?? '');
+        if ($firstDate !== '') {
+            $seenDates[$firstDate] = true;
+        }
+    }
+
+    $repairedTail = [];
+    foreach ($tail as $day) {
+        if (!is_array($day)) {
+            continue;
+        }
+        $kind = trim((string) ($day['kind'] ?? ''));
+        if ($kind === 'travel') {
+            $date = calculatie_route_v2_normalize_date($day['date'] ?? '');
+            if ($date !== '' && isset($seenDates[$date])) {
+                continue;
+            }
+            if ($date !== '') {
+                $seenDates[$date] = true;
+            }
+        }
+        $repairedTail[] = $day;
+    }
+
+    $merged = array_merge($head, $repairedTail);
+    $reindexed = [];
+    foreach ($merged as $i => $day) {
+        if (!is_array($day)) {
+            continue;
+        }
+        $day['seq'] = $i + 1;
+        $day['day_index'] = $i;
+        $reindexed[] = $day;
+    }
+
+    return $reindexed;
+}
+
+/**
  * Verwijdert losse-pakketdagen (extra travel-dagen met day_index ≥ 1) en zet de vlag uit.
  * Gebruikt wanneer CALCULATIE_LOSSE_PAKKET_DAGEN_ENABLED uit staat.
  */
@@ -870,6 +936,13 @@ function calculatie_route_v2_normalize_payload(array $payload): array
             'losse_rijdagen_pakket' => !empty($flagsIn['losse_rijdagen_pakket']),
         ],
     ];
+
+    if (!empty($out['flags']['losse_rijdagen_pakket'])) {
+        $out['days'] = calculatie_route_v2_losse_pakket_repair_days($out['days']);
+        $resolvedStart = calculatie_route_v2_normalize_date($out['dates']['start'] ?? '');
+        $resolvedEnd = calculatie_route_v2_normalize_date($out['dates']['end'] ?? '');
+        $out['dates'] = calculatie_route_v2_resolve_dates($resolvedStart, $resolvedEnd, $out['days']);
+    }
 
     if (!calculatie_feature_losse_pakket_dagen_enabled()) {
         $out = calculatie_route_v2_remove_losse_pakket_package_data($out);

@@ -88,7 +88,7 @@ try {
     require_once __DIR__ . '/includes/route_heen_segments.php';
     require_once __DIR__ . '/includes/route_v2.php';
 
-    if (!$is_nieuw && !calculatie_feature_losse_pakket_dagen_enabled() && !empty($rit['route_v2_json'])) {
+    if (!$is_nieuw && !empty($rit['route_v2_json'])) {
         $dec = calculatie_route_v2_decode((string) $rit['route_v2_json']);
         if ($dec !== null) {
             try {

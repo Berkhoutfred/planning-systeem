@@ -481,6 +481,176 @@ function offerte_presentatie_event_rows(array $events): array
     return $rows;
 }
 
+function offerte_presentatie_payload_tussendagen_enabled(?array $payload): bool
+{
+    if (!is_array($payload)) {
+        return false;
+    }
+    $tuss = is_array($payload['tussendagen'] ?? null) ? $payload['tussendagen'] : [];
+
+    return !empty($tuss['enabled']) && is_array($tuss['items'] ?? null) && $tuss['items'] !== [];
+}
+
+/**
+ * Zet tussenrit-events om naar dezelfde route-tabelrijen als de hoofdrit (Vertrek / Van / Naar).
+ *
+ * @param list<array<string, mixed>> $events
+ * @return list<array<string, mixed>>
+ */
+function offerte_presentatie_events_to_route_rows(array $events): array
+{
+    $rows = [];
+    foreach ($events as $event) {
+        if (!is_array($event)) {
+            continue;
+        }
+        $from = trim((string) ($event['from'] ?? ''));
+        $to = trim((string) ($event['to'] ?? ''));
+        if ($from === '' && $to === '') {
+            continue;
+        }
+        $time = calculatie_route_v2_normalize_hhmm($event['time'] ?? '');
+        $zone = calculatie_route_v2_normalize_zone($event['zone'] ?? 'nl');
+        $rows[] = [
+            'depart' => $time,
+            'depart_display' => $time !== '' ? $time : '—',
+            'from' => $from,
+            'to' => $to,
+            'arrive' => '',
+            'arrive_display' => '',
+            'km' => calculatie_route_v2_normalize_float($event['km'] ?? 0),
+            'km_display' => '',
+            'zone' => $zone,
+            'zone_display' => offerte_presentatie_zone_label($zone),
+        ];
+    }
+
+    return $rows;
+}
+
+/**
+ * Route-dagblok voor offerte/PDF (zelfde structuur als klant-route).
+ *
+ * @param list<array<string, mixed>> $rows
+ * @return array<string, mixed>|null
+ */
+function offerte_presentatie_route_day_block(string $dayDate, string $dayLabel, array $rows): ?array
+{
+    if ($rows === []) {
+        return null;
+    }
+
+    $showZone = false;
+    foreach ($rows as $row) {
+        if (($row['zone'] ?? 'nl') !== 'nl') {
+            $showZone = true;
+            break;
+        }
+    }
+
+    $dateDisplay = offerte_presentatie_format_date($dayDate, true);
+
+    return [
+        'label' => $dayLabel,
+        'heading_label' => $dateDisplay !== '' ? $dateDisplay : $dayLabel,
+        'kind' => 'travel',
+        'date' => $dayDate,
+        'date_display' => $dateDisplay,
+        'show_zone' => $showZone,
+        'routes' => [[
+            'label' => '',
+            'table_type' => 'segment_table',
+            'show_zone' => $showZone,
+            'inline_with_day_heading' => true,
+            'rows' => $rows,
+        ]],
+        'events' => [],
+    ];
+}
+
+/**
+ * Extra rijdagen uit route_v2 (tussenritten) voor klant-offerte, per datum als route-tabel.
+ *
+ * @return list<array<string, mixed>>
+ */
+function offerte_presentatie_build_tussendagen_route_days(?array $payload, string $startDate): array
+{
+    if (!offerte_presentatie_payload_tussendagen_enabled($payload)) {
+        return [];
+    }
+
+    $startDate = calculatie_route_v2_normalize_date($startDate);
+    $blocksByDate = [];
+
+    foreach (is_array($payload['days'] ?? null) ? $payload['days'] : [] as $day) {
+        if (!is_array($day)) {
+            continue;
+        }
+        $dayDate = calculatie_route_v2_normalize_date($day['date'] ?? '');
+        $kind = trim((string) ($day['kind'] ?? ''));
+        if ($dayDate === '' || ($dayDate === $startDate && $kind === 'travel')) {
+            continue;
+        }
+        if (!in_array($kind, ['extra_drive', 'travel'], true)) {
+            continue;
+        }
+
+        $rows = [];
+        foreach (is_array($day['routes'] ?? null) ? $day['routes'] : [] as $route) {
+            if (!is_array($route) || empty($route['enabled'])) {
+                continue;
+            }
+            foreach (offerte_presentatie_route_table_from_segments($route) as $row) {
+                $rows[] = $row;
+            }
+        }
+        if ($rows === []) {
+            $rows = offerte_presentatie_events_to_route_rows(is_array($day['events'] ?? null) ? $day['events'] : []);
+        }
+        $block = offerte_presentatie_route_day_block(
+            $dayDate,
+            trim((string) ($day['label'] ?? 'Extra dag')) ?: 'Extra dag',
+            $rows
+        );
+        if ($block !== null) {
+            $blocksByDate[$dayDate] = $block;
+        }
+    }
+
+    if ($blocksByDate === []) {
+        $tuss = is_array($payload['tussendagen'] ?? null) ? $payload['tussendagen'] : [];
+        foreach (is_array($tuss['items'] ?? null) ? $tuss['items'] : [] as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $dayDate = calculatie_route_v2_normalize_date($item['datum'] ?? $item['date'] ?? '');
+            if ($dayDate === '' || $dayDate === $startDate) {
+                continue;
+            }
+            $from = trim((string) ($item['van'] ?? $item['from'] ?? ''));
+            $to = trim((string) ($item['naar'] ?? $item['to'] ?? ''));
+            if ($from === '' && $to === '') {
+                continue;
+            }
+            $rows = offerte_presentatie_events_to_route_rows([[
+                'time' => $item['tijd'] ?? $item['time'] ?? '',
+                'from' => $from,
+                'to' => $to,
+                'km' => $item['km'] ?? 0,
+                'zone' => $item['zone'] ?? 'nl',
+            ]]);
+            $block = offerte_presentatie_route_day_block($dayDate, 'Tussenrit', $rows);
+            if ($block !== null) {
+                $blocksByDate[$dayDate] = $block;
+            }
+        }
+    }
+
+    ksort($blocksByDate);
+
+    return array_values($blocksByDate);
+}
+
 function offerte_presentatie_build_route_days(?array $payload): array
 {
     $days = [];
@@ -524,11 +694,33 @@ function offerte_presentatie_build_route_days(?array $payload): array
             ];
         }
 
-        $eventRows = offerte_presentatie_event_rows(is_array($day['events'] ?? null) ? $day['events'] : []);
+        $rawEvents = is_array($day['events'] ?? null) ? $day['events'] : [];
+        $eventRows = offerte_presentatie_event_rows($rawEvents);
         foreach ($eventRows as $row) {
             if (($row['zone'] ?? 'nl') !== 'nl') {
                 $showZone = true;
                 break;
+            }
+        }
+
+        // Tussenritten (extra_drive): zelfde Vertrek/Van/Naar-tabel als hoofdrit, geen aparte "Dagactiviteiten"-tabel.
+        if ($routeBlocks === [] && $rawEvents !== []) {
+            $converted = offerte_presentatie_events_to_route_rows($rawEvents);
+            if ($converted !== []) {
+                foreach ($converted as $row) {
+                    if (($row['zone'] ?? 'nl') !== 'nl') {
+                        $showZone = true;
+                        break;
+                    }
+                }
+                $routeBlocks[] = [
+                    'label' => '',
+                    'table_type' => 'segment_table',
+                    'show_zone' => false,
+                    'inline_with_day_heading' => true,
+                    'rows' => $converted,
+                ];
+                $eventRows = [];
             }
         }
 
@@ -899,6 +1091,52 @@ function offerte_presentatie_build(PDO $pdo, array $rit): array
             }
         }
     }
+
+    // Oudere records: tussenritten soms alleen in tussendagen_meta, niet in route_v2_json.
+    if (!offerte_presentatie_payload_tussendagen_enabled($payload)) {
+        $metaTuss = offerte_presentatie_decode_json_array($rit['tussendagen_meta'] ?? null);
+        $metaItems = is_array($metaTuss['items'] ?? null) ? $metaTuss['items'] : [];
+        if ($metaItems !== []) {
+            if (!is_array($payload)) {
+                $payload = [];
+            }
+            $payload['tussendagen'] = [
+                'enabled' => true,
+                'items' => $metaItems,
+            ];
+        }
+    }
+
+    if (offerte_presentatie_payload_tussendagen_enabled($payload)) {
+        $tussDays = offerte_presentatie_build_tussendagen_route_days($payload, $startDate);
+        if ($tussDays !== []) {
+            if ($useKlantRoute) {
+                $routeDays = array_merge($routeDays, $tussDays);
+            } else {
+                $knownDates = [];
+                foreach ($routeDays as $existing) {
+                    $d = calculatie_route_v2_normalize_date((string) ($existing['date'] ?? ''));
+                    if ($d !== '') {
+                        $knownDates[$d] = true;
+                    }
+                }
+                foreach ($tussDays as $extra) {
+                    $d = calculatie_route_v2_normalize_date((string) ($extra['date'] ?? ''));
+                    if ($d !== '' && !isset($knownDates[$d])) {
+                        $routeDays[] = $extra;
+                        $knownDates[$d] = true;
+                    }
+                }
+                usort($routeDays, static function (array $a, array $b): int {
+                    return strcmp(
+                        calculatie_route_v2_normalize_date((string) ($a['date'] ?? '')),
+                        calculatie_route_v2_normalize_date((string) ($b['date'] ?? ''))
+                    );
+                });
+            }
+        }
+    }
+
     $intro = 'Hartelijk dank voor uw aanvraag. Wij doen u hierbij graag onze vrijblijvende offerte toekomen op basis van actuele beschikbaarheid. Hieronder vindt u de besproken ritgegevens, routeplanning en prijsopbouw.';
     if ($pakketLosseRijdagen) {
         $intro .= ' Deze offerte omvat meerdere losse rijdagen op opeenvolgende of gekozen data (tussendoor naar de zaak/garage), samengevat in één totaalprijs; de route staat per rijdag vermeld.';
