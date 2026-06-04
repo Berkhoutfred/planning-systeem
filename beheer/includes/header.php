@@ -46,6 +46,7 @@ if (isset($pdo) && $pdo instanceof PDO && function_exists('current_tenant_id')) 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tourplan</title>
+    <link rel="icon" type="image/png" href="<?php echo $path; ?>../assets/favicon.png">
     
     <link rel="stylesheet" href="<?php echo $path; ?>style.css?v=<?php echo time(); ?>"> 
     
@@ -186,6 +187,7 @@ if (isset($pdo) && $pdo instanceof PDO && function_exists('current_tenant_id')) 
 <body>
 
 <header>
+    <img src="<?php echo $path; ?>../assets/tourplan-logo-header-600.png" alt="Tourplan" style="height: 32px; width: auto; margin-right: 12px;">
     <h2 style="margin:0; white-space: nowrap; font-size:17px; line-height:1.1;"><?php echo htmlspecialchars($tenantLabel, ENT_QUOTES, 'UTF-8'); ?></h2>
     
     <nav>

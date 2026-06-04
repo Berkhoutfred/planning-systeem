@@ -608,7 +608,7 @@ function val($data, $rij, $veld, $default = '') {
         </div> 
 
         <button type="submit" class="btn-save"><i class="fas fa-save"></i> RIT OPSLAAN & TERUG NAAR OVERZICHT</button>
-        <p class="calculatie-ui-build">BusAI calculatie · versie: <?= $uiBuildLabel ?></p>
+        <p class="calculatie-ui-build">Tourplan calculatie · versie: <?= $uiBuildLabel ?></p>
     </form> 
 
     <div id="bijlagen">

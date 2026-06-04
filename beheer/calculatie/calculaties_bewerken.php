@@ -929,7 +929,7 @@ $calcCsrf = function_exists('auth_get_csrf_token') ? auth_get_csrf_token() : '';
         <?php endif; ?> 
 
         <button type="submit" class="btn-save"><i class="fas fa-save"></i> OPSLAAN & TERUG NAAR OVERZICHT</button>
-        <p class="calculatie-ui-build">BusAI calculatie · versie: <?= $uiBuildLabel ?></p>
+        <p class="calculatie-ui-build">Tourplan calculatie · versie: <?= $uiBuildLabel ?></p>
     </form> 
 
     <?php if (!$is_nieuw && (int) ($rit['id'] ?? 0) > 0):

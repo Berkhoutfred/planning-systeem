@@ -48,7 +48,7 @@ if (!function_exists('tenant_instellingen_seed_defaults')) {
              VALUES (?, ?, ?)'
         );
         $stmt->execute([1, 'Berkhout Reizen', 'Zutphen']);
-        $stmt->execute([2, 'BusAI Testomgeving', 'Zutphen']);
+        $stmt->execute([2, 'Tourplan Testomgeving', 'Zutphen']);
     }
 }
 
@@ -61,7 +61,7 @@ if (!function_exists('tenant_instellingen_ensure_core_tenants')) {
              VALUES (?, ?, ?, ?)'
         );
         $stmt->execute([1, 'pilot_transport', 'Pilot Transport', 'active']);
-        $stmt->execute([2, 'busai_testomgeving', 'BusAI Testomgeving', 'active']);
+        $stmt->execute([2, 'tourplan_testomgeving', 'Tourplan Testomgeving', 'active']);
     }
 }
 
@@ -146,7 +146,7 @@ if (!function_exists('tenant_instellingen_get')) {
 
         $defaults = [
             'tenant_id' => $tenantId,
-            'bedrijfsnaam' => $tenantId === 2 ? 'BusAI Testomgeving' : 'Berkhout Reizen',
+            'bedrijfsnaam' => $tenantId === 2 ? 'Tourplan Testomgeving' : 'Berkhout Reizen',
             'adres' => '',
             'postcode' => '',
             'plaats' => '',

@@ -664,8 +664,8 @@ try {
                     }
 
                     $aanhef = trim((string) ($r['voornaam'] ?? '')) !== '' ? (string) $r['voornaam'] : 'klant';
-                    $mail_subject = rawurlencode('Uw aanvraag bij BusAI (' . date('d-m-Y', strtotime((string) $r['rit_datum'])) . ')');
-                    $mail_body = rawurlencode("Beste {$aanhef},\n\nWe hebben onlangs een offerte verzonden voor de busreis naar {$bestemmingVol} op " . date('d-m-Y', strtotime((string) $r['rit_datum'])) . ".\n\nWe vroegen ons af of u hier al naar heeft kunnen kijken en of de rit definitief doorgaat?\nWe horen graag van u, zodat we de bus voor u gereserveerd kunnen houden.\n\nMet vriendelijke groet,\n\nBusAI");
+                    $mail_subject = rawurlencode('Uw aanvraag bij Tourplan (' . date('d-m-Y', strtotime((string) $r['rit_datum'])) . ')');
+                    $mail_body = rawurlencode("Beste {$aanhef},\n\nWe hebben onlangs een offerte verzonden voor de busreis naar {$bestemmingVol} op " . date('d-m-Y', strtotime((string) $r['rit_datum'])) . ".\n\nWe vroegen ons af of u hier al naar heeft kunnen kijken en of de rit definitief doorgaat?\nWe horen graag van u, zodat we de bus voor u gereserveerd kunnen houden.\n\nMet vriendelijke groet,\n\nTourplan");
 
                     $iconOff = $isSales ? ('icon-offerte-s-' . $salesId) : ('icon-offerte-' . $calcId);
                     $iconBev = $isSales ? ('icon-bevestiging-s-' . $salesId) : ('icon-bevestiging-' . $calcId);

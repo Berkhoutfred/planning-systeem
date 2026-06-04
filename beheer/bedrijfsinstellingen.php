@@ -276,7 +276,7 @@ include 'includes/header.php';
     <div class="bi-card-header">
         <div>
             <h1>Bedrijfsinstellingen</h1>
-            <p>Tenant #<?php echo (int) $tenantId; ?> &mdash; stel je BusAI bedrijfsgegevens in.</p>
+            <p>Tenant #<?php echo (int) $tenantId; ?> &mdash; stel je Tourplan bedrijfsgegevens in.</p>
         </div>
         <a href="dashboard.php" class="bi-back-btn">&larr; Dashboard</a>
     </div>

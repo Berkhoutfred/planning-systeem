@@ -64,7 +64,7 @@ if ($tenantId <= 0) {
 }
 
 $tenantInst = tenant_instellingen_get($pdo, $tenantId);
-$mijn_bedrijfsnaam = trim((string) ($tenantInst['bedrijfsnaam'] ?? 'BusAI'));
+$mijn_bedrijfsnaam = trim((string) ($tenantInst['bedrijfsnaam'] ?? 'Tourplan'));
 $mijn_adres = trim((string) ($tenantInst['adres'] ?? ''));
 $mijn_postcode_plaats = trim((string) ($tenantInst['postcode'] ?? '') . ' ' . (string) ($tenantInst['plaats'] ?? ''));
 $mijn_telefoon = trim((string) ($tenantInst['telefoon'] ?? ''));

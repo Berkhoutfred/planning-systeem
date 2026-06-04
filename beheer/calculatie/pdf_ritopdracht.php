@@ -69,7 +69,7 @@ if ($tenantId <= 0) {
 }
 
 $tenantInst = tenant_instellingen_get($pdo, $tenantId);
-$mijn_bedrijfsnaam = trim((string) ($tenantInst['bedrijfsnaam'] ?? 'BusAI'));
+$mijn_bedrijfsnaam = trim((string) ($tenantInst['bedrijfsnaam'] ?? 'Tourplan'));
 $mijn_logo = trim((string) ($tenantInst['logo_pad'] ?? ''));
 
 if (!empty($rit['klant_id'])) {

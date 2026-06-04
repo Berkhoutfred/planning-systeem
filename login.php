@@ -21,7 +21,7 @@ $infoMelding = '';
 $csrfToken = auth_get_csrf_token();
 $redirectInput = (string) ($_POST['redirect_to'] ?? ($_GET['redirect_to'] ?? '/beheer/'));
 $redirectTo = auth_sanitize_redirect_path($redirectInput);
-$logoWebPath = '/assets/brand/busai-logo-horizontal.png';
+$logoWebPath = '/assets/tourplan-logo-header-600.png';
 $logoFsPath = __DIR__ . $logoWebPath;
 $hasLoginLogo = is_file($logoFsPath);
 
@@ -205,14 +205,14 @@ if ($stepGet === 'code' && !$showOtpCodeForm) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inloggen - BusAI Beheer</title>
+    <title>Inloggen - Tourplan Beheer</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        busai: {
+                        tourplan: {
                             primary: '#0B3E69',
                             primaryHover: '#0A3459',
                             surface: '#F3F6F8'
@@ -223,20 +223,20 @@ if ($stepGet === 'code' && !$showOtpCodeForm) {
         };
     </script>
 </head>
-<body class="min-h-screen bg-busai-surface text-slate-900 antialiased">
+<body class="min-h-screen bg-tourplan-surface text-slate-900 antialiased">
     <main class="min-h-screen flex items-center justify-center px-4 py-8">
         <div class="w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-200/60 p-6 sm:p-8">
             <div class="flex flex-col items-center text-center mb-6">
                 <?php if ($hasLoginLogo): ?>
                     <img
                         src="<?php echo h($logoWebPath); ?>"
-                        alt="BusAI"
+                        alt="Tourplan"
                         class="h-12 w-auto mb-4"
                         loading="eager"
                     >
                 <?php endif; ?>
-                <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Inloggen op BusAI</h1>
-                <p class="mt-2 text-sm text-slate-600">Log in op het BusAI beheerportaal.</p>
+                <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Inloggen op Tourplan</h1>
+                <p class="mt-2 text-sm text-slate-600">Log in op het Tourplan beheerportaal.</p>
             </div>
 
             <?php if ($infoMelding !== ''): ?>
@@ -276,7 +276,7 @@ if ($stepGet === 'code' && !$showOtpCodeForm) {
                             required
                             autofocus
                             autocomplete="username"
-                            class="block w-full rounded-xl border border-slate-300 bg-white px-3.5 py-3 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-busai-primary focus:outline-none focus:ring-4 focus:ring-[#0B3E69]/15"
+                            class="block w-full rounded-xl border border-slate-300 bg-white px-3.5 py-3 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-tourplan-primary focus:outline-none focus:ring-4 focus:ring-[#0B3E69]/15"
                         >
                     </div>
 
@@ -289,13 +289,13 @@ if ($stepGet === 'code' && !$showOtpCodeForm) {
                             placeholder="Wachtwoord"
                             required
                             autocomplete="current-password"
-                            class="block w-full rounded-xl border border-slate-300 bg-white px-3.5 py-3 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-busai-primary focus:outline-none focus:ring-4 focus:ring-[#0B3E69]/15"
+                            class="block w-full rounded-xl border border-slate-300 bg-white px-3.5 py-3 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-tourplan-primary focus:outline-none focus:ring-4 focus:ring-[#0B3E69]/15"
                         >
                     </div>
 
                     <button
                         type="submit"
-                        class="mt-2 inline-flex w-full items-center justify-center rounded-xl bg-busai-primary px-4 py-3 text-sm font-semibold text-white transition hover:bg-busai-primaryHover focus:outline-none focus:ring-4 focus:ring-[#0B3E69]/20"
+                        class="mt-2 inline-flex w-full items-center justify-center rounded-xl bg-tourplan-primary px-4 py-3 text-sm font-semibold text-white transition hover:bg-tourplan-primaryHover focus:outline-none focus:ring-4 focus:ring-[#0B3E69]/20"
                     >
                         Inloggen
                     </button>
@@ -325,12 +325,12 @@ if ($stepGet === 'code' && !$showOtpCodeForm) {
                             required
                             autofocus
                             autocomplete="username"
-                            class="block w-full rounded-xl border border-slate-300 bg-white px-3.5 py-3 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-busai-primary focus:outline-none focus:ring-4 focus:ring-[#0B3E69]/15"
+                            class="block w-full rounded-xl border border-slate-300 bg-white px-3.5 py-3 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-tourplan-primary focus:outline-none focus:ring-4 focus:ring-[#0B3E69]/15"
                         >
                     </div>
                     <button
                         type="submit"
-                        class="mt-2 inline-flex w-full items-center justify-center rounded-xl bg-busai-primary px-4 py-3 text-sm font-semibold text-white transition hover:bg-busai-primaryHover focus:outline-none focus:ring-4 focus:ring-[#0B3E69]/20"
+                        class="mt-2 inline-flex w-full items-center justify-center rounded-xl bg-tourplan-primary px-4 py-3 text-sm font-semibold text-white transition hover:bg-tourplan-primaryHover focus:outline-none focus:ring-4 focus:ring-[#0B3E69]/20"
                     >
                         Stuur code (6 cijfers)
                     </button>
@@ -358,18 +358,18 @@ if ($stepGet === 'code' && !$showOtpCodeForm) {
                             required
                             autofocus
                             autocomplete="one-time-code"
-                            class="block w-full rounded-xl border border-slate-300 bg-white px-3.5 py-3 text-sm text-slate-900 shadow-sm tracking-widest text-center text-lg font-mono focus:border-busai-primary focus:outline-none focus:ring-4 focus:ring-[#0B3E69]/15"
+                            class="block w-full rounded-xl border border-slate-300 bg-white px-3.5 py-3 text-sm text-slate-900 shadow-sm tracking-widest text-center text-lg font-mono focus:border-tourplan-primary focus:outline-none focus:ring-4 focus:ring-[#0B3E69]/15"
                         >
                     </div>
                     <button
                         type="submit"
-                        class="mt-2 inline-flex w-full items-center justify-center rounded-xl bg-busai-primary px-4 py-3 text-sm font-semibold text-white transition hover:bg-busai-primaryHover focus:outline-none focus:ring-4 focus:ring-[#0B3E69]/20"
+                        class="mt-2 inline-flex w-full items-center justify-center rounded-xl bg-tourplan-primary px-4 py-3 text-sm font-semibold text-white transition hover:bg-tourplan-primaryHover focus:outline-none focus:ring-4 focus:ring-[#0B3E69]/20"
                     >
                         Bevestigen en inloggen
                     </button>
                 </form>
                 <p class="mt-4 text-center text-xs">
-                    <a class="text-busai-primary hover:underline" href="/login.php?redirect_to=<?php echo h(rawurlencode($redirectTo)); ?>">Annuleren en opnieuw beginnen</a>
+                    <a class="text-tourplan-primary hover:underline" href="/login.php?redirect_to=<?php echo h(rawurlencode($redirectTo)); ?>">Annuleren en opnieuw beginnen</a>
                 </p>
             <?php endif; ?>
 
