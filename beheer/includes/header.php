@@ -34,10 +34,10 @@ $tenantSwitchOptions = [
     1 => 'Omgeving 1 - Productie',
     2 => 'Omgeving 2 - Test',
 ];
-$tenantLabel = 'BusAI';
+$tenantLabel = 'Tourplan';
 if (isset($pdo) && $pdo instanceof PDO && function_exists('current_tenant_id')) {
     $tid = current_tenant_id();
-    $tenantLabel = 'BusAI | ' . ($tenantSwitchOptions[$tid] ?? ('Omgeving ' . (string) $tid));
+    $tenantLabel = 'Tourplan | ' . ($tenantSwitchOptions[$tid] ?? ('Omgeving ' . (string) $tid));
 }
 ?>
 <!DOCTYPE html>
@@ -45,7 +45,7 @@ if (isset($pdo) && $pdo instanceof PDO && function_exists('current_tenant_id')) 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BusAI</title>
+    <title>Tourplan</title>
     
     <link rel="stylesheet" href="<?php echo $path; ?>style.css?v=<?php echo time(); ?>"> 
     
