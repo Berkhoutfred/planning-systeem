@@ -505,21 +505,21 @@ if ($stepGet === 'code' && !$showOtpCodeForm) {
                     <img src="<?php echo htmlspecialchars($logoWebPath, ENT_QUOTES, 'UTF-8'); ?>" alt="Tourplan" class="brand-logo">
                 <?php endif; ?>
                 
-                <h1 class="brand-title">Transport Planning, gestroomlijnd</h1>
-                <p class="brand-subtitle">Beheer routes, chauffeurs en klanten in één modern platform</p>
+                <h1 class="brand-title">Enterprise Resource Planning</h1>
+                <p class="brand-subtitle">Breng offertes, bevestigingen, planning en facturering samen in één centraal systeem.</p>
                 
                 <div class="feature-list">
                     <div class="feature-item">
                         <div class="feature-icon">✓</div>
-                        <span>Real-time planning & dispatch</span>
+                        <span>Offertes &amp; bevestigingen</span>
                     </div>
                     <div class="feature-item">
                         <div class="feature-icon">✓</div>
-                        <span>Automatische routeberekening</span>
+                        <span>Live planbord</span>
                     </div>
                     <div class="feature-item">
                         <div class="feature-icon">✓</div>
-                        <span>Multi-tenant support</span>
+                        <span>Facturering &amp; administratie</span>
                     </div>
                 </div>
             </div>
