@@ -41,6 +41,20 @@ function offerte_pdf_section_header(FPDF $pdf, string $title): void
     $pdf->SetTextColor(0, 0, 0);
 }
 
+/** Geschatte hoogte van offerte_pdf_section_header (Ln + balk). */
+function offerte_pdf_section_header_height(): float
+{
+    return 13.0;
+}
+
+function offerte_pdf_slottekst(): string
+{
+    return 'Indien van het bovenstaande programma wordt afgeweken, kan er een prijsaanpassing volgen. '
+        . 'Wij vertrouwen erop u met deze offerte een passende aanbieding te hebben gedaan en zien uw reactie gaarne tegemoet. '
+        . 'De aanbieding is exclusief eventuele parkeer-, tol- en/of verblijfskosten. '
+        . 'Wij behouden ons het recht voor onze reissommen te wijzigen, indien daartoe aanleiding bestaat door prijs en/of brandstofverhogingen door derden.';
+}
+
 /**
  * Lichte sectie-scheiding: blauw vetgedrukte titel + dunne blauwe lijn; geen gevuld blok.
  */
@@ -207,9 +221,25 @@ class OffertePDF extends FPDF
 
     private function CheckPageBreak(float $h): void
     {
-        if ($this->GetY() + $h > $this->PageBreakTrigger) {
+        $this->ensureVerticalSpace($h);
+    }
+
+    /** Ruimte op huidige pagina; anders nieuwe pagina (voorkomt gesplitste secties). */
+    public function ensureVerticalSpace(float $neededHeight): void
+    {
+        if ($neededHeight <= 0) {
+            return;
+        }
+        if ($this->GetY() + $neededHeight > $this->PageBreakTrigger) {
             $this->AddPage($this->CurOrientation);
         }
+    }
+
+    public function estimateMultiCellHeight(float $width, float $lineHeight, string $text): float
+    {
+        $lines = $this->NbLines($width, safe_iconv($text));
+
+        return $lineHeight * max(1, $lines);
     }
 
     private function NbLines(float $w, string $txt): int
@@ -405,10 +435,27 @@ function offerte_pdf_render_offer_body(OffertePDF $pdf, array $view): void
         }
     }
 
-    if (!empty($view['notes'])) {
+    $slottekst = offerte_pdf_slottekst();
+    $notesText = trim((string) ($view['notes'] ?? ''));
+
+    if ($pdf instanceof OffertePDF) {
+        $pdf->SetFont('Arial', '', 10);
+        $priceBlockHeight = offerte_pdf_section_header_height() + 6 + 6 + 2 + 8 + 5
+            + $pdf->estimateMultiCellHeight(190, 5.0, $slottekst) + 5 + 5 + 5;
+        $tailHeight = $priceBlockHeight;
+        if ($notesText !== '') {
+            $pdf->SetFont('Arial', '', 9.5);
+            $tailHeight += offerte_pdf_section_header_height()
+                + $pdf->estimateMultiCellHeight(190, 5.5, $notesText);
+        }
+        // Hele staart (bijzonderheden + prijs) bij elkaar op één pagina waar mogelijk.
+        $pdf->ensureVerticalSpace($tailHeight);
+    }
+
+    if ($notesText !== '') {
         offerte_pdf_section_header($pdf, 'Bijzonderheden');
         $pdf->SetFont('Arial', '', 9.5);
-        $pdf->MultiCell(190, 5.5, safe_iconv((string) $view['notes']));
+        $pdf->MultiCell(190, 5.5, safe_iconv($notesText));
     }
 
     offerte_pdf_section_header($pdf, 'Prijs');
@@ -436,10 +483,6 @@ function offerte_pdf_render_offer_body(OffertePDF $pdf, array $view): void
     $pdf->SetTextColor(0, 0, 0);
     $pdf->SetFont('Arial', '', 9);
     $pdf->Ln(5);
-    $slottekst = 'Indien van het bovenstaande programma wordt afgeweken, kan er een prijsaanpassing volgen. '
-        . 'Wij vertrouwen erop u met deze offerte een passende aanbieding te hebben gedaan en zien uw reactie gaarne tegemoet. '
-        . 'De aanbieding is exclusief eventuele parkeer-, tol- en/of verblijfskosten. '
-        . 'Wij behouden ons het recht voor onze reissommen te wijzigen, indien daartoe aanleiding bestaat door prijs en/of brandstofverhogingen door derden.';
     $pdf->MultiCell(190, 5.0, safe_iconv($slottekst));
     $pdf->Ln(5);
     $pdf->SetFont('Arial', '', 10);
