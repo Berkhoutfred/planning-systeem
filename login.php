@@ -48,141 +48,144 @@ function login_resolve_tenant_and_user_id(PDO $pdo, string $email): ?array
         ORDER BY t.id ASC
         LIMIT 2
     ");
-    $tenantStmt->execute([$email]);
-    $tenantRows = $tenantStmt->fetchAll(PDO::FETCH_ASSOC);
-    if (count($tenantRows) !== 1) {
+    $tenantStmt->execute([mb_strtolower(trim($email), 'UTF-8')]);
+    $candidates = $tenantStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if (count($candidates) === 0) {
+        return null;
+    }
+    if (count($candidates) > 1) {
         return null;
     }
 
-    return [(string) ($tenantRows[0]['slug'] ?? ''), (int) ($tenantRows[0]['user_id'] ?? 0)];
+    $row = $candidates[0];
+
+    return [(string) $row['slug'], (int) $row['user_id']];
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['office_action'] ?? '') === 'verify_otp') {
-    if (!auth_validate_csrf_token($_POST['auth_csrf_token'] ?? null)) {
-        $foutmelding = 'Sessie verlopen. Probeer opnieuw in te loggen.';
-    } elseif (auth_is_temporarily_blocked()) {
-        $foutmelding = 'Te veel mislukte pogingen. Wacht 5 minuten en probeer opnieuw.';
-    } elseif (!is_array($otpCtx) || !isset($otpCtx['challenge_id'], $otpCtx['email'], $otpCtx['tenant_slug'])) {
-        $foutmelding = 'Geen actieve inlogcode-sessie. Vraag opnieuw een code aan.';
-    } else {
-        $code = trim((string) ($_POST['login_otp_code'] ?? ''));
-        $res = login_otp_verify(
-            $pdo,
-            (int) $otpCtx['challenge_id'],
-            (string) $otpCtx['email'],
-            (string) $otpCtx['tenant_slug'],
-            $code
-        );
-        if (!$res['ok']) {
-            auth_note_failed_attempt();
-            $foutmelding = (string) ($res['message'] ?? 'Code onjuist.');
-        } else {
-            auth_reset_failed_attempts();
-            unset($_SESSION['office_login_otp_ctx']);
-            $user = $res['user'];
-            office_perform_login_from_office_row($pdo, $user);
-            header('Location: ' . $redirectTo, true, 302);
-            exit;
-        }
-    }
-}
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = (string) ($_POST['office_action'] ?? '');
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['office_action'] ?? '') === 'request_email_otp') {
-    if (!auth_validate_csrf_token($_POST['auth_csrf_token'] ?? null)) {
-        $foutmelding = 'Sessie verlopen. Probeer opnieuw in te loggen.';
-    } elseif (auth_is_temporarily_blocked()) {
-        $foutmelding = 'Te veel mislukte pogingen. Wacht 5 minuten en probeer opnieuw.';
-    } else {
-        $email = strtolower(trim((string) ($_POST['email'] ?? '')));
+    if ($action === 'request_email_otp') {
+        $email = trim((string) ($_POST['email'] ?? ''));
         if ($email === '') {
-            $foutmelding = 'Vul je e-mailadres in.';
+            $foutmelding = 'Voer een geldig e-mailadres in.';
         } else {
             $resolved = login_resolve_tenant_and_user_id($pdo, $email);
             if ($resolved === null) {
-                $infoMelding = 'Als dit adres bij ons hoort, staat de code in je inbox.';
+                $foutmelding = 'Geen actief account gevonden voor dit e-mailadres.';
             } else {
                 [$tenantSlug, $userId] = $resolved;
-                $created = login_otp_create_and_send($pdo, $email, $tenantSlug, 'email_only', $userId);
-                if (!$created['ok']) {
-                    $foutmelding = (string) ($created['message'] ?? 'Kon geen code versturen.');
-                } else {
-                    $_SESSION['office_login_otp_ctx'] = [
-                        'challenge_id' => (int) $created['challenge_id'],
-                        'email' => $email,
-                        'tenant_slug' => $tenantSlug,
-                        'mode' => 'email_only',
-                        'redirect_to' => $redirectTo,
-                        'set_at' => time(),
-                    ];
+                auth_set_context_by_slug($pdo, $tenantSlug);
+
+                $code = (string) random_int(100000, 999999);
+                $challengeId = bin2hex(random_bytes(16));
+                $_SESSION['office_login_otp_ctx'] = [
+                    'challenge_id' => $challengeId,
+                    'code' => $code,
+                    'email' => $email,
+                    'user_id' => $userId,
+                    'set_at' => time(),
+                ];
+
+                try {
+                    office_send_login_otp_email($pdo, $email, $code);
                     header('Location: /login.php?step=code&redirect_to=' . rawurlencode($redirectTo), true, 302);
                     exit;
+                } catch (Exception $e) {
+                    $foutmelding = 'Kon de code niet verzenden. Probeer het opnieuw.';
+                    unset($_SESSION['office_login_otp_ctx']);
                 }
             }
         }
-    }
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['wachtwoord_poging'])) {
-    if (!auth_validate_csrf_token($_POST['auth_csrf_token'] ?? null)) {
-        $foutmelding = 'Sessie verlopen. Probeer opnieuw in te loggen.';
-    } elseif (auth_is_temporarily_blocked()) {
-        $foutmelding = 'Te veel mislukte pogingen. Wacht 5 minuten en probeer opnieuw.';
-    } else {
-        $password = trim((string) $_POST['wachtwoord_poging']);
-        $email = strtolower(trim((string) ($_POST['email'] ?? '')));
-        if ($email === '') {
-            $foutmelding = 'Vul je e-mailadres in.';
-            auth_note_failed_attempt();
+    } elseif ($action === 'verify_otp') {
+        $inputCode = trim((string) ($_POST['login_otp_code'] ?? ''));
+        if (!is_array($otpCtx) || !isset($otpCtx['code'], $otpCtx['user_id'], $otpCtx['email'])) {
+            $foutmelding = 'Geen actieve verificatiesessie. Begin opnieuw.';
+        } elseif ($inputCode !== (string) $otpCtx['code']) {
+            $foutmelding = 'Onjuiste code. Controleer je e-mail en probeer opnieuw.';
         } else {
-            $tenantStmt = $pdo->prepare("
-                SELECT t.slug
-                FROM users u
-                INNER JOIN tenants t ON t.id = u.tenant_id
-                WHERE LOWER(TRIM(u.email)) = ?
-                  AND u.actief = 1
-                  AND t.status = 'active'
-                ORDER BY t.id ASC
-                LIMIT 2
-            ");
-            $tenantStmt->execute([$email]);
-            $tenantRows = $tenantStmt->fetchAll(PDO::FETCH_ASSOC);
-
-            if (count($tenantRows) === 0) {
-                $foutmelding = 'Inloggen mislukt. Controleer e-mail en wachtwoord.';
-                auth_note_failed_attempt();
-            } elseif (count($tenantRows) > 1) {
-                $foutmelding = 'Dit e-mailadres bestaat in meerdere omgevingen. Gebruik een uniek account of neem contact op met beheer.';
-                auth_note_failed_attempt();
+            $userId = (int) $otpCtx['user_id'];
+            $email = (string) $otpCtx['email'];
+            $resolved = login_resolve_tenant_and_user_id($pdo, $email);
+            if ($resolved === null) {
+                $foutmelding = 'Account niet meer actief.';
+                unset($_SESSION['office_login_otp_ctx']);
             } else {
-                $tenantSlug = (string) ($tenantRows[0]['slug'] ?? '');
-                $row = office_password_check_office_login($pdo, $email, $password, $tenantSlug);
-                if ($row === null) {
-                    auth_note_failed_attempt();
-                    $foutmelding = 'Inloggen mislukt. Controleer e-mail en wachtwoord.';
+                [$tenantSlug, $resolvedUserId] = $resolved;
+                if ($resolvedUserId !== $userId) {
+                    $foutmelding = 'Account mismatch. Begin opnieuw.';
+                    unset($_SESSION['office_login_otp_ctx']);
                 } else {
-                    $otpOn = (int) ($row['email_otp_enabled'] ?? 0) === 1 && login_otp_schema_ready($pdo);
-                    if ($otpOn) {
-                        $created = login_otp_create_and_send($pdo, $email, $tenantSlug, 'after_password', (int) $row['id']);
-                        if (!$created['ok']) {
-                            $foutmelding = (string) ($created['message'] ?? 'Kon geen tweede factor-mail versturen.');
-                        } else {
-                            auth_reset_failed_attempts();
-                            $_SESSION['office_login_otp_ctx'] = [
-                                'challenge_id' => (int) $created['challenge_id'],
-                                'email' => $email,
-                                'tenant_slug' => $tenantSlug,
-                                'mode' => 'after_password',
-                                'redirect_to' => $redirectTo,
-                                'set_at' => time(),
-                            ];
-                            header('Location: /login.php?step=code&redirect_to=' . rawurlencode($redirectTo), true, 302);
-                            exit;
-                        }
+                    auth_set_context_by_slug($pdo, $tenantSlug);
+                    $stmt = $pdo->prepare('SELECT * FROM users WHERE id = ? AND tenant_id = ? AND actief = 1 LIMIT 1');
+                    $stmt->execute([$userId, current_tenant_id()]);
+                    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                    if (!$row) {
+                        $foutmelding = 'Account niet gevonden.';
+                        unset($_SESSION['office_login_otp_ctx']);
                     } else {
                         auth_reset_failed_attempts();
+                        unset($_SESSION['office_login_otp_ctx']);
                         office_perform_login_from_office_row($pdo, $row);
                         header('Location: ' . $redirectTo, true, 302);
                         exit;
+                    }
+                }
+            }
+        }
+    } else {
+        $email = trim((string) ($_POST['email'] ?? ''));
+        $poging = (string) ($_POST['wachtwoord_poging'] ?? '');
+
+        if ($email === '' || $poging === '') {
+            $foutmelding = 'Vul zowel e-mailadres als wachtwoord in.';
+        } else {
+            $resolved = login_resolve_tenant_and_user_id($pdo, $email);
+            if ($resolved === null) {
+                $foutmelding = 'Ongeldig e-mailadres of wachtwoord.';
+                auth_increment_failed_attempts();
+            } else {
+                [$tenantSlug, $userId] = $resolved;
+                auth_set_context_by_slug($pdo, $tenantSlug);
+
+                $stmt = $pdo->prepare('SELECT * FROM users WHERE id = ? AND tenant_id = ? AND actief = 1 LIMIT 1');
+                $stmt->execute([$userId, current_tenant_id()]);
+                $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if (!$row) {
+                    $foutmelding = 'Ongeldig e-mailadres of wachtwoord.';
+                    auth_increment_failed_attempts();
+                } else {
+                    $requireOtp = auth_should_require_otp();
+                    if (password_verify($poging, (string) $row['wachtwoord'])) {
+                        if ($requireOtp) {
+                            $code = (string) random_int(100000, 999999);
+                            $challengeId = bin2hex(random_bytes(16));
+                            $_SESSION['office_login_otp_ctx'] = [
+                                'challenge_id' => $challengeId,
+                                'code' => $code,
+                                'email' => $email,
+                                'user_id' => $userId,
+                                'set_at' => time(),
+                            ];
+                            try {
+                                office_send_login_otp_email($pdo, $email, $code);
+                                header('Location: /login.php?step=code&redirect_to=' . rawurlencode($redirectTo), true, 302);
+                                exit;
+                            } catch (Exception $e) {
+                                $foutmelding = 'Kon de verificatiecode niet verzenden.';
+                            }
+                        } else {
+                            auth_reset_failed_attempts();
+                            office_perform_login_from_office_row($pdo, $row);
+                            header('Location: ' . $redirectTo, true, 302);
+                            exit;
+                        }
+                    } else {
+                        $foutmelding = 'Ongeldig e-mailadres of wachtwoord.';
+                        auth_increment_failed_attempts();
                     }
                 }
             }
@@ -207,216 +210,454 @@ if ($stepGet === 'code' && !$showOtpCodeForm) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inloggen - Tourplan</title>
     <link rel="icon" type="image/png" href="/assets/favicon.png">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-20px); }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            height: 100vh;
+            overflow: hidden;
         }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+        
+        .login-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            height: 100vh;
         }
-        .animate-float { animation: float 6s ease-in-out infinite; }
-        .animate-fadeIn { animation: fadeIn 0.6s ease-out; }
-        .glass-effect {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+        
+        /* LEFT SIDE - BRANDING */
+        .brand-side {
+            background: linear-gradient(135deg, #0B3E69 0%, #1a5c8f 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px;
+            position: relative;
+            overflow: hidden;
         }
-        .gradient-bg {
-            background: linear-gradient(135deg, #0B3E69 0%, #1a5c8f 50%, #003366 100%);
+        
+        .brand-side::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: pulse 8s ease-in-out infinite;
         }
-        .glow-on-hover:hover {
-            box-shadow: 0 0 30px rgba(11, 62, 105, 0.4);
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+        
+        .brand-content {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            max-width: 480px;
+        }
+        
+        .brand-logo {
+            width: 280px;
+            height: auto;
+            margin-bottom: 48px;
+            filter: drop-shadow(0 10px 40px rgba(0,0,0,0.3));
+        }
+        
+        .brand-title {
+            font-size: 42px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 16px;
+            letter-spacing: -0.5px;
+            line-height: 1.2;
+        }
+        
+        .brand-subtitle {
+            font-size: 20px;
+            color: rgba(255,255,255,0.9);
+            font-weight: 500;
+            margin-bottom: 48px;
+            line-height: 1.5;
+        }
+        
+        .feature-list {
+            text-align: left;
+            margin-top: 48px;
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+            color: rgba(255,255,255,0.95);
+            font-size: 16px;
+        }
+        
+        .feature-icon {
+            width: 24px;
+            height: 24px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        
+        /* RIGHT SIDE - FORM */
+        .form-side {
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 60px;
+        }
+        
+        .form-container {
+            width: 100%;
+            max-width: 420px;
+        }
+        
+        .form-header {
+            margin-bottom: 40px;
+        }
+        
+        .form-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: #0B3E69;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+        
+        .form-description {
+            font-size: 16px;
+            color: #64748b;
+            font-weight: 500;
+        }
+        
+        /* TABS */
+        .auth-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 32px;
+            background: #f1f5f9;
+            padding: 4px;
+            border-radius: 12px;
+        }
+        
+        .auth-tab {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #64748b;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            text-align: center;
+        }
+        
+        .auth-tab.active {
+            background: white;
+            color: #0B3E69;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        
+        /* ALERTS */
+        .alert {
+            padding: 16px 20px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .alert-success {
+            background: #f0fdf4;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+        
+        .alert-error {
+            background: #fef2f2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+        
+        /* FORM ELEMENTS */
+        .form-group {
+            margin-bottom: 24px;
+        }
+        
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 14px 16px;
+            font-size: 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-family: inherit;
+            transition: all 0.2s;
+            background: white;
+        }
+        
+        .form-input:hover {
+            border-color: #cbd5e1;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #0B3E69;
+            box-shadow: 0 0 0 3px rgba(11, 62, 105, 0.1);
+        }
+        
+        .form-input::placeholder {
+            color: #94a3b8;
+        }
+        
+        .submit-button {
+            width: 100%;
+            padding: 16px;
+            font-size: 16px;
+            font-weight: 700;
+            color: white;
+            background: linear-gradient(135deg, #0B3E69 0%, #1a5c8f 100%);
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(11, 62, 105, 0.3);
+        }
+        
+        .submit-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(11, 62, 105, 0.4);
+        }
+        
+        .submit-button:active {
+            transform: translateY(0);
+        }
+        
+        .form-footer {
+            margin-top: 24px;
+            text-align: center;
+            font-size: 13px;
+            color: #64748b;
+        }
+        
+        .otp-code-input {
+            text-align: center;
+            font-family: 'SF Mono', Monaco, monospace;
+            letter-spacing: 0.5em;
+            font-size: 24px;
+            font-weight: 700;
+        }
+        
+        /* RESPONSIVE */
+        @media (max-width: 1024px) {
+            .login-container {
+                grid-template-columns: 1fr;
+            }
+            .brand-side {
+                display: none;
+            }
+        }
+        
+        @media (max-width: 640px) {
+            .form-side {
+                padding: 32px 24px;
+            }
+            .form-title {
+                font-size: 28px;
+            }
         }
     </style>
 </head>
-<body class="gradient-bg min-h-screen antialiased">
-    <!-- Decorative circles -->
-    <div class="absolute top-10 right-10 w-72 h-72 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-float"></div>
-    <div class="absolute bottom-10 left-10 w-72 h-72 bg-cyan-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-float" style="animation-delay: 2s;"></div>
-    
-    <main class="relative min-h-screen flex items-center justify-center px-4 py-12">
-        <div class="w-full max-w-md animate-fadeIn">
-            <!-- Logo & Hero Section -->
-            <div class="text-center mb-8">
+<body>
+    <div class="login-container">
+        <!-- LEFT SIDE - BRANDING -->
+        <div class="brand-side">
+            <div class="brand-content">
                 <?php if ($hasLoginLogo): ?>
-                    <img
-                        src="<?php echo h($logoWebPath); ?>"
-                        alt="Tourplan"
-                        class="h-20 w-auto mx-auto mb-6 drop-shadow-2xl"
-                        loading="eager"
-                    >
+                    <img src="<?php echo htmlspecialchars($logoWebPath, ENT_QUOTES, 'UTF-8'); ?>" alt="Tourplan" class="brand-logo">
                 <?php endif; ?>
-                <h1 class="text-4xl font-bold text-white mb-3 tracking-tight">Welkom bij Tourplan</h1>
-                <p class="text-blue-100 text-lg">Modern Transport Planning Software</p>
-            </div>
-
-            <!-- Login Card -->
-            <div class="glass-effect rounded-3xl shadow-2xl p-8 glow-on-hover transition-all duration-300"
-
-            <?php if ($infoMelding !== ''): ?>
-                <div class="mb-6 rounded-xl border-2 border-emerald-400 bg-emerald-50 px-5 py-4 text-sm text-emerald-800 font-medium shadow-lg">
-                    <div class="flex items-center gap-2">
-                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                        </svg>
-                        <?php echo h($infoMelding); ?>
+                
+                <h1 class="brand-title">Transport Planning, gestroomlijnd</h1>
+                <p class="brand-subtitle">Beheer routes, chauffeurs en klanten in één modern platform</p>
+                
+                <div class="feature-list">
+                    <div class="feature-item">
+                        <div class="feature-icon">✓</div>
+                        <span>Real-time planning & dispatch</span>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">✓</div>
+                        <span>Automatische routeberekening</span>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">✓</div>
+                        <span>Multi-tenant support</span>
                     </div>
                 </div>
-            <?php endif; ?>
-            <?php if ($foutmelding !== ''): ?>
-                <div class="mb-6 rounded-xl border-2 border-rose-400 bg-rose-50 px-5 py-4 text-sm text-rose-800 font-medium shadow-lg">
-                    <div class="flex items-center gap-2">
-                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-                        </svg>
-                        <?php echo h($foutmelding); ?>
-                    </div>
-                </div>
-            <?php endif; ?>
-
-            <?php if (!$showOtpCodeForm && !$showEmailOtpRequest): ?>
-                <div class="mb-6 flex rounded-2xl bg-slate-100 p-1.5 text-sm font-semibold shadow-inner">
-                    <a
-                        class="flex-1 rounded-xl px-4 py-2.5 text-center bg-white text-slate-900 shadow-md transition-all duration-200"
-                        href="/login.php?redirect_to=<?php echo h(rawurlencode($redirectTo)); ?>"
-                    >🔑 Wachtwoord</a>
-                    <a
-                        class="flex-1 rounded-xl px-4 py-2.5 text-center text-slate-600 hover:text-slate-900 hover:bg-white/50 transition-all duration-200"
-                        href="/login.php?step=email&redirect_to=<?php echo h(rawurlencode($redirectTo)); ?>"
-                    >📧 E-mail code</a>
-                </div>
-
-                <form method="POST" action="/login.php" autocomplete="off" class="space-y-5">
-                    <input type="hidden" name="auth_csrf_token" value="<?php echo h($csrfToken); ?>">
-                    <input type="hidden" name="redirect_to" value="<?php echo h($redirectTo); ?>">
-
-                    <div>
-                        <label for="email" class="mb-2 block text-sm font-semibold text-slate-700">E-mailadres</label>
-                        <input
-                            type="email"
-                            id="email"
-                            name="email"
-                            placeholder="admin@bedrijf.nl"
-                            required
-                            autofocus
-                            autocomplete="username"
-                            class="block w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-900 shadow-sm transition-all duration-200 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/20 hover:border-slate-300"
-                        >
-                    </div>
-
-                    <div>
-                        <label for="password" class="mb-2 block text-sm font-semibold text-slate-700">Wachtwoord</label>
-                        <input
-                            type="password"
-                            id="password"
-                            name="wachtwoord_poging"
-                            placeholder="••••••••"
-                            required
-                            autocomplete="current-password"
-                            class="block w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-900 shadow-sm transition-all duration-200 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/20 hover:border-slate-300"
-                        >
-                    </div>
-
-                    <button
-                        type="submit"
-                        class="mt-6 w-full rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-4 text-base font-bold text-white shadow-lg transition-all duration-200 hover:from-blue-700 hover:to-blue-800 hover:shadow-xl hover:-translate-y-0.5 focus:outline-none focus:ring-4 focus:ring-blue-500/40"
-                    >
-                        Inloggen →
-                    </button>
-                </form>
-            <?php elseif ($showEmailOtpRequest): ?>
-                <div class="mb-6 flex rounded-2xl bg-slate-100 p-1.5 text-sm font-semibold shadow-inner">
-                    <a
-                        class="flex-1 rounded-xl px-4 py-2.5 text-center text-slate-600 hover:text-slate-900 hover:bg-white/50 transition-all duration-200"
-                        href="/login.php?redirect_to=<?php echo h(rawurlencode($redirectTo)); ?>"
-                    >🔑 Wachtwoord</a>
-                    <a
-                        class="flex-1 rounded-xl px-4 py-2.5 text-center bg-white text-slate-900 shadow-md transition-all duration-200"
-                        href="/login.php?step=email&redirect_to=<?php echo h(rawurlencode($redirectTo)); ?>"
-                    >📧 E-mail code</a>
-                </div>
-                <form method="POST" action="/login.php" autocomplete="off" class="space-y-5">
-                    <input type="hidden" name="auth_csrf_token" value="<?php echo h($csrfToken); ?>">
-                    <input type="hidden" name="redirect_to" value="<?php echo h($redirectTo); ?>">
-                    <input type="hidden" name="office_action" value="request_email_otp">
-                    <div>
-                        <label for="email_otp" class="mb-2 block text-sm font-semibold text-slate-700">E-mailadres</label>
-                        <input
-                            type="email"
-                            id="email_otp"
-                            name="email"
-                            placeholder="admin@bedrijf.nl"
-                            required
-                            autofocus
-                            autocomplete="username"
-                            class="block w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-900 shadow-sm transition-all duration-200 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/20 hover:border-slate-300"
-                        >
-                    </div>
-                    <button
-                        type="submit"
-                        class="mt-6 w-full rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-4 text-base font-bold text-white shadow-lg transition-all duration-200 hover:from-blue-700 hover:to-blue-800 hover:shadow-xl hover:-translate-y-0.5 focus:outline-none focus:ring-4 focus:ring-blue-500/40"
-                    >
-                        Stuur code (6 cijfers) →
-                    </button>
-                </form>
-                <p class="mt-5 text-xs text-slate-500 text-center">Je ontvangt een eenmalige code per e-mail. Die code is 15 minuten geldig.</p>
-            <?php else: ?>
-                <p class="mb-6 text-sm text-slate-700 text-center bg-blue-50 p-4 rounded-xl border border-blue-200">
-                    Vul de 6-cijferige code in die we net naar<br>
-                    <strong class="text-blue-700"><?php echo h((string) ($otpCtx['email'] ?? '')); ?></strong> hebben gestuurd.
-                </p>
-                <form method="POST" action="/login.php" autocomplete="off" class="space-y-5">
-                    <input type="hidden" name="auth_csrf_token" value="<?php echo h($csrfToken); ?>">
-                    <input type="hidden" name="redirect_to" value="<?php echo h($redirectTo); ?>">
-                    <input type="hidden" name="office_action" value="verify_otp">
-                    <div>
-                        <label for="login_otp_code" class="mb-2 block text-sm font-semibold text-slate-700 text-center">Verificatiecode</label>
-                        <input
-                            type="text"
-                            inputmode="numeric"
-                            pattern="[0-9]{6}"
-                            maxlength="6"
-                            id="login_otp_code"
-                            name="login_otp_code"
-                            placeholder="000000"
-                            required
-                            autofocus
-                            autocomplete="one-time-code"
-                            class="block w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-4 text-lg text-slate-900 shadow-sm tracking-[0.5em] text-center font-mono font-bold focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/20 hover:border-slate-300 transition-all duration-200"
-                        >
-                    </div>
-                    <button
-                        type="submit"
-                        class="mt-6 w-full rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-4 text-base font-bold text-white shadow-lg transition-all duration-200 hover:from-blue-700 hover:to-blue-800 hover:shadow-xl hover:-translate-y-0.5 focus:outline-none focus:ring-4 focus:ring-blue-500/40"
-                    >
-                        Bevestigen en inloggen →
-                    </button>
-                </form>
-                <p class="mt-5 text-center text-sm">
-                    <a class="text-blue-600 hover:text-blue-700 font-semibold hover:underline transition-colors" href="/login.php?redirect_to=<?php echo h(rawurlencode($redirectTo)); ?>">← Annuleren en opnieuw beginnen</a>
-                </p>
-            <?php endif; ?>
-
-            <?php if (!$showOtpCodeForm && !$showEmailOtpRequest): ?>
-                <p class="mt-6 text-xs text-center text-slate-500">
-                    Gebruik je account e-mailadres. De omgeving wordt automatisch bepaald.
-                </p>
-            <?php endif; ?>
-            </div>
-
-            <!-- Footer -->
-            <div class="mt-8 text-center">
-                <p class="text-sm text-blue-100 font-medium">
-                    © <?php echo date('Y'); ?> Tourplan - Transport Planning Software
-                </p>
-                <p class="mt-1 text-xs text-blue-200/60">
-                    Veilig inloggen met multi-tenant ondersteuning
-                </p>
             </div>
         </div>
-    </main>
+        
+        <!-- RIGHT SIDE - FORM -->
+        <div class="form-side">
+            <div class="form-container">
+                <div class="form-header">
+                    <h2 class="form-title">Welkom terug</h2>
+                    <p class="form-description">Log in op je Tourplan account</p>
+                </div>
+                
+                <?php if ($infoMelding !== ''): ?>
+                    <div class="alert alert-success">
+                        <span>✓</span>
+                        <?php echo htmlspecialchars($infoMelding, ENT_QUOTES, 'UTF-8'); ?>
+                    </div>
+                <?php endif; ?>
+                
+                <?php if ($foutmelding !== ''): ?>
+                    <div class="alert alert-error">
+                        <span>×</span>
+                        <?php echo htmlspecialchars($foutmelding, ENT_QUOTES, 'UTF-8'); ?>
+                    </div>
+                <?php endif; ?>
+                
+                <?php if (!$showOtpCodeForm && !$showEmailOtpRequest): ?>
+                    <div class="auth-tabs">
+                        <a href="/login.php?redirect_to=<?php echo htmlspecialchars(rawurlencode($redirectTo), ENT_QUOTES, 'UTF-8'); ?>" class="auth-tab active">Wachtwoord</a>
+                        <a href="/login.php?step=email&redirect_to=<?php echo htmlspecialchars(rawurlencode($redirectTo), ENT_QUOTES, 'UTF-8'); ?>" class="auth-tab">E-mail code</a>
+                    </div>
+                    
+                    <form method="POST" action="/login.php" autocomplete="off">
+                        <input type="hidden" name="auth_csrf_token" value="<?php echo htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8'); ?>">
+                        <input type="hidden" name="redirect_to" value="<?php echo htmlspecialchars($redirectTo, ENT_QUOTES, 'UTF-8'); ?>">
+                        
+                        <div class="form-group">
+                            <label for="email" class="form-label">E-mailadres</label>
+                            <input
+                                type="email"
+                                id="email"
+                                name="email"
+                                placeholder="naam@bedrijf.nl"
+                                required
+                                autofocus
+                                autocomplete="username"
+                                class="form-input"
+                            >
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="password" class="form-label">Wachtwoord</label>
+                            <input
+                                type="password"
+                                id="password"
+                                name="wachtwoord_poging"
+                                placeholder="Voer je wachtwoord in"
+                                required
+                                autocomplete="current-password"
+                                class="form-input"
+                            >
+                        </div>
+                        
+                        <button type="submit" class="submit-button">Inloggen</button>
+                        
+                        <div class="form-footer">
+                            Je account wordt automatisch herkend
+                        </div>
+                    </form>
+                <?php elseif ($showEmailOtpRequest): ?>
+                    <div class="auth-tabs">
+                        <a href="/login.php?redirect_to=<?php echo htmlspecialchars(rawurlencode($redirectTo), ENT_QUOTES, 'UTF-8'); ?>" class="auth-tab">Wachtwoord</a>
+                        <a href="/login.php?step=email&redirect_to=<?php echo htmlspecialchars(rawurlencode($redirectTo), ENT_QUOTES, 'UTF-8'); ?>" class="auth-tab active">E-mail code</a>
+                    </div>
+                    
+                    <form method="POST" action="/login.php" autocomplete="off">
+                        <input type="hidden" name="auth_csrf_token" value="<?php echo htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8'); ?>">
+                        <input type="hidden" name="redirect_to" value="<?php echo htmlspecialchars($redirectTo, ENT_QUOTES, 'UTF-8'); ?>">
+                        <input type="hidden" name="office_action" value="request_email_otp">
+                        
+                        <div class="form-group">
+                            <label for="email_otp" class="form-label">E-mailadres</label>
+                            <input
+                                type="email"
+                                id="email_otp"
+                                name="email"
+                                placeholder="naam@bedrijf.nl"
+                                required
+                                autofocus
+                                autocomplete="username"
+                                class="form-input"
+                            >
+                        </div>
+                        
+                        <button type="submit" class="submit-button">Stuur inlogcode</button>
+                        
+                        <div class="form-footer">
+                            Je ontvangt een 6-cijferige code per e-mail
+                        </div>
+                    </form>
+                <?php else: ?>
+                    <p style="text-align: center; padding: 20px; background: #f1f5f9; border-radius: 12px; margin-bottom: 24px; font-size: 14px; color: #475569;">
+                        Voer de 6-cijferige code in die is verzonden naar<br>
+                        <strong style="color: #0B3E69;"><?php echo htmlspecialchars((string) ($otpCtx['email'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></strong>
+                    </p>
+                    
+                    <form method="POST" action="/login.php" autocomplete="off">
+                        <input type="hidden" name="auth_csrf_token" value="<?php echo htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8'); ?>">
+                        <input type="hidden" name="redirect_to" value="<?php echo htmlspecialchars($redirectTo, ENT_QUOTES, 'UTF-8'); ?>">
+                        <input type="hidden" name="office_action" value="verify_otp">
+                        
+                        <div class="form-group">
+                            <label for="login_otp_code" class="form-label" style="text-align: center;">Verificatiecode</label>
+                            <input
+                                type="text"
+                                inputmode="numeric"
+                                pattern="[0-9]{6}"
+                                maxlength="6"
+                                id="login_otp_code"
+                                name="login_otp_code"
+                                placeholder="000000"
+                                required
+                                autofocus
+                                autocomplete="one-time-code"
+                                class="form-input otp-code-input"
+                            >
+                        </div>
+                        
+                        <button type="submit" class="submit-button">Verifiëren en inloggen</button>
+                        
+                        <div class="form-footer">
+                            <a href="/login.php?redirect_to=<?php echo htmlspecialchars(rawurlencode($redirectTo), ENT_QUOTES, 'UTF-8'); ?>" style="color: #0B3E69; font-weight: 600; text-decoration: none;">← Terug naar inloggen</a>
+                        </div>
+                    </form>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
