@@ -48,144 +48,141 @@ function login_resolve_tenant_and_user_id(PDO $pdo, string $email): ?array
         ORDER BY t.id ASC
         LIMIT 2
     ");
-    $tenantStmt->execute([mb_strtolower(trim($email), 'UTF-8')]);
-    $candidates = $tenantStmt->fetchAll(PDO::FETCH_ASSOC);
-
-    if (count($candidates) === 0) {
-        return null;
-    }
-    if (count($candidates) > 1) {
+    $tenantStmt->execute([$email]);
+    $tenantRows = $tenantStmt->fetchAll(PDO::FETCH_ASSOC);
+    if (count($tenantRows) !== 1) {
         return null;
     }
 
-    $row = $candidates[0];
-
-    return [(string) $row['slug'], (int) $row['user_id']];
+    return [(string) ($tenantRows[0]['slug'] ?? ''), (int) ($tenantRows[0]['user_id'] ?? 0)];
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $action = (string) ($_POST['office_action'] ?? '');
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['office_action'] ?? '') === 'verify_otp') {
+    if (!auth_validate_csrf_token($_POST['auth_csrf_token'] ?? null)) {
+        $foutmelding = 'Sessie verlopen. Probeer opnieuw in te loggen.';
+    } elseif (auth_is_temporarily_blocked()) {
+        $foutmelding = 'Te veel mislukte pogingen. Wacht 5 minuten en probeer opnieuw.';
+    } elseif (!is_array($otpCtx) || !isset($otpCtx['challenge_id'], $otpCtx['email'], $otpCtx['tenant_slug'])) {
+        $foutmelding = 'Geen actieve inlogcode-sessie. Vraag opnieuw een code aan.';
+    } else {
+        $code = trim((string) ($_POST['login_otp_code'] ?? ''));
+        $res = login_otp_verify(
+            $pdo,
+            (int) $otpCtx['challenge_id'],
+            (string) $otpCtx['email'],
+            (string) $otpCtx['tenant_slug'],
+            $code
+        );
+        if (!$res['ok']) {
+            auth_note_failed_attempt();
+            $foutmelding = (string) ($res['message'] ?? 'Code onjuist.');
+        } else {
+            auth_reset_failed_attempts();
+            unset($_SESSION['office_login_otp_ctx']);
+            $user = $res['user'];
+            office_perform_login_from_office_row($pdo, $user);
+            header('Location: ' . $redirectTo, true, 302);
+            exit;
+        }
+    }
+}
 
-    if ($action === 'request_email_otp') {
-        $email = trim((string) ($_POST['email'] ?? ''));
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['office_action'] ?? '') === 'request_email_otp') {
+    if (!auth_validate_csrf_token($_POST['auth_csrf_token'] ?? null)) {
+        $foutmelding = 'Sessie verlopen. Probeer opnieuw in te loggen.';
+    } elseif (auth_is_temporarily_blocked()) {
+        $foutmelding = 'Te veel mislukte pogingen. Wacht 5 minuten en probeer opnieuw.';
+    } else {
+        $email = strtolower(trim((string) ($_POST['email'] ?? '')));
         if ($email === '') {
-            $foutmelding = 'Voer een geldig e-mailadres in.';
+            $foutmelding = 'Vul je e-mailadres in.';
         } else {
             $resolved = login_resolve_tenant_and_user_id($pdo, $email);
             if ($resolved === null) {
-                $foutmelding = 'Geen actief account gevonden voor dit e-mailadres.';
+                $infoMelding = 'Als dit adres bij ons hoort, staat de code in je inbox.';
             } else {
                 [$tenantSlug, $userId] = $resolved;
-                auth_set_context_by_slug($pdo, $tenantSlug);
-
-                $code = (string) random_int(100000, 999999);
-                $challengeId = bin2hex(random_bytes(16));
-                $_SESSION['office_login_otp_ctx'] = [
-                    'challenge_id' => $challengeId,
-                    'code' => $code,
-                    'email' => $email,
-                    'user_id' => $userId,
-                    'set_at' => time(),
-                ];
-
-                try {
-                    office_send_login_otp_email($pdo, $email, $code);
+                $created = login_otp_create_and_send($pdo, $email, $tenantSlug, 'email_only', $userId);
+                if (!$created['ok']) {
+                    $foutmelding = (string) ($created['message'] ?? 'Kon geen code versturen.');
+                } else {
+                    $_SESSION['office_login_otp_ctx'] = [
+                        'challenge_id' => (int) $created['challenge_id'],
+                        'email' => $email,
+                        'tenant_slug' => $tenantSlug,
+                        'mode' => 'email_only',
+                        'redirect_to' => $redirectTo,
+                        'set_at' => time(),
+                    ];
                     header('Location: /login.php?step=code&redirect_to=' . rawurlencode($redirectTo), true, 302);
                     exit;
-                } catch (Exception $e) {
-                    $foutmelding = 'Kon de code niet verzenden. Probeer het opnieuw.';
-                    unset($_SESSION['office_login_otp_ctx']);
                 }
             }
         }
-    } elseif ($action === 'verify_otp') {
-        $inputCode = trim((string) ($_POST['login_otp_code'] ?? ''));
-        if (!is_array($otpCtx) || !isset($otpCtx['code'], $otpCtx['user_id'], $otpCtx['email'])) {
-            $foutmelding = 'Geen actieve verificatiesessie. Begin opnieuw.';
-        } elseif ($inputCode !== (string) $otpCtx['code']) {
-            $foutmelding = 'Onjuiste code. Controleer je e-mail en probeer opnieuw.';
-        } else {
-            $userId = (int) $otpCtx['user_id'];
-            $email = (string) $otpCtx['email'];
-            $resolved = login_resolve_tenant_and_user_id($pdo, $email);
-            if ($resolved === null) {
-                $foutmelding = 'Account niet meer actief.';
-                unset($_SESSION['office_login_otp_ctx']);
-            } else {
-                [$tenantSlug, $resolvedUserId] = $resolved;
-                if ($resolvedUserId !== $userId) {
-                    $foutmelding = 'Account mismatch. Begin opnieuw.';
-                    unset($_SESSION['office_login_otp_ctx']);
-                } else {
-                    auth_set_context_by_slug($pdo, $tenantSlug);
-                    $stmt = $pdo->prepare('SELECT * FROM users WHERE id = ? AND tenant_id = ? AND actief = 1 LIMIT 1');
-                    $stmt->execute([$userId, current_tenant_id()]);
-                    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+}
 
-                    if (!$row) {
-                        $foutmelding = 'Account niet gevonden.';
-                        unset($_SESSION['office_login_otp_ctx']);
-                    } else {
-                        auth_reset_failed_attempts();
-                        unset($_SESSION['office_login_otp_ctx']);
-                        office_perform_login_from_office_row($pdo, $row);
-                        header('Location: ' . $redirectTo, true, 302);
-                        exit;
-                    }
-                }
-            }
-        }
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['wachtwoord_poging'])) {
+    if (!auth_validate_csrf_token($_POST['auth_csrf_token'] ?? null)) {
+        $foutmelding = 'Sessie verlopen. Probeer opnieuw in te loggen.';
+    } elseif (auth_is_temporarily_blocked()) {
+        $foutmelding = 'Te veel mislukte pogingen. Wacht 5 minuten en probeer opnieuw.';
     } else {
-        $email = trim((string) ($_POST['email'] ?? ''));
-        $poging = (string) ($_POST['wachtwoord_poging'] ?? '');
-
-        if ($email === '' || $poging === '') {
-            $foutmelding = 'Vul zowel e-mailadres als wachtwoord in.';
+        $password = trim((string) $_POST['wachtwoord_poging']);
+        $email = strtolower(trim((string) ($_POST['email'] ?? '')));
+        if ($email === '') {
+            $foutmelding = 'Vul je e-mailadres in.';
+            auth_note_failed_attempt();
         } else {
-            $resolved = login_resolve_tenant_and_user_id($pdo, $email);
-            if ($resolved === null) {
-                $foutmelding = 'Ongeldig e-mailadres of wachtwoord.';
-                auth_increment_failed_attempts();
+            $tenantStmt = $pdo->prepare("
+                SELECT t.slug
+                FROM users u
+                INNER JOIN tenants t ON t.id = u.tenant_id
+                WHERE LOWER(TRIM(u.email)) = ?
+                  AND u.actief = 1
+                  AND t.status = 'active'
+                ORDER BY t.id ASC
+                LIMIT 2
+            ");
+            $tenantStmt->execute([$email]);
+            $tenantRows = $tenantStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            if (count($tenantRows) === 0) {
+                $foutmelding = 'Inloggen mislukt. Controleer e-mail en wachtwoord.';
+                auth_note_failed_attempt();
+            } elseif (count($tenantRows) > 1) {
+                $foutmelding = 'Dit e-mailadres bestaat in meerdere omgevingen. Gebruik een uniek account of neem contact op met beheer.';
+                auth_note_failed_attempt();
             } else {
-                [$tenantSlug, $userId] = $resolved;
-                auth_set_context_by_slug($pdo, $tenantSlug);
-
-                $stmt = $pdo->prepare('SELECT * FROM users WHERE id = ? AND tenant_id = ? AND actief = 1 LIMIT 1');
-                $stmt->execute([$userId, current_tenant_id()]);
-                $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-                if (!$row) {
-                    $foutmelding = 'Ongeldig e-mailadres of wachtwoord.';
-                    auth_increment_failed_attempts();
+                $tenantSlug = (string) ($tenantRows[0]['slug'] ?? '');
+                $row = office_password_check_office_login($pdo, $email, $password, $tenantSlug);
+                if ($row === null) {
+                    auth_note_failed_attempt();
+                    $foutmelding = 'Inloggen mislukt. Controleer e-mail en wachtwoord.';
                 } else {
-                    $requireOtp = auth_should_require_otp();
-                    if (password_verify($poging, (string) $row['wachtwoord'])) {
-                        if ($requireOtp) {
-                            $code = (string) random_int(100000, 999999);
-                            $challengeId = bin2hex(random_bytes(16));
-                            $_SESSION['office_login_otp_ctx'] = [
-                                'challenge_id' => $challengeId,
-                                'code' => $code,
-                                'email' => $email,
-                                'user_id' => $userId,
-                                'set_at' => time(),
-                            ];
-                            try {
-                                office_send_login_otp_email($pdo, $email, $code);
-                                header('Location: /login.php?step=code&redirect_to=' . rawurlencode($redirectTo), true, 302);
-                                exit;
-                            } catch (Exception $e) {
-                                $foutmelding = 'Kon de verificatiecode niet verzenden.';
-                            }
+                    $otpOn = (int) ($row['email_otp_enabled'] ?? 0) === 1 && login_otp_schema_ready($pdo);
+                    if ($otpOn) {
+                        $created = login_otp_create_and_send($pdo, $email, $tenantSlug, 'after_password', (int) $row['id']);
+                        if (!$created['ok']) {
+                            $foutmelding = (string) ($created['message'] ?? 'Kon geen tweede factor-mail versturen.');
                         } else {
                             auth_reset_failed_attempts();
-                            office_perform_login_from_office_row($pdo, $row);
-                            header('Location: ' . $redirectTo, true, 302);
+                            $_SESSION['office_login_otp_ctx'] = [
+                                'challenge_id' => (int) $created['challenge_id'],
+                                'email' => $email,
+                                'tenant_slug' => $tenantSlug,
+                                'mode' => 'after_password',
+                                'redirect_to' => $redirectTo,
+                                'set_at' => time(),
+                            ];
+                            header('Location: /login.php?step=code&redirect_to=' . rawurlencode($redirectTo), true, 302);
                             exit;
                         }
                     } else {
-                        $foutmelding = 'Ongeldig e-mailadres of wachtwoord.';
-                        auth_increment_failed_attempts();
+                        auth_reset_failed_attempts();
+                        office_perform_login_from_office_row($pdo, $row);
+                        header('Location: ' . $redirectTo, true, 302);
+                        exit;
                     }
                 }
             }
