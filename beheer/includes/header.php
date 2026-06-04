@@ -34,10 +34,10 @@ $tenantSwitchOptions = [
     1 => 'Omgeving 1 - Productie',
     2 => 'Omgeving 2 - Test',
 ];
-$tenantLabel = 'Tourplan';
+$tenantLabel = '';
 if (isset($pdo) && $pdo instanceof PDO && function_exists('current_tenant_id')) {
     $tid = current_tenant_id();
-    $tenantLabel = 'Tourplan | ' . ($tenantSwitchOptions[$tid] ?? ('Omgeving ' . (string) $tid));
+    $tenantLabel = $tenantSwitchOptions[$tid] ?? ('Omgeving ' . (string) $tid);
 }
 ?>
 <!DOCTYPE html>
