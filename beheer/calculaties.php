@@ -9,6 +9,7 @@ include '../beveiliging.php';
 require_role(['tenant_admin', 'planner_user']);
 require 'includes/db.php';
 require_once __DIR__ . '/includes/sales_rit_dossiers.php';
+require_once __DIR__ . '/calculatie/includes/route_v2.php';
 
 $tenantId = current_tenant_id();
 if ($tenantId <= 0) {
@@ -130,6 +131,37 @@ function sales_calc_trunc_plaats(string $s, int $max = 42): string
     return mb_substr($s, 0, $max - 1) . '…';
 }
 
+/** Verwijder tijdslimieten uit route-adres (bijv. "t/m 22:00 uur") vóór plaats-parsing. */
+function sales_calc_sanitize_route_adres(string $adres): string
+{
+    $adres = trim($adres);
+    if ($adres === '') {
+        return '';
+    }
+    $adres = (string) preg_replace('/\s*t\/m\s+\d{1,2}[.:]\d{2}(\s*uur)?/iu', '', $adres);
+    $adres = (string) preg_replace('/\s+tot\s+\d{1,2}[.:]\d{2}(\s*uur)?/iu', '', $adres);
+    $adres = (string) preg_replace('/\s+\d{1,2}[.:]\d{2}(\s*uur)?\s*$/iu', '', $adres);
+    $adres = (string) preg_replace('/\s+uur\s*$/iu', '', $adres);
+
+    return trim($adres, " \t\n\r\0\x0B,");
+}
+
+function sales_calc_is_noise_plaats_token(string $token): bool
+{
+    $t = mb_strtolower(trim($token));
+    if ($t === '' || mb_strlen($t) < 2) {
+        return true;
+    }
+    static $noise = [
+        'uur', 'min', 't/m', 'tm', 'via', 'pendelen', 'pendel', 'rit', 'bus', 'naar', 'van', 'tot',
+        'nederland', 'netherlands', 'belgië', 'belgium', 'duitsland', 'germany',
+    ];
+
+    return in_array($t, $noise, true)
+        || preg_match('/^\d{1,2}[.:]\d{2}$/u', $t)
+        || preg_match('/^\d+$/u', $t);
+}
+
 /**
  * Laatste “woord” in segment als plaats-indicator (bijv. "Stayokay Gorssel" → Gorssel).
  */
@@ -140,10 +172,15 @@ function sales_calc_plaats_token_from_segment(string $segment): string
         return '?';
     }
     $partsWs = preg_split('/\s+/u', $segment, -1, PREG_SPLIT_NO_EMPTY);
-    if (count($partsWs) >= 2) {
-        $last = (string) end($partsWs);
-        if (preg_match('/^[A-Za-zÀ-ÿ][A-Za-zà-ÿ\-\']*$/u', $last) && mb_strlen($last) >= 3 && !preg_match('/^\d+$/', $last)) {
-            return sales_calc_trunc_plaats($last, 36);
+    if (count($partsWs) >= 1) {
+        for ($i = count($partsWs) - 1; $i >= 0; $i--) {
+            $word = (string) $partsWs[$i];
+            if (sales_calc_is_noise_plaats_token($word)) {
+                continue;
+            }
+            if (preg_match('/^[A-Za-zÀ-ÿ][A-Za-zà-ÿ\-\']*$/u', $word) && mb_strlen($word) >= 3) {
+                return sales_calc_trunc_plaats($word, 36);
+            }
         }
     }
 
@@ -155,7 +192,7 @@ function sales_calc_plaats_token_from_segment(string $segment): string
  */
 function sales_calc_plaats_from_adres(?string $adres): string
 {
-    $raw = trim((string) $adres);
+    $raw = sales_calc_sanitize_route_adres((string) $adres);
     if ($raw === '' || $raw === '?') {
         return '?';
     }
@@ -168,10 +205,17 @@ function sales_calc_plaats_from_adres(?string $adres): string
         return '?';
     }
 
+    if (!sales_calc_streetish_fragment($chunks[0])) {
+        $first = sales_calc_plaats_token_from_segment($chunks[0]);
+        if ($first !== '?' && !sales_calc_is_noise_plaats_token($first)) {
+            return $first;
+        }
+    }
+
     for ($i = $n - 1; $i >= 0; $i--) {
         if (preg_match('/\b(\d{4}\s?[A-Z]{2})\s+(.+)$/u', $chunks[$i], $m)) {
             $city = trim((string) ($m[2] ?? ''));
-            if ($city !== '') {
+            if ($city !== '' && !sales_calc_is_noise_plaats_token($city)) {
                 return sales_calc_trunc_plaats($city);
             }
         }
@@ -194,12 +238,63 @@ function sales_calc_plaats_from_adres(?string $adres): string
     return sales_calc_plaats_token_from_segment($chunks[0]);
 }
 
+/**
+ * Van/naar uit route_v2_json (betrouwbaarder bij pendel/meerdere dagen).
+ *
+ * @return array{0: string, 1: string}
+ */
+function sales_calc_van_naar_from_route_v2(?string $routeV2Json): array
+{
+    $payload = calculatie_route_v2_decode($routeV2Json);
+    if (!is_array($payload)) {
+        return ['', ''];
+    }
+
+    $van = '';
+    $naar = '';
+    $garageKinds = ['garage_to_customer', 'garage_start', 'garage_end', 'customer_to_garage', 'return_to_garage'];
+
+    foreach (is_array($payload['days'] ?? null) ? $payload['days'] : [] as $day) {
+        if (!is_array($day)) {
+            continue;
+        }
+        foreach (is_array($day['routes'] ?? null) ? $day['routes'] : [] as $route) {
+            if (!is_array($route) || empty($route['enabled'])) {
+                continue;
+            }
+            foreach (is_array($route['segments'] ?? null) ? $route['segments'] : [] as $seg) {
+                if (!is_array($seg)) {
+                    continue;
+                }
+                $kind = trim((string) ($seg['kind'] ?? $seg['return_kind'] ?? ''));
+                $isGarage = in_array($kind, $garageKinds, true) || $kind === 'rg';
+                $from = trim((string) ($seg['from'] ?? $seg['van'] ?? ''));
+                $to = trim((string) ($seg['to'] ?? $seg['naar'] ?? ''));
+                if ($van === '' && $from !== '' && !$isGarage) {
+                    $van = $from;
+                }
+                if ($to !== '' && !in_array($kind, ['garage_end', 'customer_to_garage', 'return_to_garage'], true)) {
+                    $naar = $to;
+                }
+            }
+        }
+    }
+
+    return [$van, $naar];
+}
+
 /** Vertrek: eerste deel is vaak de plaats; anders tweede segment na straat. */
 function sales_calc_plaats_from_adres_vertrek(?string $adres): string
 {
-    $raw = trim((string) $adres);
+    $raw = sales_calc_sanitize_route_adres((string) $adres);
     if ($raw === '' || $raw === '?') {
         return '?';
+    }
+    if (preg_match('/\bpendel(?:en)?\s+([A-Za-zÀ-ÿ][\w\-\']{2,})/iu', $raw, $m)) {
+        $city = trim((string) ($m[1] ?? ''));
+        if ($city !== '' && !sales_calc_is_noise_plaats_token($city)) {
+            return sales_calc_trunc_plaats($city, 36);
+        }
     }
     $s = preg_replace('/,\s*(Nederland|Netherlands|België|Belgium|Duitsland|Germany|France|Luxemburg)\s*$/iu', '', $raw);
     $chunks = array_values(array_filter(array_map('trim', explode(',', $s)), static function ($p) {
@@ -593,6 +688,15 @@ try {
 
                     $vertrekVol = trim((string) ($r['vertrek_adres'] ?? ''));
                     $bestemmingVol = trim((string) ($r['bestemming_adres'] ?? ''));
+                    if (!$isSales && trim((string) ($r['route_v2_json'] ?? '')) !== '') {
+                        [$rvVan, $rvNaar] = sales_calc_van_naar_from_route_v2((string) $r['route_v2_json']);
+                        if ($rvVan !== '') {
+                            $vertrekVol = $rvVan;
+                        }
+                        if ($rvNaar !== '') {
+                            $bestemmingVol = $rvNaar;
+                        }
+                    }
                     if ($vertrekVol === '') {
                         $vertrekVol = '?';
                     }
@@ -601,6 +705,9 @@ try {
                     }
                     $vertrekLabel = $vertrekVol === '?' ? '?' : sales_calc_plaats_from_adres_vertrek($vertrekVol);
                     $bestemmingLabel = $bestemmingVol === '?' ? '?' : sales_calc_plaats_from_adres($bestemmingVol);
+                    if ($bestemmingLabel === '?' || sales_calc_is_noise_plaats_token($bestemmingLabel)) {
+                        $bestemmingLabel = $bestemmingVol === '?' ? '?' : sales_calc_trunc_plaats($bestemmingVol, 28);
+                    }
                     $routeVvSuffix = ($r['rittype'] ?? '') === 'brenghaal' ? ' v.v.' : '';
                     $routeTitle = $vertrekVol === '?' && $bestemmingVol === '?'
                         ? ''
