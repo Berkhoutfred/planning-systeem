@@ -205,148 +205,175 @@ if ($stepGet === 'code' && !$showOtpCodeForm) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inloggen - Tourplan Beheer</title>
+    <title>Inloggen - Tourplan</title>
+    <link rel="icon" type="image/png" href="/assets/favicon.png">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        tourplan: {
-                            primary: '#0B3E69',
-                            primaryHover: '#0A3459',
-                            surface: '#F3F6F8'
-                        }
-                    }
-                }
-            }
-        };
-    </script>
+    <style>
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-float { animation: float 6s ease-in-out infinite; }
+        .animate-fadeIn { animation: fadeIn 0.6s ease-out; }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #0B3E69 0%, #1a5c8f 50%, #003366 100%);
+        }
+        .glow-on-hover:hover {
+            box-shadow: 0 0 30px rgba(11, 62, 105, 0.4);
+        }
+    </style>
 </head>
-<body class="min-h-screen bg-tourplan-surface text-slate-900 antialiased">
-    <main class="min-h-screen flex items-center justify-center px-4 py-8">
-        <div class="w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-200/60 p-6 sm:p-8">
-            <div class="flex flex-col items-center text-center mb-6">
+<body class="gradient-bg min-h-screen antialiased">
+    <!-- Decorative circles -->
+    <div class="absolute top-10 right-10 w-72 h-72 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-float"></div>
+    <div class="absolute bottom-10 left-10 w-72 h-72 bg-cyan-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-float" style="animation-delay: 2s;"></div>
+    
+    <main class="relative min-h-screen flex items-center justify-center px-4 py-12">
+        <div class="w-full max-w-md animate-fadeIn">
+            <!-- Logo & Hero Section -->
+            <div class="text-center mb-8">
                 <?php if ($hasLoginLogo): ?>
                     <img
                         src="<?php echo h($logoWebPath); ?>"
                         alt="Tourplan"
-                        class="h-12 w-auto mb-4"
+                        class="h-20 w-auto mx-auto mb-6 drop-shadow-2xl"
                         loading="eager"
                     >
                 <?php endif; ?>
-                <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Inloggen op Tourplan</h1>
-                <p class="mt-2 text-sm text-slate-600">Log in op het Tourplan beheerportaal.</p>
+                <h1 class="text-4xl font-bold text-white mb-3 tracking-tight">Welkom bij Tourplan</h1>
+                <p class="text-blue-100 text-lg">Modern Transport Planning Software</p>
             </div>
 
+            <!-- Login Card -->
+            <div class="glass-effect rounded-3xl shadow-2xl p-8 glow-on-hover transition-all duration-300"
+
             <?php if ($infoMelding !== ''): ?>
-                <div class="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-                    <?php echo h($infoMelding); ?>
+                <div class="mb-6 rounded-xl border-2 border-emerald-400 bg-emerald-50 px-5 py-4 text-sm text-emerald-800 font-medium shadow-lg">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                        </svg>
+                        <?php echo h($infoMelding); ?>
+                    </div>
                 </div>
             <?php endif; ?>
             <?php if ($foutmelding !== ''): ?>
-                <div class="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
-                    <?php echo h($foutmelding); ?>
+                <div class="mb-6 rounded-xl border-2 border-rose-400 bg-rose-50 px-5 py-4 text-sm text-rose-800 font-medium shadow-lg">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                        </svg>
+                        <?php echo h($foutmelding); ?>
+                    </div>
                 </div>
             <?php endif; ?>
 
             <?php if (!$showOtpCodeForm && !$showEmailOtpRequest): ?>
-                <div class="mb-4 flex rounded-xl border border-slate-200 bg-slate-50 p-1 text-sm font-medium">
+                <div class="mb-6 flex rounded-2xl bg-slate-100 p-1.5 text-sm font-semibold shadow-inner">
                     <a
-                        class="flex-1 rounded-lg px-3 py-2 text-center bg-white text-slate-900 shadow-sm"
+                        class="flex-1 rounded-xl px-4 py-2.5 text-center bg-white text-slate-900 shadow-md transition-all duration-200"
                         href="/login.php?redirect_to=<?php echo h(rawurlencode($redirectTo)); ?>"
-                    >Wachtwoord</a>
+                    >🔑 Wachtwoord</a>
                     <a
-                        class="flex-1 rounded-lg px-3 py-2 text-center text-slate-600 hover:text-slate-900"
+                        class="flex-1 rounded-xl px-4 py-2.5 text-center text-slate-600 hover:text-slate-900 hover:bg-white/50 transition-all duration-200"
                         href="/login.php?step=email&redirect_to=<?php echo h(rawurlencode($redirectTo)); ?>"
-                    >Code per e-mail</a>
+                    >📧 E-mail code</a>
                 </div>
 
-                <form method="POST" action="/login.php" autocomplete="off" class="space-y-4">
+                <form method="POST" action="/login.php" autocomplete="off" class="space-y-5">
                     <input type="hidden" name="auth_csrf_token" value="<?php echo h($csrfToken); ?>">
                     <input type="hidden" name="redirect_to" value="<?php echo h($redirectTo); ?>">
 
                     <div>
-                        <label for="email" class="mb-1 block text-sm font-medium text-slate-700">E-mailadres</label>
+                        <label for="email" class="mb-2 block text-sm font-semibold text-slate-700">E-mailadres</label>
                         <input
                             type="email"
                             id="email"
                             name="email"
-                            placeholder="bijv. admin@bedrijf.nl"
+                            placeholder="admin@bedrijf.nl"
                             required
                             autofocus
                             autocomplete="username"
-                            class="block w-full rounded-xl border border-slate-300 bg-white px-3.5 py-3 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-tourplan-primary focus:outline-none focus:ring-4 focus:ring-[#0B3E69]/15"
+                            class="block w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-900 shadow-sm transition-all duration-200 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/20 hover:border-slate-300"
                         >
                     </div>
 
                     <div>
-                        <label for="password" class="mb-1 block text-sm font-medium text-slate-700">Wachtwoord</label>
+                        <label for="password" class="mb-2 block text-sm font-semibold text-slate-700">Wachtwoord</label>
                         <input
                             type="password"
                             id="password"
                             name="wachtwoord_poging"
-                            placeholder="Wachtwoord"
+                            placeholder="••••••••"
                             required
                             autocomplete="current-password"
-                            class="block w-full rounded-xl border border-slate-300 bg-white px-3.5 py-3 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-tourplan-primary focus:outline-none focus:ring-4 focus:ring-[#0B3E69]/15"
+                            class="block w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-900 shadow-sm transition-all duration-200 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/20 hover:border-slate-300"
                         >
                     </div>
 
                     <button
                         type="submit"
-                        class="mt-2 inline-flex w-full items-center justify-center rounded-xl bg-tourplan-primary px-4 py-3 text-sm font-semibold text-white transition hover:bg-tourplan-primaryHover focus:outline-none focus:ring-4 focus:ring-[#0B3E69]/20"
+                        class="mt-6 w-full rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-4 text-base font-bold text-white shadow-lg transition-all duration-200 hover:from-blue-700 hover:to-blue-800 hover:shadow-xl hover:-translate-y-0.5 focus:outline-none focus:ring-4 focus:ring-blue-500/40"
                     >
-                        Inloggen
+                        Inloggen →
                     </button>
                 </form>
             <?php elseif ($showEmailOtpRequest): ?>
-                <div class="mb-4 flex rounded-xl border border-slate-200 bg-slate-50 p-1 text-sm font-medium">
+                <div class="mb-6 flex rounded-2xl bg-slate-100 p-1.5 text-sm font-semibold shadow-inner">
                     <a
-                        class="flex-1 rounded-lg px-3 py-2 text-center text-slate-600 hover:text-slate-900"
+                        class="flex-1 rounded-xl px-4 py-2.5 text-center text-slate-600 hover:text-slate-900 hover:bg-white/50 transition-all duration-200"
                         href="/login.php?redirect_to=<?php echo h(rawurlencode($redirectTo)); ?>"
-                    >Wachtwoord</a>
+                    >🔑 Wachtwoord</a>
                     <a
-                        class="flex-1 rounded-lg px-3 py-2 text-center bg-white text-slate-900 shadow-sm"
+                        class="flex-1 rounded-xl px-4 py-2.5 text-center bg-white text-slate-900 shadow-md transition-all duration-200"
                         href="/login.php?step=email&redirect_to=<?php echo h(rawurlencode($redirectTo)); ?>"
-                    >Code per e-mail</a>
+                    >📧 E-mail code</a>
                 </div>
-                <form method="POST" action="/login.php" autocomplete="off" class="space-y-4">
+                <form method="POST" action="/login.php" autocomplete="off" class="space-y-5">
                     <input type="hidden" name="auth_csrf_token" value="<?php echo h($csrfToken); ?>">
                     <input type="hidden" name="redirect_to" value="<?php echo h($redirectTo); ?>">
                     <input type="hidden" name="office_action" value="request_email_otp">
                     <div>
-                        <label for="email_otp" class="mb-1 block text-sm font-medium text-slate-700">E-mailadres</label>
+                        <label for="email_otp" class="mb-2 block text-sm font-semibold text-slate-700">E-mailadres</label>
                         <input
                             type="email"
                             id="email_otp"
                             name="email"
-                            placeholder="bijv. admin@bedrijf.nl"
+                            placeholder="admin@bedrijf.nl"
                             required
                             autofocus
                             autocomplete="username"
-                            class="block w-full rounded-xl border border-slate-300 bg-white px-3.5 py-3 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-tourplan-primary focus:outline-none focus:ring-4 focus:ring-[#0B3E69]/15"
+                            class="block w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-900 shadow-sm transition-all duration-200 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/20 hover:border-slate-300"
                         >
                     </div>
                     <button
                         type="submit"
-                        class="mt-2 inline-flex w-full items-center justify-center rounded-xl bg-tourplan-primary px-4 py-3 text-sm font-semibold text-white transition hover:bg-tourplan-primaryHover focus:outline-none focus:ring-4 focus:ring-[#0B3E69]/20"
+                        class="mt-6 w-full rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-4 text-base font-bold text-white shadow-lg transition-all duration-200 hover:from-blue-700 hover:to-blue-800 hover:shadow-xl hover:-translate-y-0.5 focus:outline-none focus:ring-4 focus:ring-blue-500/40"
                     >
-                        Stuur code (6 cijfers)
+                        Stuur code (6 cijfers) →
                     </button>
                 </form>
-                <p class="mt-4 text-xs text-slate-500">Je ontvangt een eenmalige code per e-mail. Die code is 15 minuten geldig.</p>
+                <p class="mt-5 text-xs text-slate-500 text-center">Je ontvangt een eenmalige code per e-mail. Die code is 15 minuten geldig.</p>
             <?php else: ?>
-                <p class="mb-4 text-sm text-slate-600 text-center">
+                <p class="mb-6 text-sm text-slate-700 text-center bg-blue-50 p-4 rounded-xl border border-blue-200">
                     Vul de 6-cijferige code in die we net naar<br>
-                    <strong><?php echo h((string) ($otpCtx['email'] ?? '')); ?></strong> hebben gestuurd.
+                    <strong class="text-blue-700"><?php echo h((string) ($otpCtx['email'] ?? '')); ?></strong> hebben gestuurd.
                 </p>
-                <form method="POST" action="/login.php" autocomplete="off" class="space-y-4">
+                <form method="POST" action="/login.php" autocomplete="off" class="space-y-5">
                     <input type="hidden" name="auth_csrf_token" value="<?php echo h($csrfToken); ?>">
                     <input type="hidden" name="redirect_to" value="<?php echo h($redirectTo); ?>">
                     <input type="hidden" name="office_action" value="verify_otp">
                     <div>
-                        <label for="login_otp_code" class="mb-1 block text-sm font-medium text-slate-700">Code</label>
+                        <label for="login_otp_code" class="mb-2 block text-sm font-semibold text-slate-700 text-center">Verificatiecode</label>
                         <input
                             type="text"
                             inputmode="numeric"
@@ -358,26 +385,37 @@ if ($stepGet === 'code' && !$showOtpCodeForm) {
                             required
                             autofocus
                             autocomplete="one-time-code"
-                            class="block w-full rounded-xl border border-slate-300 bg-white px-3.5 py-3 text-sm text-slate-900 shadow-sm tracking-widest text-center text-lg font-mono focus:border-tourplan-primary focus:outline-none focus:ring-4 focus:ring-[#0B3E69]/15"
+                            class="block w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-4 text-lg text-slate-900 shadow-sm tracking-[0.5em] text-center font-mono font-bold focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/20 hover:border-slate-300 transition-all duration-200"
                         >
                     </div>
                     <button
                         type="submit"
-                        class="mt-2 inline-flex w-full items-center justify-center rounded-xl bg-tourplan-primary px-4 py-3 text-sm font-semibold text-white transition hover:bg-tourplan-primaryHover focus:outline-none focus:ring-4 focus:ring-[#0B3E69]/20"
+                        class="mt-6 w-full rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-4 text-base font-bold text-white shadow-lg transition-all duration-200 hover:from-blue-700 hover:to-blue-800 hover:shadow-xl hover:-translate-y-0.5 focus:outline-none focus:ring-4 focus:ring-blue-500/40"
                     >
-                        Bevestigen en inloggen
+                        Bevestigen en inloggen →
                     </button>
                 </form>
-                <p class="mt-4 text-center text-xs">
-                    <a class="text-tourplan-primary hover:underline" href="/login.php?redirect_to=<?php echo h(rawurlencode($redirectTo)); ?>">Annuleren en opnieuw beginnen</a>
+                <p class="mt-5 text-center text-sm">
+                    <a class="text-blue-600 hover:text-blue-700 font-semibold hover:underline transition-colors" href="/login.php?redirect_to=<?php echo h(rawurlencode($redirectTo)); ?>">← Annuleren en opnieuw beginnen</a>
                 </p>
             <?php endif; ?>
 
             <?php if (!$showOtpCodeForm && !$showEmailOtpRequest): ?>
-                <p class="mt-4 text-xs text-slate-500">
+                <p class="mt-6 text-xs text-center text-slate-500">
                     Gebruik je account e-mailadres. De omgeving wordt automatisch bepaald.
                 </p>
             <?php endif; ?>
+            </div>
+
+            <!-- Footer -->
+            <div class="mt-8 text-center">
+                <p class="text-sm text-blue-100 font-medium">
+                    © <?php echo date('Y'); ?> Tourplan - Transport Planning Software
+                </p>
+                <p class="mt-1 text-xs text-blue-200/60">
+                    Veilig inloggen met multi-tenant ondersteuning
+                </p>
+            </div>
         </div>
     </main>
 </body>

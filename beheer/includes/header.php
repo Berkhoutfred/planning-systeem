@@ -187,7 +187,7 @@ if (isset($pdo) && $pdo instanceof PDO && function_exists('current_tenant_id')) 
 <body>
 
 <header>
-    <img src="<?php echo $path; ?>../assets/tourplan-logo-header-600.png" alt="Tourplan" style="height: 32px; width: auto; margin-right: 12px;">
+    <img src="<?php echo $path; ?>../assets/tourplan-logo-header-600.png" alt="Tourplan" style="height: 48px; width: auto; margin-right: 16px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));">
     <h2 style="margin:0; white-space: nowrap; font-size:17px; line-height:1.1;"><?php echo htmlspecialchars($tenantLabel, ENT_QUOTES, 'UTF-8'); ?></h2>
     
     <nav>
