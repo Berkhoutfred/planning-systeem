@@ -14,6 +14,27 @@ if ($tenantId <= 0) {
 
 $moduleBuitenland = isset($_GET['module']) && $_GET['module'] === 'buitenland';
 
+/**
+ * BUG 4: retourneert het garage-adres voor de formulierveldwaarden.
+ * Volgorde: 1) .env DEFAULT_GARAGE_ADRES  2) laatste t_garage-regel voor deze tenant  3) lege string.
+ */
+function maken_default_garage_adres(PDO $pdo, int $tenantId): string
+{
+    $envAdres = trim((string) ($_ENV['DEFAULT_GARAGE_ADRES'] ?? getenv('DEFAULT_GARAGE_ADRES') ?? ''));
+    if ($envAdres !== '') {
+        return $envAdres;
+    }
+    $stmt = $pdo->prepare(
+        "SELECT adres FROM calculatie_regels
+         WHERE tenant_id = ? AND type = 't_garage' AND adres IS NOT NULL AND adres <> ''
+         ORDER BY id DESC LIMIT 1"
+    );
+    $stmt->execute([$tenantId]);
+    return trim((string) ($stmt->fetchColumn() ?: ''));
+}
+
+$defaultGarageAdres = maken_default_garage_adres($pdo, $tenantId);
+
 // STANDAARD WAARDEN
 $rit = [
     'id' => 0, 'klant_id' => 0, 'contact_id' => 0, 'afdeling_id' => 0, 'rittype' => 'dagtocht', 
@@ -355,7 +376,7 @@ function val($data, $rij, $veld, $default = '') {
                 <div id="legacy_heen_mirror" class="legacy-heen-sr-only" aria-hidden="true">
                     <div class="rit-row" id="row_garage">
                         <input type="text" name="time[t_garage]" id="time_t_garage" class="form-control custom-time-input reken-trigger" placeholder="--:--" readonly>
-                        <input type="text" name="addr[t_garage]" id="addr_t_garage" class="form-control reken-trigger" value="Industrieweg 95a, Zutphen" placeholder="Garage..." autocomplete="off">
+                        <input type="text" name="addr[t_garage]" id="addr_t_garage" class="form-control reken-trigger" value="<?= htmlspecialchars($defaultGarageAdres, ENT_QUOTES, 'UTF-8') ?>" placeholder="Garage..." autocomplete="off">
                     </div>
                     <div class="rit-row" id="row_vertrek_klant">
                         <input type="text" name="time[t_vertrek_klant]" id="time_t_vertrek_klant" class="form-control custom-time-input reken-trigger" placeholder="--:--" readonly>
@@ -387,7 +408,7 @@ function val($data, $rij, $veld, $default = '') {
                     </div>
                     <div class="rit-row" id="row_retour_garage_heen" style="display:none;">
                         <input type="text" name="time[t_retour_garage_heen]" id="time_t_retour_garage_heen" class="form-control custom-time-input reken-trigger" placeholder="--:--" readonly>
-                        <input type="text" name="addr[t_retour_garage_heen]" id="addr_t_retour_garage_heen" class="form-control reken-trigger" value="Industrieweg 95a, Zutphen" placeholder="Garage..." autocomplete="off">
+                        <input type="text" name="addr[t_retour_garage_heen]" id="addr_t_retour_garage_heen" class="form-control reken-trigger" value="<?= htmlspecialchars($defaultGarageAdres, ENT_QUOTES, 'UTF-8') ?>" placeholder="Garage..." autocomplete="off">
                         <input type="number" name="km[t_retour_garage_heen]" class="form-control km-calc reken-trigger" value="0">
                         <select class="form-control km-zone-select reken-trigger"><option value="nl">NL</option><option value="de">DE</option><option value="ch">CH</option><option value="ov">0%</option></select>
                     </div>
@@ -457,7 +478,7 @@ function val($data, $rij, $veld, $default = '') {
                         
                         <div class="rit-row" id="row_garage_rit2" style="display:none; background:#f9f9f9; padding:5px; margin-bottom:10px; border-radius:4px;">
                             <div class="col-tijd"><label>Start rit twee</label><input type="text" name="time[t_garage_rit2]" id="time_t_garage_rit2" class="form-control custom-time-input reken-trigger" placeholder="--:--" readonly></div>
-                            <div class="col-adres"><label>Garage start (rit twee)</label><input type="text" name="addr[t_garage_rit2]" id="addr_t_garage_rit2" class="form-control google-autocomplete" value="Industrieweg 95a, Zutphen" placeholder="Garage..."></div>
+                            <div class="col-adres"><label>Garage start (rit twee)</label><input type="text" name="addr[t_garage_rit2]" id="addr_t_garage_rit2" class="form-control google-autocomplete" value="<?= htmlspecialchars($defaultGarageAdres, ENT_QUOTES, 'UTF-8') ?>" placeholder="Garage..."></div>
                             <div class="col-km"><label>Km</label><input type="number" name="km[t_garage_rit2]" class="form-control km-calc reken-trigger" value="0"></div>
                             <div class="col-zone"><label>Zone</label><select class="form-control km-zone-select reken-trigger" title="Fiscale zone"><option value="nl">NL</option><option value="de">DE</option><option value="ch">CH</option><option value="ov">0%</option></select></div>
                         </div>
@@ -485,7 +506,7 @@ function val($data, $rij, $veld, $default = '') {
 
                         <div class="rit-row" id="row_garage_terug" style="border-top:1px dashed #ccc; padding-top:10px;">
                             <div class="col-tijd"><label>Einde Rit</label><input type="text" name="time[t_retour_garage]" id="time_t_retour_garage" class="form-control custom-time-input reken-trigger" placeholder="--:--" readonly></div>
-                            <div class="col-adres"><label>Garage Retour (Einde)</label><input type="text" name="addr[t_retour_garage]" id="addr_t_retour_garage" class="form-control google-autocomplete" value="Industrieweg 95a, Zutphen" placeholder="Garage..."></div>
+                            <div class="col-adres"><label>Garage Retour (Einde)</label><input type="text" name="addr[t_retour_garage]" id="addr_t_retour_garage" class="form-control google-autocomplete" value="<?= htmlspecialchars($defaultGarageAdres, ENT_QUOTES, 'UTF-8') ?>" placeholder="Garage..."></div>
                             <div class="col-km"><label>Km</label><input type="number" name="km[t_retour_garage]" class="form-control km-calc reken-trigger" value="0"></div>
                             <div class="col-zone"><label>Zone</label><select class="form-control km-zone-select reken-trigger" title="Fiscale zone"><option value="nl">NL</option><option value="de">DE</option><option value="ch">CH</option><option value="ov">0%</option></select></div>
                         </div>

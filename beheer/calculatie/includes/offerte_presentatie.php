@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/route_v2.php';
 require_once dirname(__DIR__, 2) . '/includes/pdf_instructie_klant.php';
 require_once dirname(__DIR__, 2) . '/includes/tenant_instellingen_db.php';
+require_once dirname(__DIR__, 2) . '/includes/tenant_settings.php';
 
 function offerte_presentatie_base_select_sql(): string
 {
@@ -262,7 +263,8 @@ function offerte_presentatie_format_date(string $date, bool $withWeekday = false
 function offerte_presentatie_format_time_with_offset(string $time, int $offset = 0): string
 {
     $time = calculatie_route_v2_normalize_hhmm($time);
-    if ($time === '') {
+    // BUG 6: lege tijd of middernacht-placeholder niet tonen in offerte
+    if ($time === '' || $time === '00:00') {
         return '';
     }
     if ($offset <= 0) {
@@ -469,7 +471,7 @@ function offerte_presentatie_event_rows(array $events): array
             'label' => trim((string) ($event['label'] ?? '')),
             'date_display' => offerte_presentatie_format_date((string) ($event['date'] ?? ''), true),
             'time' => calculatie_route_v2_normalize_hhmm($event['time'] ?? ''),
-            'time_display' => calculatie_route_v2_normalize_hhmm($event['time'] ?? ''),
+            'time_display' => offerte_presentatie_format_time_with_offset((string) ($event['time'] ?? '')),
             'from' => trim((string) ($event['from'] ?? '')),
             'to' => trim((string) ($event['to'] ?? '')),
             'km' => calculatie_route_v2_normalize_float($event['km'] ?? 0),
@@ -1065,8 +1067,12 @@ function offerte_presentatie_build(PDO $pdo, array $rit): array
     $instructie = pdf_filter_instructie_voor_klant(isset($rit['instructie_kantoor']) ? (string) $rit['instructie_kantoor'] : null);
 
     // DB-kolom `prijs` is LEIDEND inclusief BTW; excl. en btw berekenen we hieruit.
+    // BUG 7: BTW-percentage uit tenant-instellingen (niet hardcoded 9%)
+    $calcInst = tenant_calculatie_instellingen_merged($pdo, $tenantId);
+    $btwPerc = (float) ($calcInst['btw_nl'] ?? 9.0);
+    $btwFactor = 1 + ($btwPerc / 100.0);
     $prijsIncl = round((float) ($rit['prijs'] ?? 0), 2);
-    $prijsExcl = round($prijsIncl / 1.09, 2);
+    $prijsExcl = round($prijsIncl / $btwFactor, 2);
     $btwBedrag = round($prijsIncl - $prijsExcl, 2);
 
     $startDate = calculatie_route_v2_normalize_date($payload['dates']['start'] ?? ($rit['rit_datum'] ?? ''));

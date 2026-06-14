@@ -36,6 +36,11 @@ if (!function_exists('tenant_instellingen_ensure_schema')) {
             if ((int) $chk->fetchColumn() === 0) {
                 $pdo->exec('ALTER TABLE tenant_instellingen ADD COLUMN boekhoud_email VARCHAR(190) NULL DEFAULT NULL AFTER email');
             }
+
+            $chk->execute([$dbName, 'tenant_instellingen', 'naam_verantwoordelijke']);
+            if ((int) $chk->fetchColumn() === 0) {
+                $pdo->exec('ALTER TABLE tenant_instellingen ADD COLUMN naam_verantwoordelijke VARCHAR(120) NULL DEFAULT NULL AFTER boekhoud_email');
+            }
         }
     }
 }
@@ -153,6 +158,7 @@ if (!function_exists('tenant_instellingen_get')) {
             'telefoon' => '',
             'email' => '',
             'boekhoud_email' => '',
+            'naam_verantwoordelijke' => '',
             'kvk_nummer' => '',
             'btw_nummer' => '',
             'iban' => '',

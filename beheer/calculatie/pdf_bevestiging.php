@@ -13,6 +13,7 @@ require '../includes/db.php';
 require '../includes/fpdf/fpdf.php';
 require '../includes/pdf_instructie_klant.php';
 require '../includes/tenant_instellingen_db.php';
+require '../includes/tenant_settings.php';
 
 function safe_iconv($text) {
     return iconv('UTF-8', 'windows-1252//TRANSLIT', (string) ($text ?? ''));
@@ -71,6 +72,20 @@ $mijn_telefoon = trim((string) ($tenantInst['telefoon'] ?? ''));
 $mijn_email = trim((string) ($tenantInst['email'] ?? ''));
 $mijn_kvk = trim((string) ($tenantInst['kvk_nummer'] ?? ''));
 $mijn_logo = trim((string) ($tenantInst['logo_pad'] ?? ''));
+// BUG 8: naam verantwoordelijke uit tenant-instellingen
+$mijn_naam_verantwoordelijke = trim((string) ($tenantInst['naam_verantwoordelijke'] ?? ''));
+
+// BUG 7: BTW-percentage uit tenant-calculatie-instellingen
+$calcInst = tenant_calculatie_instellingen_merged($pdo, $tenantId);
+$btwPerc = (float) ($calcInst['btw_nl'] ?? 9.0);
+$btwFactor = 1 + ($btwPerc / 100.0);
+
+// BUG 7: aantal bussen dynamisch berekenen (hoofd + extra_voertuigen)
+$extraVoertuigenRaw = trim((string) ($rit['extra_voertuigen'] ?? ''));
+$extraVoertuigenIds = $extraVoertuigenRaw !== ''
+    ? array_filter(explode(',', $extraVoertuigenRaw), static fn ($v) => trim($v) !== '')
+    : [];
+$aantalBussen = 1 + count($extraVoertuigenIds);
 
 if (!empty($rit['klant_id'])) {
     $kid = (int) $rit['klant_id'];
@@ -309,18 +324,20 @@ $pdf->SetTextColor(0);
 $pdf->SetFont('Arial','',10);
 
 // DB-kolom `prijs` is LEIDEND inclusief BTW.
+// BUG 7: gebruik $btwFactor en $aantalBussen die hierboven dynamisch zijn ingesteld
 $prijsIncl = (float) ($rit['prijs'] ?? 0);
-$prijsExcl = round($prijsIncl / 1.09, 2);
+$prijsExcl = round($prijsIncl / $btwFactor, 2);
 $btw = round($prijsIncl - $prijsExcl, 2);
-$totaal = round($prijsIncl / 5) * 5; 
+$totaal = round($prijsIncl / 5) * 5;
 
+$busLabel = $aantalBussen === 1 ? '1 touringcar' : $aantalBussen . ' touringcars';
 $pdf->Ln(2);
-$pdf->Cell(150, 6, '  Vervoerskosten (1 touringcar) - Excl. BTW', 0, 0);
+$pdf->Cell(150, 6, '  Vervoerskosten (' . $busLabel . ') - Excl. BTW', 0, 0);
 $pdf->Cell(40, 6, chr(128).' '.number_format($prijsExcl, 2, ',', '.'), 0, 1, 'R');
 
 $pdf->SetFont('Arial','I',9);
 $pdf->SetTextColor(100, 100, 100);
-$pdf->Cell(150, 5, '  Nederland 9% BTW over ' . chr(128).' '.number_format($prijsExcl, 2, ',', '.'), 0, 0);
+$pdf->Cell(150, 5, '  Nederland ' . number_format($btwPerc, 0) . '% BTW over ' . chr(128).' '.number_format($prijsExcl, 2, ',', '.'), 0, 0);
 $pdf->Cell(40, 5, chr(128).' '.number_format($btw, 2, ',', '.'), 0, 1, 'R');
 
 $pdf->Ln(3);
@@ -352,9 +369,12 @@ $pdf->SetFont('Arial','',10);
 $pdf->Cell(0, 5, safe_iconv('Wij wensen u alvast een prettige en veilige reis met ' . $mijn_bedrijfsnaam . '.'), 0, 1);
 $pdf->Ln(4);
 $pdf->SetFont('Arial','B',10);
-$pdf->Cell(0, 5, safe_iconv($mijn_bedrijfsnaam), 0, 1); 
+$pdf->Cell(0, 5, safe_iconv($mijn_bedrijfsnaam), 0, 1);
 $pdf->SetFont('Arial','',10);
-$pdf->Cell(0, 5, safe_iconv('Fred Stravers'), 0, 1); 
+// BUG 8: naam verantwoordelijke uit tenant-instellingen (niet hardcoded)
+if ($mijn_naam_verantwoordelijke !== '') {
+    $pdf->Cell(0, 5, safe_iconv($mijn_naam_verantwoordelijke), 0, 1);
+}
 
 $slug = preg_replace('/[^A-Za-z0-9_-]/', '_', $mijn_bedrijfsnaam);
 $pdf->Output('I', 'Bevestiging-' . $slug . '-' . $orderNummer . '.pdf');

@@ -1,6 +1,6 @@
 /**
  * Bestand: beheer/calculatie/rekenmachine.js
- * Versie: MASTER 3.3 - Definitieve Adres & Contact Fix
+ * Versie: MASTER 3.4 - Tijdveld Init Fix & Tenant Bugfixes
  */
 
 let activeTimeInput = null;
@@ -190,6 +190,8 @@ function init() {
     }
     updateVisibility();
     bindGooglePlacesAutocomplete();
+    // BUG 1: tijdvelden initieel berekenen bij laden pagina
+    updatePlanning(false);
 }
 
 /** Als de Maps-callback uitblijft (adblock, sleutel, netwerk), toch route/segmenten laden. */
@@ -222,6 +224,9 @@ function tryInitialRouteIfNoKm() {
         const ab = document.getElementById('addr_t_aankomst_best');
         if (sum < 0.5 && vg && ab && vg.value.trim() !== '' && ab.value.trim() !== '') {
             calculateRoute();
+        } else {
+            // BUG 3: bestaande offerte met km — tijden toch berekenen zonder overschrijven
+            updatePlanning(false);
         }
     }, 450);
 }
@@ -897,7 +902,20 @@ function syncHeenSegmentPlanning() {
     return true;
 }
 
-function updatePlanning() {
+/**
+ * BUG 2: helper die alleen schrijft als overwrite===true OF het veld leeg/ongewijzigd is.
+ * Zo worden handmatig ingevoerde tijden nooit overschreven bij overwrite=false.
+ */
+function setTijd(id, waarde, overwrite) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (overwrite || el.value === '' || el.value === '--:--') {
+        el.value = waarde;
+    }
+}
+
+function updatePlanning(overwrite) {
+    if (overwrite === undefined) overwrite = true;
     const typeElPlan = document.getElementById('rittype_select');
     const type = typeElPlan ? typeElPlan.value : '';
     const segmentPlanningHandled = syncHeenSegmentPlanning();
@@ -911,7 +929,7 @@ function updatePlanning() {
         const dGarage = addMinutes(dVoorrij, -ritGarageNaarVl);
         const elGarage = document.getElementById('time_t_garage');
         if (elGarage && elGarage.dataset.manual !== '1') {
-            elGarage.value = formatTime(dGarage);
+            setTijd('time_t_garage', formatTime(dGarage), overwrite);
         }
 
         const ritVlNaarGrens = reisTijden['addr_t_voorstaan'] || 0;
@@ -920,10 +938,7 @@ function updatePlanning() {
         const ritG1NaarG2 = useG2 ? (reisTijden['addr_t_grens2'] || 0) : 0;
         const ritLastNaarBest = reisTijden['addr_t_aankomst_best'] || 0;
         const dAankomst = addMinutes(dVertrek, ritVlNaarGrens + ritG1NaarG2 + ritLastNaarBest);
-        const elBestA = document.getElementById('time_t_aankomst_best');
-        if (elBestA) {
-            elBestA.value = formatTime(dAankomst);
-        }
+        setTijd('time_t_aankomst_best', formatTime(dAankomst), overwrite);
 
         const elHiddenVs = document.getElementById('time_t_voorstaan');
         if (elHiddenVs) {
@@ -939,9 +954,8 @@ function updatePlanning() {
         }
 
         const ritNaarGarageHeen = reisTijden['addr_t_retour_garage_heen'] || 30;
-        const dGarageHeenEnd = addMinutes(dAankomst, ritNaarGarageHeen + 15); 
-        if(document.getElementById('time_t_retour_garage_heen'))
-            document.getElementById('time_t_retour_garage_heen').value = formatTime(dGarageHeenEnd);
+        const dGarageHeenEnd = addMinutes(dAankomst, ritNaarGarageHeen + 15);
+        setTijd('time_t_retour_garage_heen', formatTime(dGarageHeenEnd), overwrite);
     } else if (!segmentPlanningHandled) {
         const elGarage = document.getElementById('time_t_garage');
         const elBest = document.getElementById('time_t_aankomst_best');
@@ -959,31 +973,19 @@ function updatePlanning() {
         if(tOphaal) {
             const dOphaal = parseTime(tOphaal);
             const dVoorstaan2 = addMinutes(dOphaal, -BUFFER_VOORSTAAN);
-            const elVs2 = document.getElementById('time_t_voorstaan_rit2');
-            if (elVs2) {
-                elVs2.value = formatTime(dVoorstaan2);
-            }
-            
+            setTijd('time_t_voorstaan_rit2', formatTime(dVoorstaan2), overwrite);
+
             const ritVanGarage2 = reisTijden['addr_t_voorstaan_rit2'] || 30;
             const dGarageStart2 = addMinutes(dVoorstaan2, -ritVanGarage2);
-            const elG2s = document.getElementById('time_t_garage_rit2');
-            if (elG2s) {
-                elG2s.value = formatTime(dGarageStart2);
-            }
-            
+            setTijd('time_t_garage_rit2', formatTime(dGarageStart2), overwrite);
+
             const ritNaarUitstap = reisTijden['addr_t_retour_klant'] || 60;
             const dUitstap = addMinutes(dOphaal, ritNaarUitstap);
-            const elRK = document.getElementById('time_t_retour_klant');
-            if (elRK) {
-                elRK.value = formatTime(dUitstap);
-            }
-            
+            setTijd('time_t_retour_klant', formatTime(dUitstap), overwrite);
+
             const ritNaarGarageEind = reisTijden['addr_t_retour_garage'] || 30;
             const dGarageEind = addMinutes(dUitstap, ritNaarGarageEind + BUFFER_NAZORG);
-            const elRG = document.getElementById('time_t_retour_garage');
-            if (elRG) {
-                elRG.value = formatTime(dGarageEind);
-            }
+            setTijd('time_t_retour_garage', formatTime(dGarageEind), overwrite);
         }
     } 
     else if (type === 'dagtocht' || type === 'schoolreis' || type === 'meerdaags' || type === 'buitenland' || type === 'trein') {
@@ -1064,6 +1066,32 @@ function updatePlanning() {
     if (typeof window.updateRouteV2HiddenInput === 'function') window.updateRouteV2HiddenInput();
     if (typeof window.syncTerugSegmentDisplayFromLegacy === 'function') {
         window.syncTerugSegmentDisplayFromLegacy();
+    }
+    // BUG 5: toon waarschuwing als retour-vertrekveld ontbreekt
+    controleerRetourTijdWaarschuwing();
+}
+
+/**
+ * BUG 5: markeert time_t_vertrek_best oranje als het leeg is bij rittype dat retour berekent.
+ * Alleen relevant voor brenghaal / dagtocht / schoolreis / meerdaags / buitenland / trein.
+ */
+function controleerRetourTijdWaarschuwing() {
+    const elVB = document.getElementById('time_t_vertrek_best');
+    if (!elVB) return;
+    const typeEl = document.getElementById('rittype_select');
+    const type = typeEl ? typeEl.value : '';
+    const retourTypes = ['brenghaal', 'dagtocht', 'schoolreis', 'meerdaags', 'buitenland', 'trein'];
+    if (!retourTypes.includes(type)) {
+        elVB.style.borderColor = '';
+        elVB.title = '';
+        return;
+    }
+    if (!elVB.value || elVB.value === '--:--') {
+        elVB.style.borderColor = 'orange';
+        elVB.title = 'Voer vertrekveld van de bestemming in voor retour-tijdberekening';
+    } else {
+        elVB.style.borderColor = '';
+        elVB.title = '';
     }
 }
 

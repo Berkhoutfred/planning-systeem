@@ -34,6 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'telefoon' => trim((string) ($_POST['telefoon'] ?? '')),
             'email' => trim((string) ($_POST['email'] ?? '')),
             'boekhoud_email' => trim((string) ($_POST['boekhoud_email'] ?? '')),
+            'naam_verantwoordelijke' => trim((string) ($_POST['naam_verantwoordelijke'] ?? '')),
             'kvk_nummer' => trim((string) ($_POST['kvk_nummer'] ?? '')),
             'btw_nummer' => trim((string) ($_POST['btw_nummer'] ?? '')),
             'iban' => trim((string) ($_POST['iban'] ?? '')),
@@ -80,7 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($fout === '') {
             $sql = 'UPDATE tenant_instellingen
                     SET bedrijfsnaam = ?, adres = ?, postcode = ?, plaats = ?, telefoon = ?, email = ?,
-                        boekhoud_email = ?, kvk_nummer = ?, btw_nummer = ?, iban = ?, logo_pad = ?
+                        boekhoud_email = ?, naam_verantwoordelijke = ?, kvk_nummer = ?, btw_nummer = ?, iban = ?, logo_pad = ?
                     WHERE tenant_id = ?';
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
@@ -91,6 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $fields['telefoon'],
                 $fields['email'],
                 $fields['boekhoud_email'],
+                $fields['naam_verantwoordelijke'],
                 $fields['kvk_nummer'],
                 $fields['btw_nummer'],
                 $fields['iban'],
@@ -350,6 +352,13 @@ include 'includes/header.php';
             <input class="bi-input" type="email" name="boekhoud_email" maxlength="190"
                    value="<?php echo htmlspecialchars((string) $inst['boekhoud_email'], ENT_QUOTES, 'UTF-8'); ?>">
             <span class="bi-hint">Wordt automatisch als BCC toegevoegd bij factuurmails voor deze tenant.</span>
+        </div>
+
+        <div class="bi-field full">
+            <label class="bi-label">Naam verantwoordelijke (ondertekening PDF) <span style="font-weight:400;color:#94a3b8;">(optioneel)</span></label>
+            <input class="bi-input" name="naam_verantwoordelijke" maxlength="120"
+                   value="<?php echo htmlspecialchars((string) ($inst['naam_verantwoordelijke'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>">
+            <span class="bi-hint">Verschijnt onder de bedrijfsnaam in offertes en bevestigingen.</span>
         </div>
 
         <div class="bi-field full">
