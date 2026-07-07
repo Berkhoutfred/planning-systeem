@@ -274,28 +274,6 @@ foreach ($tenantAdmins as $admin) {
     $adminsByTenant[$tid][] = $admin;
 }
 
-$moduleCountsStmt = $pdo->query("
-    SELECT tenant_id, COUNT(*) AS cnt
-    FROM tenant_modules
-    WHERE actief = 1
-    GROUP BY tenant_id
-");
-$moduleCounts = [];
-foreach ($moduleCountsStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-    $moduleCounts[(int) $row['tenant_id']] = (int) $row['cnt'];
-}
-
-$klantTenants = [];
-$systeemTenants = [];
-foreach ($tenants as $tenant) {
-    $slug = (string) ($tenant['slug'] ?? '');
-    if ($slug === 'testomgeving' || str_contains($slug, 'test')) {
-        $systeemTenants[] = $tenant;
-    } else {
-        $klantTenants[] = $tenant;
-    }
-}
-
 if (!function_exists('po_is_legacy_admin')) {
     function po_is_legacy_admin(array $admin): bool
     {
@@ -304,6 +282,43 @@ if (!function_exists('po_is_legacy_admin')) {
         return str_ends_with($email, '.local') || str_contains($email, 'pilot-transport');
     }
 }
+
+$moduleNamesByTenant = [];
+$modListStmt = $pdo->query("
+    SELECT tm.tenant_id, m.naam, m.code
+    FROM tenant_modules tm
+    JOIN modules m ON m.code = tm.module_code
+    WHERE tm.actief = 1
+    ORDER BY m.volgorde ASC, m.naam ASC
+");
+foreach ($modListStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+    $moduleNamesByTenant[(int) $row['tenant_id']][] = (string) $row['naam'];
+}
+
+$selectedTenantId = isset($_GET['tenant']) ? (int) $_GET['tenant'] : 0;
+$selectedTenant = null;
+$selectedLoginUsers = [];
+if ($selectedTenantId > 0) {
+    foreach ($tenants as $tenant) {
+        if ((int) $tenant['id'] === $selectedTenantId) {
+            $selectedTenant = $tenant;
+            break;
+        }
+    }
+    if ($selectedTenant !== null) {
+        $loginStmt = $pdo->prepare("
+            SELECT volledige_naam, email, rol, actief, email_otp_enabled, laatste_login_at
+            FROM users
+            WHERE tenant_id = ?
+              AND rol IN ('tenant_admin', 'planner_user')
+            ORDER BY actief DESC, rol ASC, volledige_naam ASC
+        ");
+        $loginStmt->execute([$selectedTenantId]);
+        $selectedLoginUsers = $loginStmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+}
+
+$owners = $pdo->query("SELECT volledige_naam, email FROM users WHERE rol='platform_owner' AND actief=1 ORDER BY email")->fetchAll(PDO::FETCH_ASSOC);
 
 reis_netwerk_ensure_tables($pdo);
 $reisNetwerken = $pdo->query(
@@ -350,14 +365,33 @@ if ($reisNetwerken !== []) {
     .badge.active { background: #dcfce7; color: #166534; }
     .badge.inactive { background: #fee2e2; color: #991b1b; }
     .badge.legacy { background: #fef3c7; color: #92400e; }
-    .tenant-block { border: 1px solid #e5e7eb; border-radius: 10px; margin-bottom: 14px; overflow: hidden; }
-    .tenant-block-head { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; padding: 12px 14px; background: #f8fafc; border-bottom: 1px solid #e5e7eb; }
-    .tenant-block-title { font-size: 15px; font-weight: 700; color: #003366; margin: 0; }
-    .tenant-block-meta { font-size: 12px; color: #64748b; }
-    .tenant-block-body { padding: 0; }
-    .tenant-empty { padding: 14px; font-size: 13px; color: #94a3b8; }
     .po-note { font-size: 12px; color: #64748b; margin: 0 0 14px; line-height: 1.5; }
-    @media (max-width: 900px) { .po-grid { grid-template-columns: 1fr; } }
+    .tenant-browser { display: grid; grid-template-columns: minmax(260px, 340px) 1fr; gap: 20px; align-items: start; }
+    .tenant-zoek { margin-bottom: 12px; }
+    .tenant-zoek input { margin-bottom: 6px; }
+    .tenant-zoek-hint { font-size: 12px; color: #94a3b8; margin: 0; }
+    .tenant-lijst { display: flex; flex-direction: column; gap: 8px; max-height: 420px; overflow-y: auto; }
+    .tenant-pick {
+        display: block; padding: 12px 14px; border: 1px solid #e5e7eb; border-radius: 10px;
+        text-decoration: none; color: inherit; background: #fff; transition: .15s;
+    }
+    .tenant-pick:hover { border-color: #003366; background: #f8faff; }
+    .tenant-pick.actief { border-color: #003366; background: #eff6ff; box-shadow: inset 0 0 0 1px #003366; }
+    .tenant-pick-naam { font-size: 15px; font-weight: 700; color: #003366; margin: 0 0 4px; }
+    .tenant-pick-meta { font-size: 12px; color: #64748b; }
+    .tenant-detail-empty {
+        padding: 40px 20px; text-align: center; color: #94a3b8; font-size: 14px;
+        border: 1px dashed #e2e8f0; border-radius: 10px; background: #fafafa;
+    }
+    .tenant-detail-head { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: start; margin-bottom: 16px; }
+    .tenant-detail-title { margin: 0; font-size: 20px; color: #003366; }
+    .tenant-detail-sub { margin: 6px 0 0; font-size: 13px; color: #64748b; }
+    .tenant-tag-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 18px; }
+    .tenant-tag { background: #f1f5f9; color: #475569; font-size: 12px; padding: 4px 10px; border-radius: 999px; }
+    @media (max-width: 900px) {
+        .po-grid { grid-template-columns: 1fr; }
+        .tenant-browser { grid-template-columns: 1fr; }
+    }
 </style>
 
 <div class="po-wrap">
@@ -401,6 +435,175 @@ Actieve modules: <?php echo po_h(implode(', ', $nieuw_tenant['modules'])); ?>
     <?php elseif ($success !== ''): ?>
         <div class="po-msg ok"><i class="fa-solid fa-check-circle"></i> <?php echo po_h($success); ?></div>
     <?php endif; ?>
+
+    <section class="po-card" style="margin-bottom:28px;">
+        <h2><i class="fa-solid fa-building"></i> Tenants bekijken</h2>
+        <div class="body tenant-browser">
+            <div>
+                <div class="tenant-zoek">
+                    <label for="tenant-zoek">Zoek tenant</label>
+                    <input type="search" id="tenant-zoek" placeholder="Naam of slug…" autocomplete="off">
+                    <p class="tenant-zoek-hint" id="tenant-zoek-hint">Standaard de eerste 5 tenants. Zoek om een andere te vinden.</p>
+                </div>
+                <div class="tenant-lijst" id="tenant-lijst">
+                    <?php foreach ($tenants as $tenant):
+                        $tid = (int) $tenant['id'];
+                        $admins = $adminsByTenant[$tid] ?? [];
+                        $activeCount = count(array_filter(
+                            $admins,
+                            static fn(array $a): bool => (int) ($a['actief'] ?? 0) === 1 && !po_is_legacy_admin($a)
+                        ));
+                        $zoekHaystack = strtolower((string) $tenant['naam'] . ' ' . (string) $tenant['slug']);
+                    ?>
+                        <a
+                            href="platform_owner.php?tenant=<?php echo $tid; ?>"
+                            class="tenant-pick<?php echo $selectedTenantId === $tid ? ' actief' : ''; ?>"
+                            data-zoek="<?php echo po_h($zoekHaystack); ?>"
+                        >
+                            <p class="tenant-pick-naam"><?php echo po_h((string) $tenant['naam']); ?></p>
+                            <div class="tenant-pick-meta">
+                                <?php echo po_h((string) $tenant['slug']); ?>
+                                · <?php echo $activeCount; ?> inlog<?php echo $activeCount === 1 ? '' : 's'; ?>
+                                · <span class="badge <?php echo $tenant['status'] === 'active' ? 'active' : 'inactive'; ?>"><?php echo po_h((string) $tenant['status']); ?></span>
+                            </div>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+
+            <div>
+                <?php if ($selectedTenant === null): ?>
+                    <div class="tenant-detail-empty">
+                        <i class="fa-solid fa-hand-pointer" style="font-size:28px; margin-bottom:12px; display:block; opacity:.4;"></i>
+                        Klik links op een tenant om beheerders en inlogtoegang te zien.
+                    </div>
+                <?php else:
+                    $tid = (int) $selectedTenant['id'];
+                    $modNamen = $moduleNamesByTenant[$tid] ?? [];
+                ?>
+                    <div class="tenant-detail-head">
+                        <div>
+                            <h3 class="tenant-detail-title"><?php echo po_h((string) $selectedTenant['naam']); ?></h3>
+                            <p class="tenant-detail-sub">
+                                slug: <code><?php echo po_h((string) $selectedTenant['slug']); ?></code>
+                                · status: <?php echo po_h((string) $selectedTenant['status']); ?>
+                            </p>
+                        </div>
+                        <span class="badge <?php echo $selectedTenant['status'] === 'active' ? 'active' : 'inactive'; ?>">
+                            <?php echo po_h((string) $selectedTenant['status']); ?>
+                        </span>
+                    </div>
+
+                    <?php if ($modNamen !== []): ?>
+                        <div class="tenant-tag-row">
+                            <?php foreach ($modNamen as $modNaam): ?>
+                                <span class="tenant-tag"><?php echo po_h($modNaam); ?></span>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php else: ?>
+                        <p class="po-note">Geen actieve modules.</p>
+                    <?php endif; ?>
+
+                    <h4 style="margin:0 0 10px; font-size:14px; color:#003366;">Inlogtoegang</h4>
+                    <?php
+                    $zichtbareUsers = array_filter(
+                        $selectedLoginUsers,
+                        static fn(array $u): bool => !po_is_legacy_admin($u) || (int) ($u['actief'] ?? 0) === 1
+                    );
+                    ?>
+                    <?php if ($zichtbareUsers === []): ?>
+                        <p class="po-note">Nog geen actieve beheerder voor deze tenant.</p>
+                    <?php else: ?>
+                        <table class="po-table">
+                            <thead>
+                                <tr>
+                                    <th>Naam</th>
+                                    <th>E-mail (inloggen)</th>
+                                    <th>Rol</th>
+                                    <th>Inlogcode</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($selectedLoginUsers as $user):
+                                    if (po_is_legacy_admin($user)) {
+                                        continue;
+                                    }
+                                ?>
+                                    <tr<?php echo (int) ($user['actief'] ?? 0) !== 1 ? ' style="opacity:.55;"' : ''; ?>>
+                                        <td><?php echo po_h((string) $user['volledige_naam']); ?></td>
+                                        <td><?php echo po_h((string) $user['email']); ?></td>
+                                        <td><?php echo po_h((string) $user['rol']); ?></td>
+                                        <td>
+                                            <?php if ((int) ($user['actief'] ?? 0) !== 1): ?>
+                                                <span class="badge inactive">inactief</span>
+                                            <?php elseif ((int) ($user['email_otp_enabled'] ?? 0) === 1): ?>
+                                                <span class="badge active">e-mailcode</span>
+                                            <?php else: ?>
+                                                wachtwoord
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    <?php endif; ?>
+
+                    <?php if ((string) ($selectedTenant['slug'] ?? '') === 'testomgeving'): ?>
+                        <h4 style="margin:18px 0 10px; font-size:14px; color:#003366;">Platform owners</h4>
+                        <table class="po-table">
+                            <thead><tr><th>Naam</th><th>E-mail</th></tr></thead>
+                            <tbody>
+                                <?php foreach ($owners as $owner): ?>
+                                    <tr>
+                                        <td><?php echo po_h((string) $owner['volledige_naam']); ?></td>
+                                        <td><?php echo po_h((string) $owner['email']); ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                        <p class="po-note">Sandbox — alleen voor platform/test, niet voor klantwerk.</p>
+                    <?php endif; ?>
+                <?php endif; ?>
+            </div>
+        </div>
+    </section>
+    <script>
+    (function () {
+        const LIMIT = 5;
+        const input = document.getElementById('tenant-zoek');
+        const hint = document.getElementById('tenant-zoek-hint');
+        const items = Array.from(document.querySelectorAll('#tenant-lijst .tenant-pick'));
+        if (!input || items.length === 0) return;
+
+        function applyFilter() {
+            const q = input.value.trim().toLowerCase();
+            let visible = 0;
+            items.forEach(function (el) {
+                const hay = el.getAttribute('data-zoek') || '';
+                const match = q === '' || hay.indexOf(q) !== -1;
+                let show = match;
+                if (q === '' && match) {
+                    show = visible < LIMIT;
+                    if (show) visible++;
+                }
+                el.style.display = show ? '' : 'none';
+            });
+            if (q === '') {
+                hint.textContent = items.length > LIMIT
+                    ? 'Eerste ' + LIMIT + ' van ' + items.length + ' tenants. Zoek om een andere te vinden.'
+                    : items.length + ' tenant(s).';
+            } else {
+                const n = items.filter(function (el) {
+                    return el.style.display !== 'none';
+                }).length;
+                hint.textContent = n === 0 ? 'Geen tenants gevonden.' : n + ' resultaat' + (n === 1 ? '' : 'en') + '.';
+            }
+        }
+
+        input.addEventListener('input', applyFilter);
+        applyFilter();
+    })();
+    </script>
 
     <!-- NIEUW: Alles-in-één formulier -->
     <div class="po-card" style="margin-bottom:28px; border:2px solid #003d82;">
@@ -514,139 +717,6 @@ Actieve modules: <?php echo po_h(implode(', ', $nieuw_tenant['modules'])); ?>
 
                     <button type="submit">Tenant admin aanmaken</button>
                 </form>
-            </div>
-        </section>
-    </div>
-
-    <div class="po-grid" style="margin-top:20px;">
-        <section class="po-card" style="grid-column: 1 / -1;">
-            <h2>Klant-tenants &amp; beheerders</h2>
-            <div class="body">
-                <p class="po-note">
-                    Per klant zie je wie mag inloggen. <strong>Pilot Transport Admin</strong> is een oud testaccount uit de eerste opzet van Tourplan — niet voor echt gebruik.
-                </p>
-                <?php if ($klantTenants === []): ?>
-                    <p class="tenant-empty">Nog geen klant-tenants.</p>
-                <?php else: ?>
-                    <?php foreach ($klantTenants as $tenant):
-                        $tid = (int) $tenant['id'];
-                        $admins = $adminsByTenant[$tid] ?? [];
-                        $activeAdmins = array_filter($admins, static fn(array $a): bool => (int) ($a['actief'] ?? 0) === 1 && !po_is_legacy_admin($a));
-                    ?>
-                    <div class="tenant-block">
-                        <div class="tenant-block-head">
-                            <div>
-                                <p class="tenant-block-title"><?php echo po_h((string) $tenant['naam']); ?></p>
-                                <div class="tenant-block-meta">
-                                    slug: <code><?php echo po_h((string) $tenant['slug']); ?></code>
-                                    · <?php echo count($activeAdmins); ?> actieve beheerder<?php echo count($activeAdmins) === 1 ? '' : 's'; ?>
-                                    · <?php echo (int) ($moduleCounts[$tid] ?? 0); ?> modules
-                                </div>
-                            </div>
-                            <span class="badge <?php echo $tenant['status'] === 'active' ? 'active' : 'inactive'; ?>">
-                                <?php echo po_h((string) $tenant['status']); ?>
-                            </span>
-                        </div>
-                        <div class="tenant-block-body">
-                            <?php if ($admins === []): ?>
-                                <p class="tenant-empty">Geen beheerder — voeg toe via &ldquo;Nieuwe tenant uitnodigen&rdquo; of &ldquo;Nieuwe Tenant Admin&rdquo;.</p>
-                            <?php else: ?>
-                                <table class="po-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Naam</th>
-                                            <th>E-mail</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ($admins as $admin): ?>
-                                            <tr<?php echo po_is_legacy_admin($admin) ? ' style="opacity:.65;"' : ''; ?>>
-                                                <td><?php echo po_h((string) $admin['volledige_naam']); ?></td>
-                                                <td><?php echo po_h((string) $admin['email']); ?></td>
-                                                <td>
-                                                    <?php if (po_is_legacy_admin($admin)): ?>
-                                                        <span class="badge legacy">Verouderd testaccount</span>
-                                                    <?php elseif ((int) $admin['actief'] === 1): ?>
-                                                        <span class="badge active">actief</span>
-                                                    <?php else: ?>
-                                                        <span class="badge inactive">inactief</span>
-                                                    <?php endif; ?>
-                                                </td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </div>
-        </section>
-
-        <section class="po-card">
-            <h2>Systeem (platform)</h2>
-            <div class="body">
-                <p class="po-note">Niet voor klantwerk. Hier horen sandbox en jouw platform-login.</p>
-                <?php foreach ($systeemTenants as $tenant): ?>
-                    <div class="tenant-block">
-                        <div class="tenant-block-head">
-                            <div>
-                                <p class="tenant-block-title"><?php echo po_h((string) $tenant['naam']); ?></p>
-                                <div class="tenant-block-meta">slug: <code><?php echo po_h((string) $tenant['slug']); ?></code></div>
-                            </div>
-                            <span class="badge active">sandbox</span>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-                <table class="po-table" style="margin-top:12px;">
-                    <thead>
-                        <tr>
-                            <th>Platform owner</th>
-                            <th>E-mail</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php
-                        $owners = $pdo->query("SELECT volledige_naam, email FROM users WHERE rol='platform_owner' AND actief=1 ORDER BY email")->fetchAll(PDO::FETCH_ASSOC);
-                        foreach ($owners as $owner):
-                        ?>
-                            <tr>
-                                <td><?php echo po_h((string) $owner['volledige_naam']); ?></td>
-                                <td><?php echo po_h((string) $owner['email']); ?></td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-        <section class="po-card">
-            <h2>Snelle tenant-lijst</h2>
-            <div class="body">
-                <table class="po-table">
-                    <thead>
-                        <tr>
-                            <th>Naam</th>
-                            <th>Slug</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($tenants as $tenant): ?>
-                            <tr>
-                                <td><?php echo po_h((string) $tenant['naam']); ?></td>
-                                <td><code><?php echo po_h((string) $tenant['slug']); ?></code></td>
-                                <td>
-                                    <span class="badge <?php echo $tenant['status'] === 'active' ? 'active' : 'inactive'; ?>">
-                                        <?php echo po_h((string) $tenant['status']); ?>
-                                    </span>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
             </div>
         </section>
     </div>
