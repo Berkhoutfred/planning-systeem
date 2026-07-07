@@ -100,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['office_action'] ?? '') ===
         } else {
             $resolved = login_resolve_tenant_and_user_id($pdo, $email);
             if ($resolved === null) {
-                $infoMelding = 'Als dit adres bij ons hoort, staat de code in je inbox.';
+                $foutmelding = 'Dit e-mailadres is niet gekoppeld aan een actief Tourplan-account.';
             } else {
                 [$tenantSlug, $userId] = $resolved;
                 $created = login_otp_create_and_send($pdo, $email, $tenantSlug, 'email_only', $userId);
@@ -192,8 +192,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['wachtwoord_poging']))
 }
 
 $stepGet = (string) ($_GET['step'] ?? '');
+$otpPostAction = (string) ($_POST['office_action'] ?? '');
 $showOtpCodeForm = ($stepGet === 'code' && is_array($otpCtx) && isset($otpCtx['challenge_id']));
-$showEmailOtpRequest = ($stepGet === 'email');
+// POST naar /login.php zonder ?step=email: blijf op e-mailcode-tab bij fout of onbekend adres
+$showEmailOtpRequest = ($stepGet === 'email') || ($otpPostAction === 'request_email_otp' && !$showOtpCodeForm);
 
 if ($stepGet === 'code' && !$showOtpCodeForm) {
     header('Location: /login.php?redirect_to=' . rawurlencode($redirectTo), true, 302);
