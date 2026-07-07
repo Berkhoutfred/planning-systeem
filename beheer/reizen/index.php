@@ -41,7 +41,7 @@ if (isset($_GET['toggle_status'])) {
 $filterType   = $_GET['type']   ?? '';
 $filterStatus = $_GET['status'] ?? 'actief'; // standaard verberg archief
 
-[$whereParts, $params] = reis_lijst_where($reisCtx, $filterType, $filterStatus);
+[$whereParts, $params] = reis_lijst_where($reisCtx, $filterType, $filterStatus, $pdo);
 
 $sql = 'SELECT b.*,
         (SELECT COUNT(*) FROM busreis_boekingen bk
@@ -68,7 +68,7 @@ $stats = $pdo->prepare("
     FROM busreizen WHERE tenant_id IN ($idPlaceholders) AND status != 'archief'
 ");
 $stats->execute($allowedIds);
-$s = $stats->fetch();
+$s = $stats->fetch() ?: ['totaal' => 0, 'gepubliceerd' => 0, 'concept' => 0, 'vol' => 0];
 
 $boekStats = $pdo->prepare("
     SELECT COUNT(*) AS totaal,
@@ -78,7 +78,7 @@ $boekStats = $pdo->prepare("
     WHERE b.tenant_id IN ($idPlaceholders) AND bk.betaal_status='betaald'
 ");
 $boekStats->execute($allowedIds);
-$bs = $boekStats->fetch();
+$bs = $boekStats->fetch() ?: ['totaal' => 0, 'omzet' => 0];
 
 include '../includes/header.php';
 ?>

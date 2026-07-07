@@ -133,9 +133,11 @@ if (!function_exists('reis_hybrid_context')) {
      */
     function reis_hybrid_context(PDO $pdo, int $tenantId, array $actieve_modules): array
     {
+        $isPlatformOwner = function_exists('current_user_role') && current_user_role() === 'platform_owner';
         $partner = reis_netwerk_partner_voor_tenant($pdo, $tenantId);
-        $hasCoop = heeft_coopdagtochten_module($actieve_modules) && $partner !== null;
-        $hasEigen = in_array('dagtochten', $actieve_modules, true)
+        $hasCoop = !$isPlatformOwner && heeft_coopdagtochten_module($actieve_modules) && $partner !== null;
+        $hasEigen = $isPlatformOwner
+            || in_array('dagtochten', $actieve_modules, true)
             || in_array('busreizen', $actieve_modules, true);
         $isCoopLeider = $hasCoop && $partner !== null && (string) ($partner['rol'] ?? '') === 'leider';
 
@@ -148,7 +150,7 @@ if (!function_exists('reis_hybrid_context')) {
             'is_hybride' => $hasCoop && $hasEigen
                 && $partner !== null
                 && (string) ($partner['rol'] ?? '') === 'partner',
-            'mag_eigen_bewerken' => $hasEigen || $isCoopLeider,
+            'mag_eigen_bewerken' => $isPlatformOwner || $hasEigen || $isCoopLeider,
             'mag_coop_bewerken' => $hasCoop && (int) ($partner['mag_bewerken'] ?? 0) === 1,
             'coop_partner' => $partner,
         ];
@@ -250,7 +252,7 @@ if (!function_exists('reis_lijst_where')) {
      * @param array<string, mixed> $ctx
      * @return array{0:list<string>,1:array<string, mixed>}
      */
-    function reis_lijst_where(array $ctx, string $filterType, string $filterStatus, string $alias = 'b'): array
+    function reis_lijst_where(array $ctx, string $filterType, string $filterStatus, ?PDO $pdo = null, string $alias = 'b'): array
     {
         $allowed = reis_toegestane_tenant_ids($ctx, $pdo);
         $placeholders = [];
