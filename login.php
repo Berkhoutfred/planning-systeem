@@ -9,6 +9,7 @@ define('AUTH_DELEGATE_LOGIN_TO_LOGIN_PHP', true);
 define('AUTH_SKIP_GUARD', true);
 require_once __DIR__ . '/beveiliging.php';
 require_once __DIR__ . '/beheer/includes/login_otp_support.php';
+require_once __DIR__ . '/beheer/includes/module_access.php';
 
 if (isset($_SESSION['ingelogd']) && $_SESSION['ingelogd'] === true) {
     header('Location: /beheer/');
@@ -81,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['office_action'] ?? '') ===
             unset($_SESSION['office_login_otp_ctx']);
             $user = $res['user'];
             office_perform_login_from_office_row($pdo, $user);
-            header('Location: ' . $redirectTo, true, 302);
+            header('Location: ' . login_post_auth_redirect($pdo, $redirectTo), true, 302);
             exit;
         }
     }
@@ -181,7 +182,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['wachtwoord_poging']))
                     } else {
                         auth_reset_failed_attempts();
                         office_perform_login_from_office_row($pdo, $row);
-                        header('Location: ' . $redirectTo, true, 302);
+                        header('Location: ' . login_post_auth_redirect($pdo, $redirectTo), true, 302);
                         exit;
                     }
                 }

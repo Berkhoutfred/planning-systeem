@@ -530,3 +530,8 @@ if (!isset($_SESSION['ingelogd']) || $_SESSION['ingelogd'] !== true) {
     header('Location: ' . auth_login_url($requestedUri));
     exit;
 }
+
+if (!defined('AUTH_SKIP_REIZEN_PORTAAL_GUARD') || AUTH_SKIP_REIZEN_PORTAAL_GUARD !== true) {
+    require_once __DIR__ . '/beheer/includes/module_access.php';
+    beheer_handhaaf_reizen_portaal($pdo);
+}
