@@ -5,12 +5,14 @@ declare(strict_types=1);
 require_once __DIR__ . '/../beheer/includes/db.php';
 require_once __DIR__ . '/_prijs.php';
 require_once __DIR__ . '/_media.php';
+require_once __DIR__ . '/_scope.php';
 
 $slug = trim($_GET['slug'] ?? '');
 if (!$slug) { header('Location: index.php'); exit; }
 
-$stmt = $pdo->prepare("SELECT * FROM busreizen WHERE slug=? AND status IN ('gepubliceerd','vol')");
-$stmt->execute([$slug]);
+$scopeTenantId = busreis_scope_tenant_id($pdo, 'public');
+$stmt = $pdo->prepare("SELECT * FROM busreizen WHERE slug=? AND tenant_id=? AND status IN ('gepubliceerd','vol')");
+$stmt->execute([$slug, $scopeTenantId]);
 $r = $stmt->fetch();
 if (!$r) { header('Location: index.php'); exit; }
 

@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 include '../beveiliging.php';
-require_role(['tenant_admin', 'planner_user']);
+require_role(['platform_owner']);
 require 'includes/db.php';
 require_once __DIR__ . '/includes/tenant_instellingen_db.php';
 

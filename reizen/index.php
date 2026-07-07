@@ -5,14 +5,17 @@ declare(strict_types=1);
 require_once __DIR__ . '/../beheer/includes/db.php';
 require_once __DIR__ . '/_prijs.php';
 require_once __DIR__ . '/_media.php';
+require_once __DIR__ . '/_scope.php';
 
 // Filters
 $filterType = $_GET['type'] ?? '';
 $filterMaand = $_GET['maand'] ?? '';
 $filterMax = (int)($_GET['max'] ?? 0);
 
-$where  = ["b.status = 'gepubliceerd'", "b.datum_van >= CURDATE()"];
-$params = [];
+[$tenantSql, $tenantParams] = busreis_scope_sql($pdo, 'b', 'public');
+
+$where  = ["b.status = 'gepubliceerd'", "b.datum_van >= CURDATE()", $tenantSql];
+$params = $tenantParams;
 
 if (in_array($filterType, ['dagtocht','meerdaags'], true)) {
     $where[] = 'b.type = ?';
@@ -40,10 +43,13 @@ $stmt->execute($params);
 $reizen = $stmt->fetchAll();
 
 // Beschikbare maanden voor filter
-$maanden = $pdo->query("SELECT DISTINCT DATE_FORMAT(datum_van,'%Y-%m') AS ym,
+$scopeTenantId = busreis_scope_tenant_id($pdo, 'public');
+$maandenStmt = $pdo->prepare("SELECT DISTINCT DATE_FORMAT(datum_van,'%Y-%m') AS ym,
     DATE_FORMAT(datum_van,'%M %Y') AS label
-    FROM busreizen WHERE status='gepubliceerd' AND datum_van>=CURDATE()
-    ORDER BY datum_van ASC")->fetchAll();
+    FROM busreizen WHERE tenant_id = ? AND status='gepubliceerd' AND datum_van>=CURDATE()
+    ORDER BY datum_van ASC");
+$maandenStmt->execute([$scopeTenantId]);
+$maanden = $maandenStmt->fetchAll();
 
 $nl_maanden = ['January'=>'Januari','February'=>'Februari','March'=>'Maart',
     'April'=>'April','May'=>'Mei','June'=>'Juni','July'=>'Juli','August'=>'Augustus',

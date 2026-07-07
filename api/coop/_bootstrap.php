@@ -170,7 +170,10 @@ function coop_api_tenant_ids(PDO $pdo, array $partner): array
         $ids[] = (int) $partner['tenant_id'];
     }
 
-    return array_values(array_unique($ids));
+    return array_values(array_unique(array_filter(
+        $ids,
+        static fn(int $id): bool => !busreis_is_test_tenant_id($pdo, $id)
+    )));
 }
 
 /** @return list<array<string, mixed>> */
