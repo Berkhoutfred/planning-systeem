@@ -133,11 +133,9 @@ if (!function_exists('reis_hybrid_context')) {
      */
     function reis_hybrid_context(PDO $pdo, int $tenantId, array $actieve_modules): array
     {
-        $isPlatformOwner = function_exists('current_user_role') && current_user_role() === 'platform_owner';
         $partner = reis_netwerk_partner_voor_tenant($pdo, $tenantId);
-        $hasCoop = !$isPlatformOwner && heeft_coopdagtochten_module($actieve_modules) && $partner !== null;
-        $hasEigen = $isPlatformOwner
-            || in_array('dagtochten', $actieve_modules, true)
+        $hasCoop = heeft_coopdagtochten_module($actieve_modules) && $partner !== null;
+        $hasEigen = in_array('dagtochten', $actieve_modules, true)
             || in_array('busreizen', $actieve_modules, true);
         $isCoopLeider = $hasCoop && $partner !== null && (string) ($partner['rol'] ?? '') === 'leider';
 
@@ -150,7 +148,7 @@ if (!function_exists('reis_hybrid_context')) {
             'is_hybride' => $hasCoop && $hasEigen
                 && $partner !== null
                 && (string) ($partner['rol'] ?? '') === 'partner',
-            'mag_eigen_bewerken' => $isPlatformOwner || $hasEigen || $isCoopLeider,
+            'mag_eigen_bewerken' => $hasEigen || $isCoopLeider,
             'mag_coop_bewerken' => $hasCoop && (int) ($partner['mag_bewerken'] ?? 0) === 1,
             'coop_partner' => $partner,
         ];
@@ -205,8 +203,12 @@ if (!function_exists('reis_mag_bewerken_voor_tenant')) {
     /** @param array<string, mixed> $ctx */
     function reis_mag_bewerken_voor_tenant(array $ctx, int $reisTenantId): bool
     {
+        // Platform owner: alles inzien, bewerken alleen binnen geselecteerde tenant.
         if (function_exists('current_user_role') && current_user_role() === 'platform_owner') {
-            return true;
+            $sessionTenantId = function_exists('current_tenant_id') ? current_tenant_id() : 0;
+            if ($sessionTenantId <= 0 || $reisTenantId !== $sessionTenantId) {
+                return false;
+            }
         }
 
         if ($reisTenantId === (int) $ctx['eigen_tenant_id']) {

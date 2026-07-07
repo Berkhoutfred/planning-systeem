@@ -80,6 +80,16 @@ $boekStats = $pdo->prepare("
 $boekStats->execute($allowedIds);
 $bs = $boekStats->fetch() ?: ['totaal' => 0, 'omzet' => 0];
 
+$isPlatformOwner = function_exists('current_user_role') && current_user_role() === 'platform_owner';
+$tenantNamen = [];
+if ($isPlatformOwner) {
+    $tenantNamen = array_column(
+        $pdo->query("SELECT id, naam FROM tenants WHERE status = 'active' ORDER BY naam ASC")->fetchAll(),
+        'naam',
+        'id'
+    );
+}
+
 include '../includes/header.php';
 ?>
 
@@ -178,7 +188,14 @@ include '../includes/header.php';
     </div>
 <?php endif; ?>
 
-<?php if ($isCoopPartner): ?>
+<?php if ($isPlatformOwner): ?>
+    <div class="rz-melding ok" style="margin-bottom:16px;">
+        <i class="fa-solid fa-crown"></i>
+        Platform-modus: je ziet reizen van alle tenants. Bewerken kan alleen voor
+        <strong><?= htmlspecialchars(current_tenant_name() ?: current_tenant_slug(), ENT_QUOTES) ?></strong>
+        (huidige tenant rechtsboven).
+    </div>
+<?php elseif ($isCoopPartner): ?>
     <div class="rz-melding warn" style="margin-bottom:16px;">
         <i class="fa-solid fa-eye"></i>
         Coöp-modus: je ziet reizen en boekingen van de netwerk-leider. Bewerken is niet toegestaan.
@@ -300,7 +317,12 @@ include '../includes/header.php';
                     </span>
                 </td>
                 <td>
-                    <?php if ($bron === 'coop'): ?>
+                    <?php if ($isPlatformOwner): ?>
+                        <span class="badge badge-berkhout">
+                            <i class="fa-solid fa-building"></i>
+                            <?= htmlspecialchars((string) ($tenantNamen[$reisTenantId] ?? 'Tenant #' . $reisTenantId), ENT_QUOTES) ?>
+                        </span>
+                    <?php elseif ($bron === 'coop'): ?>
                         <span class="badge badge-coop"><i class="fa-solid fa-handshake"></i> Coöp</span>
                     <?php else: ?>
                         <span class="badge badge-gepubliceerd"><i class="fa-solid fa-house"></i> Eigen</span>
