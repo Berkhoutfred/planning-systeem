@@ -176,11 +176,23 @@ if (!function_exists('reis_toegestane_tenant_ids')) {
         $ids = array_values(array_unique($ids));
 
         $isOwner = function_exists('current_user_role') && current_user_role() === 'platform_owner';
+        if ($isOwner && $pdo instanceof PDO) {
+            $stmt = $pdo->query("SELECT id FROM tenants WHERE status = 'active' ORDER BY id ASC");
+            $all = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+
+            return $all !== [] ? $all : $ids;
+        }
+
         if (!$isOwner && $pdo instanceof PDO) {
+            $homeId = (int) ($ctx['tenant_id'] ?? 0);
             $ids = array_values(array_filter(
                 $ids,
-                static fn(int $tid): bool => !busreis_is_test_tenant_id($pdo, $tid)
+                static fn(int $tid): bool => $tid === $homeId || !busreis_is_test_tenant_id($pdo, $tid)
             ));
+        }
+
+        if ($ids === [] && !empty($ctx['tenant_id'])) {
+            $ids[] = (int) $ctx['tenant_id'];
         }
 
         return $ids;
@@ -191,6 +203,10 @@ if (!function_exists('reis_mag_bewerken_voor_tenant')) {
     /** @param array<string, mixed> $ctx */
     function reis_mag_bewerken_voor_tenant(array $ctx, int $reisTenantId): bool
     {
+        if (function_exists('current_user_role') && current_user_role() === 'platform_owner') {
+            return true;
+        }
+
         if ($reisTenantId === (int) $ctx['eigen_tenant_id']) {
             return !empty($ctx['mag_eigen_bewerken']);
         }

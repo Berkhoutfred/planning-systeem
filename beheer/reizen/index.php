@@ -3,7 +3,7 @@ declare(strict_types=1);
 // Bestand: beheer/reizen/index.php
 
 include '../../beveiliging.php';
-require_role(['tenant_admin', 'planner_user']);
+require_role(['tenant_admin', 'planner_user', 'platform_owner']);
 require '../includes/db.php';
 require_once __DIR__ . '/_tenant_context.php';
 require_once __DIR__ . '/../includes/module_access.php';

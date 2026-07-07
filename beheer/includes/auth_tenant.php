@@ -124,12 +124,17 @@ if (!function_exists('auth_handhaaf_tenant_sessie')) {
             auth_force_logout('verkeerde_omgeving');
         }
 
-        if ($homeRol !== 'platform_owner' && in_array($homeSlug, tenant_reizen_portaal_slugs(), true)) {
-            $stmt = $pdo->prepare('SELECT slug FROM tenants WHERE id = ? LIMIT 1');
-            $stmt->execute([$sessionTenantId]);
-            $sessionSlug = strtolower((string) ($stmt->fetchColumn() ?: ''));
-            if ($sessionSlug !== $homeSlug) {
-                auth_force_logout('coachtravel_omgeving');
+        if ($homeRol !== 'platform_owner') {
+            if (!function_exists('tenant_reizen_portaal_slugs')) {
+                require_once __DIR__ . '/module_access.php';
+            }
+            if (in_array($homeSlug, tenant_reizen_portaal_slugs(), true)) {
+                $stmt = $pdo->prepare('SELECT slug FROM tenants WHERE id = ? LIMIT 1');
+                $stmt->execute([$sessionTenantId]);
+                $sessionSlug = strtolower((string) ($stmt->fetchColumn() ?: ''));
+                if ($sessionSlug !== $homeSlug) {
+                    auth_force_logout('coachtravel_omgeving');
+                }
             }
         }
     }

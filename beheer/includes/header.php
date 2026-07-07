@@ -409,7 +409,7 @@ $actief_dashboard = nav_actief($huidig_pad, $huidige_pagina, ['dashboard.php','i
         </div>
         <?php endif; ?>
 
-        <?php if (heeft_reizen_module($actieve_modules)):
+        <?php if ($is_platform_owner || heeft_reizen_module($actieve_modules)):
             $reizen_menu_titel = 'Dagtochten';
             if (heeft_module($actieve_modules, 'coopdagtochten')) {
                 $reizen_menu_titel = 'Coöp Dagtochten';

@@ -78,6 +78,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 }
 
 require_once __DIR__ . '/beheer/includes/db.php';
+require_once __DIR__ . '/beheer/includes/module_access.php';
 require_once __DIR__ . '/beheer/includes/auth_tenant.php';
 
 if (!function_exists('h')) {
@@ -540,7 +541,6 @@ if (!isset($_SESSION['ingelogd']) || $_SESSION['ingelogd'] !== true) {
 }
 
 if (!defined('AUTH_SKIP_REIZEN_PORTAAL_GUARD') || AUTH_SKIP_REIZEN_PORTAAL_GUARD !== true) {
-    require_once __DIR__ . '/beheer/includes/module_access.php';
     beheer_handhaaf_reizen_portaal($pdo);
 }
 
