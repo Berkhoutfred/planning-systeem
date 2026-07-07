@@ -9,7 +9,7 @@ declare(strict_types=1);
 function busreis_scope_tenant_slug(string $context = 'public'): string
 {
     $key = $context === 'preview' ? 'BUSREIS_PREVIEW_TENANT_SLUG' : 'BUSREIS_PUBLIC_TENANT_SLUG';
-    $default = $context === 'preview' ? 'tourplan_testomgeving' : 'coachtravel';
+    $default = $context === 'preview' ? 'testomgeving' : 'coachtravel';
     if (function_exists('env_value')) {
         return trim((string) env_value($key, $default));
     }

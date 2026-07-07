@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 /**
  * Harde tenant-isolatie: sessie moet altijd kloppen met users.tenant_id.
- * Testomgeving (tourplan_testomgeving) alleen voor platform_owner of eigen test-gebruikers.
+ * Sandbox (testomgeving) = home tenant platform owner. Klant-tenants (Berkhout, Coach Travel) apart.
  */
 
 require_once __DIR__ . '/../../reizen/_scope.php';
