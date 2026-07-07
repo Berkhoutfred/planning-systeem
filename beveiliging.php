@@ -78,6 +78,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 }
 
 require_once __DIR__ . '/beheer/includes/db.php';
+require_once __DIR__ . '/beheer/includes/auth_tenant.php';
 
 if (!function_exists('h')) {
     function h(string $value): string
@@ -388,6 +389,13 @@ if (!function_exists('office_password_check_office_login')) {
             return null;
         }
 
+        $homeTenantId = (int) $user['tenant_id'];
+        $sessionTenantId = (int) $user['session_tenant_id'];
+        $rol = (string) $user['rol'];
+        if (!auth_may_use_tenant($pdo, $rol, $homeTenantId, $sessionTenantId)) {
+            return null;
+        }
+
         return $user;
     }
 }
@@ -535,3 +543,5 @@ if (!defined('AUTH_SKIP_REIZEN_PORTAAL_GUARD') || AUTH_SKIP_REIZEN_PORTAAL_GUARD
     require_once __DIR__ . '/beheer/includes/module_access.php';
     beheer_handhaaf_reizen_portaal($pdo);
 }
+
+auth_handhaaf_tenant_sessie($pdo);

@@ -4,6 +4,7 @@ declare(strict_types=1);
 include '../beveiliging.php';
 require_role(['platform_owner']);
 require 'includes/db.php';
+require_once __DIR__ . '/includes/auth_tenant.php';
 require_once __DIR__ . '/includes/tenant_instellingen_db.php';
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
@@ -17,9 +18,9 @@ if (!auth_validate_csrf_token($_POST['auth_csrf_token'] ?? null)) {
 }
 
 $tenantId = isset($_POST['tenant_id']) ? (int) $_POST['tenant_id'] : 0;
-if (!in_array($tenantId, [1, 2], true)) {
+if ($tenantId <= 0) {
     http_response_code(400);
-    die('Alleen tenant 1 of 2 is toegestaan.');
+    die('Ongeldige tenant.');
 }
 
 tenant_instellingen_bootstrap($pdo);
@@ -30,6 +31,17 @@ $tenant = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$tenant) {
     http_response_code(404);
     die('Tenant niet gevonden of niet actief.');
+}
+
+$home = auth_user_home_tenant($pdo, (int) ($_SESSION['user_id'] ?? 0));
+if ($home === null || (string) $home['rol'] !== 'platform_owner') {
+    http_response_code(403);
+    die('Alleen platform owner mag van omgeving wisselen.');
+}
+
+if (!auth_may_use_tenant($pdo, 'platform_owner', (int) $home['id'], (int) $tenant['id'])) {
+    http_response_code(403);
+    die('Deze omgeving is niet toegestaan.');
 }
 
 $_SESSION['tenant_id'] = (int) $tenant['id'];
