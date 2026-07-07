@@ -37,6 +37,8 @@ if (isset($_GET['toggle_status'])) {
     exit;
 }
 
+require_once __DIR__ . '/../includes/reis_media.php';
+
 // ── Filters ────────────────────────────────────────────────
 $filterType   = $_GET['type']   ?? '';
 $filterStatus = $_GET['status'] ?? 'actief'; // standaard verberg archief
@@ -297,8 +299,10 @@ include '../includes/header.php';
         ?>
             <tr>
                 <td>
-                    <?php if ($r['foto_pad']): ?>
-                        <img src="<?= htmlspecialchars('../../' . ltrim($r['foto_pad'], '/'), ENT_QUOTES) ?>"
+                    <?php
+                    $fotoUrl = reis_foto_admin_url((string) ($r['foto_pad'] ?? ''), 'card');
+                    if ($fotoUrl !== ''): ?>
+                        <img src="<?= htmlspecialchars($fotoUrl, ENT_QUOTES) ?>"
                              class="foto" alt="">
                     <?php else: ?>
                         <div class="foto-leeg"><i class="fa-solid fa-image"></i></div>

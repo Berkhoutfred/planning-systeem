@@ -6,6 +6,7 @@ include '../../beveiliging.php';
 require_role(['tenant_admin', 'planner_user', 'platform_owner']);
 require '../includes/db.php';
 require_once __DIR__ . '/_tenant_context.php';
+require_once __DIR__ . '/../includes/reis_media.php';
 
 $id       = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $isNieuw  = $id === 0;
@@ -84,16 +85,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$slug) $slug = 'reis-' . time();
 
         // Foto upload
-        $fotoPad = $reis['foto_pad'] ?? null;
+        $fotoPad = isset($reis['foto_pad']) ? reis_normalize_foto_pad((string) $reis['foto_pad']) : null;
+        if ($fotoPad === '') {
+            $fotoPad = null;
+        }
         if (!empty($_FILES['foto']['name'])) {
             $ext = strtolower(pathinfo($_FILES['foto']['name'], PATHINFO_EXTENSION));
             if (in_array($ext, ['jpg','jpeg','png','webp'], true)) {
-                $uploadDir = '../../beheer/uploads/reizen/';
-                if (!is_dir($uploadDir)) mkdir($uploadDir, 0775, true);
+                require_once __DIR__ . '/../includes/reis_media.php';
+                $uploadDir = reis_media_ensure_upload_dir() . '/';
                 $bestandsnaam = 'reis_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
                 if (move_uploaded_file($_FILES['foto']['tmp_name'], $uploadDir . $bestandsnaam)) {
                     $fotoPad = 'beheer/uploads/reizen/' . $bestandsnaam;
-                    require_once __DIR__ . '/../includes/reis_media.php';
                     reis_media_generate_variants($uploadDir . $bestandsnaam);
                 }
             }
@@ -104,8 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!empty($_FILES['brochure_pdf']['name'])) {
             $ext = strtolower(pathinfo($_FILES['brochure_pdf']['name'], PATHINFO_EXTENSION));
             if ($ext === 'pdf') {
-                $uploadDir = '../../beheer/uploads/reizen/';
-                if (!is_dir($uploadDir)) mkdir($uploadDir, 0775, true);
+                $uploadDir = reis_media_ensure_upload_dir() . '/';
                 $bestandsnaam = 'brochure_' . time() . '.' . $ext;
                 if (move_uploaded_file($_FILES['brochure_pdf']['tmp_name'], $uploadDir . $bestandsnaam)) {
                     $brochurePdf = 'beheer/uploads/reizen/' . $bestandsnaam;
@@ -664,9 +666,17 @@ include '../includes/header.php';
                     <div class="veld">
                         <label>Hoofdfoto</label>
                         <input type="file" name="foto" accept="image/jpeg,image/png,image/webp">
-                        <?php if (!empty($reis['foto_pad'])): ?>
-                            <img src="<?= htmlspecialchars('../../' . ltrim($reis['foto_pad'],'/'), ENT_QUOTES) ?>"
+                        <?php
+                        $previewUrl = !empty($reis['foto_pad'])
+                            ? reis_foto_admin_url((string) $reis['foto_pad'], 'card')
+                            : '';
+                        if ($previewUrl !== ''): ?>
+                            <img src="<?= htmlspecialchars($previewUrl, ENT_QUOTES) ?>"
                                  class="foto-preview" alt="Huidige foto">
+                        <?php elseif (!empty($reis['foto_pad'])): ?>
+                            <p style="font-size:12px;color:#92400e;margin-top:8px;">
+                                Foto staat in de database maar het bestand ontbreekt op de server. Upload opnieuw.
+                            </p>
                         <?php endif; ?>
                         <small>JPG, PNG of WebP — max 8MB</small>
                     </div>

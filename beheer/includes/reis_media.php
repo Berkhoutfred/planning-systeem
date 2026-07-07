@@ -7,7 +7,68 @@ declare(strict_types=1);
 
 function reis_media_doc_root(): string
 {
-    return rtrim((string) ($_SERVER['DOCUMENT_ROOT'] ?? ''), '/');
+    if (!empty($_SERVER['DOCUMENT_ROOT'])) {
+        return rtrim((string) $_SERVER['DOCUMENT_ROOT'], '/');
+    }
+
+    // CLI / fallback: public_html = twee niveaus boven beheer/includes/
+    return dirname(__DIR__, 2);
+}
+
+/** Eén canoniek pad: altijd beheer/uploads/reizen/... */
+function reis_normalize_foto_pad(string $fotoPad): string
+{
+    $fotoPad = trim($fotoPad);
+    if ($fotoPad === '') {
+        return '';
+    }
+
+    $path = ltrim(str_replace('\\', '/', $fotoPad), '/');
+    if (str_starts_with($path, 'uploads/reizen/')) {
+        return 'beheer/' . $path;
+    }
+
+    return $path;
+}
+
+function reis_foto_bestaat(string $fotoPad): bool
+{
+    $fotoPad = reis_normalize_foto_pad($fotoPad);
+    if ($fotoPad === '') {
+        return false;
+    }
+
+    $full = reis_media_doc_root() . '/' . $fotoPad;
+
+    return is_file($full);
+}
+
+/** Absolute URL voor beheer-thumbnails; leeg als bestand ontbreekt. */
+function reis_foto_admin_url(string $fotoPad, string $usage = 'card'): string
+{
+    $fotoPad = reis_normalize_foto_pad($fotoPad);
+    if ($fotoPad === '' || !reis_foto_bestaat($fotoPad)) {
+        return '';
+    }
+
+    $media = reis_media_resolve($fotoPad, $usage);
+
+    return (string) ($media['src'] ?? '');
+}
+
+function reis_media_upload_dir(): string
+{
+    return dirname(__DIR__) . '/uploads/reizen';
+}
+
+function reis_media_ensure_upload_dir(): string
+{
+    $dir = reis_media_upload_dir();
+    if (!is_dir($dir)) {
+        mkdir($dir, 0775, true);
+    }
+
+    return $dir;
 }
 
 function reis_media_variant_path(string $fotoPad, string $suffix): string
@@ -24,7 +85,7 @@ function reis_media_public_url(string $webPath): string
 
 function reis_media_ensure_variants(string $fotoPad): void
 {
-    $fotoPad = trim($fotoPad);
+    $fotoPad = reis_normalize_foto_pad($fotoPad);
     if ($fotoPad === '') {
         return;
     }
@@ -48,7 +109,7 @@ function reis_media_ensure_variants(string $fotoPad): void
 /** @return list<string> hero, card, full — eerste bestaande pad op schijf */
 function reis_media_resolve(string $fotoPad, string $usage = 'hero'): array
 {
-    $fotoPad = trim($fotoPad);
+    $fotoPad = reis_normalize_foto_pad($fotoPad);
     if ($fotoPad === '') {
         return ['src' => '', 'srcset' => ''];
     }
