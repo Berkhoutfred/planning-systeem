@@ -19,7 +19,7 @@ require __DIR__ . '/includes/db.php';
 
 const SANDBOX_SLUG = 'testomgeving';
 const BERKHOUT_SLUG = 'berkhoutreizen';
-const BERKHOUT_ADMIN_EMAIL = 'administratie@taxiberkhout.nl';
+const BERKHOUT_ADMIN_EMAIL = 'administratie@berkhoutreizen.nl';
 
 $fixes = [];
 
