@@ -52,3 +52,21 @@ function busreis_bereken_prijs(array $reis, int $aantal, int $enkelpersoon, floa
         'vroegboek_totaal' => round($vroegboekTotaal, 2),
     ];
 }
+
+/**
+ * @return array{vrij:int, geboekt:int, max:int, pct_vrij:int, pct_vol:int}
+ */
+function busreis_bezetting(int $geboekt, int $max): array
+{
+    $max = max(1, $max);
+    $geboekt = max(0, min($geboekt, $max));
+    $vrij = max(0, $max - $geboekt);
+
+    return [
+        'vrij' => $vrij,
+        'geboekt' => $geboekt,
+        'max' => $max,
+        'pct_vrij' => (int) round($vrij / $max * 100),
+        'pct_vol' => (int) min(100, round($geboekt / $max * 100)),
+    ];
+}

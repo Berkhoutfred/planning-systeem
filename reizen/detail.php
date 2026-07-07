@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../beheer/includes/db.php';
 require_once __DIR__ . '/_prijs.php';
+require_once __DIR__ . '/_media.php';
 
 $slug = trim($_GET['slug'] ?? '');
 if (!$slug) { header('Location: index.php'); exit; }
@@ -31,6 +32,9 @@ $isVol       = $vrij === 0 || $r['status'] === 'vol';
 $nDagen      = $r['datum_tot'] ? (int)((strtotime($r['datum_tot']) - strtotime($r['datum_van'])) / 86400) + 1 : 1;
 $bronPartner = preg_replace('/[^a-z0-9_-]/', '', strtolower(trim((string) ($_GET['src'] ?? ''))));
 $vroegboekActief = busreis_vroegboek_actief($r);
+$bezetting       = busreis_bezetting($boekingen, (int) $r['max_deelnemers']);
+$bookingDirect   = isset($_GET['boek']) || isset($_GET['boeken']);
+$boekQuery       = $bronPartner !== '' ? '&src=' . urlencode($bronPartner) : '';
 
 $nl_maanden  = ['January'=>'Januari','February'=>'Februari','March'=>'Maart','April'=>'April','May'=>'Mei','June'=>'Juni','July'=>'Juli','August'=>'Augustus','September'=>'September','October'=>'Oktober','November'=>'November','December'=>'December'];
 $datumStr    = strtr(date('d F Y', strtotime($r['datum_van'])), $nl_maanden);
@@ -61,7 +65,7 @@ body { font-family: 'Inter', sans-serif; background: #f0f4f8; color: #1a2533; }
 
 /* HERO */
 .hero { position: relative; height: clamp(280px, 45vw, 480px); overflow: hidden; }
-.hero-img { width: 100%; height: 100%; object-fit: cover; }
+.hero-img { width: 100%; height: 100%; object-fit: cover; object-position: center; image-rendering: auto; }
 .hero-placeholder { width: 100%; height: 100%; background: linear-gradient(135deg,#001d42,#004aad); display: flex; align-items: center; justify-content: center; }
 .hero-placeholder i { font-size: 80px; color: rgba(255,255,255,.12); }
 .hero-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,20,50,.85) 0%, rgba(0,20,50,.3) 50%, transparent 100%); }
@@ -139,10 +143,19 @@ body { font-family: 'Inter', sans-serif; background: #f0f4f8; color: #1a2533; }
 .wb-mol   { background: #ede9fe; color: #6d28d9; }
 
 /* Plaatsen indicator */
-.widget-plaatsen { background: <?= ($vrij <= 5 && !$isVol) ? '#fff7ed' : ($isVol ? '#fee2e2' : '#f0fdf4') ?>; border: 1px solid <?= ($vrij <= 5 && !$isVol) ? '#fed7aa' : ($isVol ? '#fca5a5' : '#bbf7d0') ?>; border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: <?= ($vrij <= 5 && !$isVol) ? '#9a3412' : ($isVol ? '#b91c1c' : '#15803d') ?>; }
+.widget-plaatsen { background: <?= ($bezetting['pct_vrij'] <= 20 && !$isVol) ? '#fff7ed' : ($isVol ? '#fee2e2' : '#f0fdf4') ?>; border: 1px solid <?= ($bezetting['pct_vrij'] <= 20 && !$isVol) ? '#fed7aa' : ($isVol ? '#fca5a5' : '#bbf7d0') ?>; border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: <?= ($bezetting['pct_vrij'] <= 20 && !$isVol) ? '#9a3412' : ($isVol ? '#b91c1c' : '#15803d') ?>; }
 .widget-plaatsen i { font-size: 14px; }
 .plaatsen-balk { flex: 1; height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden; }
-.plaatsen-balk-fill { height: 100%; background: <?= $isVol ? '#b91c1c' : ($vrij <= 5 ? '#f59e0b' : '#16a34a') ?>; width: <?= min(100, round($boekingen / max(1, $r['max_deelnemers']) * 100)) ?>%; border-radius: 3px; }
+.plaatsen-balk-fill { height: 100%; background: <?= $isVol ? '#b91c1c' : ($bezetting['pct_vrij'] <= 20 ? '#f59e0b' : '#16a34a') ?>; width: <?= $bezetting['pct_vol'] ?>%; border-radius: 3px; transition: width .3s; }
+.plaatsen-pct { margin-left: auto; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Direct boeken: focus op reserveren, info ingeklapt */
+body.booking-direct .hero { height: clamp(160px, 28vw, 220px); }
+body.booking-direct .hero-content h1 { font-size: clamp(18px, 3.5vw, 26px); }
+body.booking-direct .page-wrap > .content-kolom { display: none; }
+body.booking-direct .page-wrap { grid-template-columns: minmax(0, 1fr); max-width: 440px; padding-top: 20px; }
+body.booking-direct .widget { position: static; box-shadow: 0 8px 32px rgba(0,0,0,.12); }
+body.booking-direct .nav-back span { display: none; }
 
 .btn-boek { width: 100%; padding: 15px; background: <?= $isVol ? '#94a3b8' : 'var(--green)' ?>; color: #fff; border: none; border-radius: 10px; font-size: 16px; font-weight: 800; cursor: <?= $isVol ? 'default' : 'pointer' ?>; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background .15s; letter-spacing: .3px; }
 .btn-boek:hover:not(:disabled) { background: #15803d; }
@@ -229,7 +242,7 @@ body { font-family: 'Inter', sans-serif; background: #f0f4f8; color: #1a2533; }
 }
 </style>
 </head>
-<body>
+<body<?= $bookingDirect ? ' class="booking-direct"' : '' ?>>
 
 <!-- NAV -->
 <nav class="nav">
@@ -244,13 +257,7 @@ body { font-family: 'Inter', sans-serif; background: #f0f4f8; color: #1a2533; }
 <!-- HERO -->
 <div class="hero">
     <?php if ($r['foto_pad']): ?>
-        <picture>
-            <source srcset="/<?= htmlspecialchars(ltrim($r['foto_pad'],'/'), ENT_QUOTES) ?>" type="image/webp">
-            <img class="hero-img"
-                 src="/<?= htmlspecialchars(ltrim($r['foto_pad'],'/'), ENT_QUOTES) ?>"
-                 alt="<?= htmlspecialchars($r['titel'], ENT_QUOTES) ?>"
-                 fetchpriority="high" decoding="async">
-        </picture>
+        <?= busreis_foto_picture((string) $r['foto_pad'], (string) $r['titel'], 'hero-img', 'hero') ?>
     <?php else: ?>
         <div class="hero-placeholder"><i class="fa-solid fa-<?= $r['type']==='meerdaags'?'moon':'bus' ?>"></i></div>
     <?php endif; ?>
@@ -284,7 +291,7 @@ body { font-family: 'Inter', sans-serif; background: #f0f4f8; color: #1a2533; }
 <div class="page-wrap">
 
     <!-- LINKS: content -->
-    <div>
+    <div class="content-kolom">
         <!-- Beschrijving -->
         <?php if ($r['beschrijving']): ?>
         <div class="sectie beschrijving">
@@ -449,12 +456,13 @@ body { font-family: 'Inter', sans-serif; background: #f0f4f8; color: #1a2533; }
                 <div class="widget-plaatsen">
                     <?php if ($isVol): ?>
                     <i class="fa-solid fa-ban"></i> Volgeboekt
-                    <?php elseif ($vrij <= 5): ?>
-                    <i class="fa-solid fa-fire"></i> Nog maar <?= $vrij ?> <?= $vrij===1?'plaats':'plaatsen' ?> vrij!
-                    <?php elseif ($vrij <= 15): ?>
-                    <i class="fa-solid fa-circle-exclamation"></i> Nog <?= $vrij ?> plaatsen beschikbaar
+                    <span class="plaatsen-pct">0% vrij</span>
+                    <?php elseif ($bezetting['pct_vrij'] <= 20): ?>
+                    <i class="fa-solid fa-fire"></i> Nog <?= $bezetting['pct_vrij'] ?>% beschikbaar
+                    <span class="plaatsen-pct"><?= $bezetting['pct_vrij'] ?>% vrij</span>
                     <?php else: ?>
-                    <i class="fa-solid fa-circle-check"></i> Beschikbaar
+                    <i class="fa-solid fa-circle-check"></i> Nog <?= $bezetting['pct_vrij'] ?>% beschikbaar
+                    <span class="plaatsen-pct"><?= $bezetting['pct_vrij'] ?>% vrij</span>
                     <?php endif; ?>
                     <div class="plaatsen-balk"><div class="plaatsen-balk-fill"></div></div>
                 </div>
@@ -659,6 +667,7 @@ const TOESLAG_EP   = <?= (float)($r['toeslag_enkelpersoon'] ?? 0) ?>;
 const VROEGBOEK_PP = <?= $vroegboekActief ? (float)$r['vroegboekkorting'] : 0 ?>;
 const HEEFT_OPTIES = <?= !empty($opties) ? 'true' : 'false' ?>;
 const MAX_STAP     = <?= !empty($opties) ? 4 : 3 ?>;
+const BOOKING_DIRECT = <?= $bookingDirect ? 'true' : 'false' ?>;
 
 let huidigeStap = 1;
 
@@ -792,6 +801,9 @@ function setStap(n) {
 document.addEventListener('DOMContentLoaded', () => {
     const eerste = document.querySelector('.dag-item');
     if (eerste) eerste.classList.add('open');
+    if (BOOKING_DIRECT && !<?= $isVol ? 'true' : 'false' ?>) {
+        openForm();
+    }
 });
 </script>
 
