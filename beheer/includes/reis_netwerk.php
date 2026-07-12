@@ -203,12 +203,9 @@ if (!function_exists('reis_mag_bewerken_voor_tenant')) {
     /** @param array<string, mixed> $ctx */
     function reis_mag_bewerken_voor_tenant(array $ctx, int $reisTenantId): bool
     {
-        // Platform owner: alles inzien, bewerken alleen binnen geselecteerde tenant.
+        // Platform owner: alle zichtbare reizen beheren (o.a. depubliceren Coach Travel).
         if (function_exists('current_user_role') && current_user_role() === 'platform_owner') {
-            $sessionTenantId = function_exists('current_tenant_id') ? current_tenant_id() : 0;
-            if ($sessionTenantId <= 0 || $reisTenantId !== $sessionTenantId) {
-                return false;
-            }
+            return $reisTenantId > 0;
         }
 
         if ($reisTenantId === (int) $ctx['eigen_tenant_id']) {

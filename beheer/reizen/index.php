@@ -193,9 +193,9 @@ include '../includes/header.php';
 <?php if ($isPlatformOwner): ?>
     <div class="rz-melding ok" style="margin-bottom:16px;">
         <i class="fa-solid fa-crown"></i>
-        Platform-modus: je ziet reizen van alle tenants. Bewerken kan alleen voor
-        <strong><?= htmlspecialchars(current_tenant_name() ?: current_tenant_slug(), ENT_QUOTES) ?></strong>
-        (huidige tenant rechtsboven).
+        Platform-modus: je ziet reizen van alle tenants en kunt status wijzigen (depubliceren/publiceren)
+        voor elke zichtbare reis, ook buiten de huidige tenant
+        (<strong><?= htmlspecialchars(current_tenant_name() ?: current_tenant_slug(), ENT_QUOTES) ?></strong>).
     </div>
 <?php elseif ($isCoopPartner): ?>
     <div class="rz-melding warn" style="margin-bottom:16px;">
