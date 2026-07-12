@@ -148,8 +148,13 @@ include '../includes/header.php';
 .badge-coop         { background:#ede9fe; color:#5b21b6; }
 
 /* Tabel */
-.rz-table-wrap { background:#fff; border-radius:10px; box-shadow:0 1px 6px rgba(0,0,0,.07); overflow:hidden; }
-.rz-table { width:100%; border-collapse:collapse; }
+.rz-table-wrap {
+    background:#fff; border-radius:10px; box-shadow:0 1px 6px rgba(0,0,0,.07);
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior-x:contain;
+}
+.rz-table { width:100%; min-width:920px; border-collapse:collapse; }
 .rz-table thead th { background:#002855; color:#fff; padding:11px 14px;
                       text-align:left; font-size:12px; font-weight:600;
                       letter-spacing:.3px; white-space:nowrap; }
@@ -176,6 +181,13 @@ include '../includes/header.php';
                font-size:13px; font-weight:500; display:flex; align-items:center; gap:8px; }
 .rz-melding.ok   { background:#dcfce7; color:#15803d; border:1px solid #bbf7d0; }
 .rz-melding.warn { background:#fef3c7; color:#92400e; border:1px solid #fde68a; }
+
+@media (max-width: 960px) {
+    .rz-page { padding:16px 12px; }
+    .rz-stats { grid-template-columns:repeat(2, 1fr); gap:10px; }
+    .rz-stat-val { font-size:22px; }
+    .rz-toolbar h1 { font-size:17px; }
+}
 </style>
 
 <div class="rz-page">

@@ -92,8 +92,13 @@ include '../includes/header.php';
 .bk-filters select { padding:7px 12px; border:1px solid #d1d5db; border-radius:6px;
                       font-size:13px; color:#374151; background:#fff; }
 
-.bk-table-wrap { background:#fff; border-radius:10px; box-shadow:0 1px 6px rgba(0,0,0,.07); overflow:hidden; }
-.bk-table { width:100%; border-collapse:collapse; }
+.bk-table-wrap {
+    background:#fff; border-radius:10px; box-shadow:0 1px 6px rgba(0,0,0,.07);
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior-x:contain;
+}
+.bk-table { width:100%; min-width:880px; border-collapse:collapse; }
 .bk-table thead th { background:#002855; color:#fff; padding:10px 13px;
                       text-align:left; font-size:11.5px; font-weight:600; white-space:nowrap; }
 .bk-table tbody tr { border-bottom:1px solid #f1f5f9; }
