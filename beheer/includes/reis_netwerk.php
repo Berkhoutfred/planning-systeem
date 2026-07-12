@@ -138,6 +138,7 @@ if (!function_exists('reis_hybrid_context')) {
         $hasEigen = in_array('dagtochten', $actieve_modules, true)
             || in_array('busreizen', $actieve_modules, true);
         $isCoopLeider = $hasCoop && $partner !== null && (string) ($partner['rol'] ?? '') === 'leider';
+        $isNetwerkLeider = reis_netwerk_is_leider($pdo, $tenantId);
 
         return [
             'tenant_id' => $tenantId,
@@ -148,7 +149,7 @@ if (!function_exists('reis_hybrid_context')) {
             'is_hybride' => $hasCoop && $hasEigen
                 && $partner !== null
                 && (string) ($partner['rol'] ?? '') === 'partner',
-            'mag_eigen_bewerken' => $hasEigen || $isCoopLeider,
+            'mag_eigen_bewerken' => $hasEigen || $isCoopLeider || $isNetwerkLeider,
             'mag_coop_bewerken' => $hasCoop && (int) ($partner['mag_bewerken'] ?? 0) === 1,
             'coop_partner' => $partner,
         ];
@@ -203,11 +204,21 @@ if (!function_exists('reis_mag_bewerken_voor_tenant')) {
     /** @param array<string, mixed> $ctx */
     function reis_mag_bewerken_voor_tenant(array $ctx, int $reisTenantId): bool
     {
-        // Platform owner: alles inzien, bewerken alleen binnen geselecteerde tenant.
+        if ($reisTenantId <= 0) {
+            return false;
+        }
+
+        // Platform owner: status wijzigen op alle zichtbare reizen (ook andere tenants).
         if (function_exists('current_user_role') && current_user_role() === 'platform_owner') {
-            $sessionTenantId = function_exists('current_tenant_id') ? current_tenant_id() : 0;
-            if ($sessionTenantId <= 0 || $reisTenantId !== $sessionTenantId) {
-                return false;
+            return true;
+        }
+
+        // Eigen tenant-data: Coach Travel-leider, Berkhout met eigen reizen, etc.
+        if (function_exists('current_tenant_id') && function_exists('current_user_role')) {
+            $rol = current_user_role();
+            if (in_array($rol, ['tenant_admin', 'planner_user'], true)
+                && $reisTenantId === current_tenant_id()) {
+                return true;
             }
         }
 
