@@ -321,6 +321,195 @@ $actief_dashboard = nav_actief($huidig_pad, $huidige_pagina, ['dashboard.php','i
         th, td { border-bottom: 1px solid #eef2f7; padding: 11px 14px; text-align: left; }
         th { background: #f7f9fc; color: #003d82; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .4px; }
         tr:hover td { background: #fafcff; }
+
+        /* ── MOBIEL HAMBURGERMENU (desktop ongewijzigd) ── */
+        .nav-toggle,
+        .nav-overlay,
+        .nav-mobile-foot { display: none; }
+
+        @media (max-width: 960px) {
+            header {
+                padding: 0 12px;
+                gap: 8px;
+            }
+
+            .header-divider,
+            .header-right { display: none !important; }
+
+            .nav-toggle {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 42px;
+                height: 42px;
+                margin-left: auto;
+                padding: 0;
+                background: rgba(255,255,255,0.1);
+                border: 1px solid rgba(255,255,255,0.22);
+                border-radius: 8px;
+                color: #fff;
+                font-size: 18px;
+                cursor: pointer;
+                flex-shrink: 0;
+                transition: background .18s, border-color .18s;
+            }
+            .nav-toggle:hover,
+            .nav-toggle:focus-visible {
+                background: rgba(255,255,255,0.18);
+                border-color: rgba(255,255,255,0.35);
+                outline: none;
+            }
+
+            .nav-overlay {
+                display: none;
+                position: fixed;
+                inset: 56px 0 0 0;
+                background: rgba(0, 20, 45, 0.45);
+                opacity: 0;
+                visibility: hidden;
+                pointer-events: none;
+                transition: opacity .22s ease, visibility .22s ease;
+                z-index: 950;
+            }
+            body.nav-open .nav-overlay {
+                display: block;
+                opacity: 1;
+                visibility: visible;
+                pointer-events: auto;
+            }
+
+            nav {
+                position: fixed;
+                top: 56px;
+                left: 0;
+                bottom: 0;
+                width: min(320px, 88vw);
+                min-height: calc(100dvh - 56px);
+                flex: none;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0;
+                padding: 8px 0 24px;
+                background: linear-gradient(180deg, #002855 0%, #003d82 100%);
+                box-shadow: 8px 0 32px rgba(0,0,0,0.28);
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                transform: translateX(-105%);
+                transition: transform .24s ease;
+                z-index: 960;
+            }
+            body.nav-open nav {
+                transform: translateX(0);
+            }
+            body.nav-open { overflow: hidden; }
+
+            nav > a,
+            .dd-btn {
+                width: 100%;
+                min-height: 48px;
+                padding: 12px 18px;
+                border-bottom: none;
+                border-radius: 0;
+                justify-content: flex-start;
+                font-size: 15px;
+            }
+            nav > a.actief,
+            .dd-btn.actief,
+            .dd.open .dd-btn {
+                background: rgba(255,255,255,0.12);
+                border-left: 4px solid #5bc8f5;
+                padding-left: 14px;
+            }
+
+            .dd {
+                flex-direction: column;
+                align-items: stretch;
+                width: 100%;
+            }
+            .dd-btn .chevron { margin-left: auto; }
+
+            .dd-menu {
+                display: none;
+                position: static;
+                top: auto;
+                left: auto;
+                min-width: 0;
+                width: 100%;
+                border: none;
+                border-radius: 0;
+                box-shadow: none;
+                background: rgba(0,0,0,0.14);
+                animation: none;
+            }
+            .dd.open .dd-menu { display: block; }
+
+            .dd-sectie {
+                background: rgba(255,255,255,0.06);
+                color: rgba(255,255,255,0.72);
+                border-bottom-color: rgba(255,255,255,0.08);
+                padding-left: 22px;
+            }
+            .dd-menu a {
+                color: rgba(255,255,255,0.92);
+                padding: 11px 18px 11px 28px;
+                border-left: none;
+                font-size: 14px;
+            }
+            .dd-menu a i { color: rgba(255,255,255,0.55); }
+            .dd-menu a:hover,
+            .dd-menu a.actief {
+                background: rgba(255,255,255,0.1);
+                color: #fff;
+                padding-left: 32px;
+                border-left: none;
+            }
+            .dd-menu a.actief { font-weight: 600; }
+            .dd-menu hr { border-top-color: rgba(255,255,255,0.1); }
+
+            .nav-mobile-foot {
+                display: block;
+                margin-top: auto;
+                padding: 16px 18px 8px;
+                border-top: 1px solid rgba(255,255,255,0.14);
+            }
+            .nav-mobile-foot .nav-mobile-bedrijf {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-size: 12px;
+                font-weight: 600;
+                color: rgba(255,255,255,0.55);
+                margin-bottom: 12px;
+            }
+            .nav-mobile-foot a {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 10px 0;
+                color: rgba(255,255,255,0.9);
+                text-decoration: none;
+                font-size: 14px;
+                font-weight: 500;
+            }
+            .nav-mobile-foot a i { width: 16px; text-align: center; opacity: .75; }
+            .nav-mobile-foot a.nav-mobile-platform { color: #ffd54f; }
+            .nav-mobile-foot .btn-uitloggen-mobile {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                width: 100%;
+                margin-top: 10px;
+                padding: 11px 14px;
+                background: rgba(255,255,255,0.1);
+                color: #fff;
+                border: 1px solid rgba(255,255,255,0.22);
+                border-radius: 8px;
+                font-size: 14px;
+                font-weight: 600;
+                text-decoration: none;
+            }
+        }
     </style>
 </head>
 <body>
@@ -332,7 +521,7 @@ $actief_dashboard = nav_actief($huidig_pad, $huidige_pagina, ['dashboard.php','i
 
     <div class="header-divider"></div>
 
-    <nav>
+    <nav id="hoofdnav">
         <!-- Dashboard -->
         <?php if ($is_reizen_portaal): ?>
         <a href="<?php echo $path; ?>reizen/index.php" class="<?php echo str_contains($huidig_pad, '/reizen/') ? 'actief' : ''; ?>">
@@ -460,7 +649,35 @@ $actief_dashboard = nav_actief($huidig_pad, $huidige_pagina, ['dashboard.php','i
             </div>
         </div>
         <?php endif; ?>
+
+        <div class="nav-mobile-foot">
+            <?php if ($bedrijfsnaam !== ''): ?>
+                <div class="nav-mobile-bedrijf">
+                    <i class="fa-solid fa-building"></i>
+                    <?php echo htmlspecialchars($bedrijfsnaam, ENT_QUOTES, 'UTF-8'); ?>
+                </div>
+            <?php endif; ?>
+            <?php if ($is_platform_owner): ?>
+                <a href="<?php echo $path; ?>platform_owner.php" class="nav-mobile-platform">
+                    <i class="fa-solid fa-crown"></i> Platform Owner
+                </a>
+                <a href="<?php echo $path; ?>module_beheer.php">
+                    <i class="fa-solid fa-puzzle-piece"></i> Module Beheer
+                </a>
+                <a href="<?php echo $path; ?>api_gebruik_overzicht.php">
+                    <i class="fa-solid fa-chart-bar"></i> API-gebruik
+                </a>
+            <?php endif; ?>
+            <a href="/beveiliging.php?uitloggen=1" class="btn-uitloggen-mobile">
+                <i class="fa-solid fa-right-from-bracket"></i> Uitloggen
+            </a>
+        </div>
     </nav>
+
+    <button type="button" class="nav-toggle" id="nav-toggle" aria-label="Menu openen" aria-expanded="false" aria-controls="hoofdnav">
+        <i class="fa-solid fa-bars" aria-hidden="true"></i>
+    </button>
+    <div class="nav-overlay" id="nav-overlay"></div>
 
     <!-- Rechter toolbar -->
     <div class="header-right">
@@ -491,6 +708,49 @@ $actief_dashboard = nav_actief($huidig_pad, $huidige_pagina, ['dashboard.php','i
 
 <script>
 (function() {
+    var MOBILE_MAX = 960;
+    var navToggle = document.getElementById('nav-toggle');
+    var navOverlay = document.getElementById('nav-overlay');
+    var navEl = document.getElementById('hoofdnav');
+
+    function isMobileNav() {
+        return window.matchMedia('(max-width: ' + MOBILE_MAX + 'px)').matches;
+    }
+
+    function setNavOpen(open) {
+        document.body.classList.toggle('nav-open', open);
+        if (navToggle) {
+            navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+            navToggle.setAttribute('aria-label', open ? 'Menu sluiten' : 'Menu openen');
+            var icon = navToggle.querySelector('i');
+            if (icon) {
+                icon.className = open ? 'fa-solid fa-xmark' : 'fa-solid fa-bars';
+            }
+        }
+    }
+
+    function closeNav() {
+        setNavOpen(false);
+        document.querySelectorAll('.dd.open').forEach(function(d) { d.classList.remove('open'); });
+    }
+
+    if (navToggle) {
+        navToggle.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (!isMobileNav()) return;
+            setNavOpen(!document.body.classList.contains('nav-open'));
+        });
+    }
+    if (navOverlay) {
+        navOverlay.addEventListener('click', closeNav);
+    }
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeNav();
+    });
+    window.addEventListener('resize', function() {
+        if (!isMobileNav()) closeNav();
+    });
+
     // Klik op dropdown-knop opent/sluit het menu
     document.querySelectorAll('.dd-btn').forEach(function(btn) {
         btn.addEventListener('click', function(e) {
@@ -503,13 +763,23 @@ $actief_dashboard = nav_actief($huidig_pad, $huidige_pagina, ['dashboard.php','i
             if (!wasOpen) dd.classList.add('open');
         });
     });
-    // Klik buiten het menu sluit alles
+    // Klik buiten het menu sluit alles (alleen desktop dropdowns)
     document.addEventListener('click', function() {
+        if (isMobileNav()) return;
         document.querySelectorAll('.dd.open').forEach(function(d) { d.classList.remove('open'); });
     });
     // Klik in het menu zelf sluit niet (behalve op een link)
     document.querySelectorAll('.dd-menu').forEach(function(menu) {
         menu.addEventListener('click', function(e) { e.stopPropagation(); });
     });
+
+    // Mobiel: menu sluiten na navigatie
+    if (navEl) {
+        navEl.querySelectorAll('a[href]').forEach(function(link) {
+            link.addEventListener('click', function() {
+                if (isMobileNav()) closeNav();
+            });
+        });
+    }
 })();
 </script>
