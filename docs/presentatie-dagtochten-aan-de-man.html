@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dagtochten aan de man brengen · Berkhout Busreizen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #002855;
+    --navy-deep: #001428;
+    --blue: #004aad;
+    --sky: #5bc8f5;
+    --gold: #f59e0b;
+    --ink: #132033;
+    --muted: #5b6b7c;
+    --line: rgba(255,255,255,.12);
+    --soft: #eef3f8;
+    --white: #ffffff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background: var(--navy-deep);
+    color: var(--ink);
+    font-family: "Manrope", sans-serif;
+    overflow: hidden;
+  }
+
+  .deck {
+    height: 100%;
+    width: 100%;
+    position: relative;
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: none;
+    padding: clamp(28px, 5vw, 64px);
+    background:
+      radial-gradient(1200px 600px at 85% -10%, rgba(91,200,245,.18), transparent 55%),
+      radial-gradient(900px 500px at -10% 110%, rgba(245,158,11,.12), transparent 50%),
+      linear-gradient(145deg, #001428 0%, #002855 55%, #00366f 100%);
+    color: var(--white);
+  }
+
+  .slide.active { display: flex; flex-direction: column; }
+
+  .slide.light {
+    background:
+      radial-gradient(900px 480px at 100% 0%, rgba(91,200,245,.16), transparent 50%),
+      linear-gradient(160deg, #f7fafc 0%, #eef3f8 100%);
+    color: var(--ink);
+  }
+
+  .eyebrow {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--sky);
+    margin-bottom: 14px;
+  }
+
+  .slide.light .eyebrow { color: var(--blue); }
+
+  h1 {
+    font-family: "Fraunces", serif;
+    font-size: clamp(34px, 5.4vw, 58px);
+    line-height: 1.08;
+    font-weight: 700;
+    max-width: 14ch;
+    margin-bottom: 18px;
+  }
+
+  h2 {
+    font-family: "Fraunces", serif;
+    font-size: clamp(28px, 4vw, 44px);
+    line-height: 1.12;
+    font-weight: 700;
+    margin-bottom: 18px;
+    max-width: 22ch;
+  }
+
+  .lead {
+    font-size: clamp(16px, 2vw, 20px);
+    line-height: 1.45;
+    max-width: 42ch;
+    color: rgba(255,255,255,.84);
+    font-weight: 500;
+  }
+
+  .slide.light .lead { color: var(--muted); }
+
+  .brand-line {
+    margin-top: auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    gap: 16px;
+    padding-top: 28px;
+    border-top: 1px solid var(--line);
+    font-size: 13px;
+    color: rgba(255,255,255,.65);
+    font-weight: 600;
+  }
+
+  .slide.light .brand-line {
+    border-top-color: rgba(0,40,85,.12);
+    color: var(--muted);
+  }
+
+  .brand-line strong { color: var(--sky); font-weight: 800; }
+  .slide.light .brand-line strong { color: var(--navy); }
+
+  .grid-10 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 28px;
+    margin-top: 8px;
+    max-width: 920px;
+  }
+
+  .grid-10 .item {
+    display: grid;
+    grid-template-columns: 34px 1fr;
+    gap: 12px;
+    align-items: start;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,.1);
+  }
+
+  .slide.light .grid-10 .item { border-bottom-color: rgba(0,40,85,.08); }
+
+  .nr {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    background: rgba(91,200,245,.16);
+    color: var(--sky);
+    font-weight: 800;
+    font-size: 13px;
+  }
+
+  .slide.light .nr {
+    background: rgba(0,74,173,.1);
+    color: var(--blue);
+  }
+
+  .item h3 {
+    font-size: 15px;
+    font-weight: 800;
+    margin-bottom: 2px;
+  }
+
+  .item p {
+    font-size: 13.5px;
+    line-height: 1.35;
+    color: rgba(255,255,255,.72);
+  }
+
+  .slide.light .item p { color: var(--muted); }
+
+  .points {
+    display: grid;
+    gap: 12px;
+    margin-top: 6px;
+    max-width: 760px;
+  }
+
+  .point {
+    display: grid;
+    grid-template-columns: 10px 1fr;
+    gap: 14px;
+    align-items: start;
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 14px;
+    padding: 14px 16px;
+  }
+
+  .slide.light .point {
+    background: #fff;
+    border-color: rgba(0,40,85,.08);
+    box-shadow: 0 8px 24px rgba(0,40,85,.05);
+  }
+
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--gold);
+    margin-top: 5px;
+  }
+
+  .point strong {
+    display: block;
+    font-size: 15px;
+    font-weight: 800;
+    margin-bottom: 3px;
+  }
+
+  .point span {
+    font-size: 14px;
+    line-height: 1.4;
+    color: rgba(255,255,255,.78);
+  }
+
+  .slide.light .point span { color: var(--muted); }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: 1.1fr .9fr;
+    gap: 28px;
+    align-items: start;
+    flex: 1;
+  }
+
+  .card {
+    background: rgba(255,255,255,.07);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 18px;
+    padding: 22px;
+  }
+
+  .slide.light .card {
+    background: #fff;
+    border-color: rgba(0,40,85,.08);
+  }
+
+  .card h3 {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--sky);
+    margin-bottom: 12px;
+    font-weight: 800;
+  }
+
+  .slide.light .card h3 { color: var(--blue); }
+
+  .card ul {
+    list-style: none;
+    display: grid;
+    gap: 10px;
+  }
+
+  .card li {
+    font-size: 14.5px;
+    line-height: 1.4;
+    padding-left: 16px;
+    position: relative;
+    color: rgba(255,255,255,.84);
+  }
+
+  .slide.light .card li { color: var(--muted); }
+
+  .card li::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--gold);
+    position: absolute;
+    left: 0;
+    top: .55em;
+  }
+
+  .quote {
+    font-family: "Fraunces", serif;
+    font-size: clamp(22px, 3.2vw, 34px);
+    line-height: 1.25;
+    max-width: 22ch;
+    margin: 10px 0 18px;
+  }
+
+  .week {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-top: 8px;
+  }
+
+  .week .day {
+    background: rgba(255,255,255,.07);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 16px;
+    padding: 16px;
+    min-height: 180px;
+  }
+
+  .week .day b {
+    display: block;
+    color: var(--sky);
+    font-size: 12px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .week .day h3 {
+    font-size: 16px;
+    font-weight: 800;
+    margin-bottom: 10px;
+  }
+
+  .week .day p {
+    font-size: 13.5px;
+    line-height: 1.4;
+    color: rgba(255,255,255,.75);
+  }
+
+  .big-number {
+    font-family: "Fraunces", serif;
+    font-size: clamp(64px, 10vw, 110px);
+    line-height: .9;
+    color: var(--sky);
+    margin-bottom: 8px;
+  }
+
+  .nav-hint {
+    position: fixed;
+    right: 18px;
+    bottom: 16px;
+    z-index: 20;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 12px;
+    color: rgba(255,255,255,.55);
+    background: rgba(0,0,0,.25);
+    border: 1px solid rgba(255,255,255,.1);
+    backdrop-filter: blur(8px);
+    border-radius: 999px;
+    padding: 7px 12px;
+  }
+
+  .nav-hint kbd {
+    background: rgba(255,255,255,.12);
+    border-radius: 5px;
+    padding: 2px 6px;
+    font-family: inherit;
+    font-weight: 700;
+  }
+
+  .progress {
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 3px;
+    background: var(--gold);
+    width: 0;
+    z-index: 30;
+    transition: width .25s ease;
+  }
+
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(245,158,11,.14);
+    border: 1px solid rgba(245,158,11,.35);
+    color: #fbbf24;
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 16px;
+  }
+
+  @media (max-width: 900px) {
+    .grid-10, .week, .two-col { grid-template-columns: 1fr; }
+    .week .day { min-height: 0; }
+    h1, h2 { max-width: none; }
+  }
+
+  @page {
+    size: 297mm 210mm;
+    margin: 0;
+  }
+
+  @media print {
+    html, body {
+      overflow: visible !important;
+      height: auto !important;
+      background: #fff !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    .deck { height: auto !important; }
+    .slide {
+      position: relative !important;
+      display: flex !important;
+      width: 297mm;
+      height: 210mm;
+      min-height: 210mm;
+      max-height: 210mm;
+      overflow: hidden;
+      page-break-after: always;
+      break-after: page;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    .slide:last-child {
+      page-break-after: auto;
+      break-after: auto;
+    }
+    .nav-hint, .progress { display: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="deck" id="deck">
+
+  <!-- 1 -->
+  <section class="slide active">
+    <div class="tag">Intern speelboek · Berkhout Busreizen</div>
+    <div class="eyebrow">Presentatie voor Mariska</div>
+    <h1>Dagtochten aan de man brengen</h1>
+    <p class="lead">Hoe we een dagtocht die online staat, snel zichtbaar maken, gericht promoten en zo vol mogelijk verkopen.</p>
+    <div class="brand-line">
+      <div><strong>Berkhout Busreizen</strong> · Verkoop &amp; marketing</div>
+      <div>10 stappen · helder &amp; doenbaar</div>
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section class="slide light">
+    <div class="eyebrow">Onze kern</div>
+    <h2>Niet afwachten. Activeren.</h2>
+    <p class="lead">Een dagtocht op de website is het startpunt — geen eindpunt. Omzet komt van een scherp aanbod, warm netwerk, lokale druk en één duidelijke boeklink.</p>
+    <div class="points" style="margin-top:28px">
+      <div class="point"><div class="dot"></div><div><strong>Warm eerst, koud later</strong><span>Eigen klanten, WhatsApp, verenigingen en partners vóór brede advertenties.</span></div></div>
+      <div class="point"><div class="dot"></div><div><strong>Eén belofte, één knop</strong><span>In 30 seconden duidelijk: wat, wanneer, prijs, waar instappen, boeken.</span></div></div>
+      <div class="point"><div class="dot"></div><div><strong>Elke dag één actie</strong><span>Stilte vult geen stoelen. Ritme wél.</span></div></div>
+    </div>
+    <div class="brand-line"><div><strong>Doel</strong>: volle bus, rustige operatie, blijvende klanten</div><div>Slide 2</div></div>
+  </section>
+
+  <!-- 3 -->
+  <section class="slide">
+    <div class="eyebrow">Overzicht</div>
+    <h2>Het 10-stappenplan</h2>
+    <div class="grid-10">
+      <div class="item"><div class="nr">01</div><div><h3>Aanbod scherp</h3><p>Belofte, prijs, foto’s, plaatsen</p></div></div>
+      <div class="item"><div class="nr">02</div><div><h3>Boekpad frictieloos</h3><p>Eén link, mobiel perfect</p></div></div>
+      <div class="item"><div class="nr">03</div><div><h3>Warm publiek</h3><p>Klanten, staf, WhatsApp</p></div></div>
+      <div class="item"><div class="nr">04</div><div><h3>Lokaal activeren</h3><p>Haltes, dorpen, flyers, QR</p></div></div>
+      <div class="item"><div class="nr">05</div><div><h3>Partners inzetten</h3><p>Verenigingen &amp; bestemming</p></div></div>
+      <div class="item"><div class="nr">06</div><div><h3>Content &amp; social</h3><p>Reels, carrousel, updates</p></div></div>
+      <div class="item"><div class="nr">07</div><div><h3>Gericht adverteren</h3><p>Regio rond opstaphaltes</p></div></div>
+      <div class="item"><div class="nr">08</div><div><h3>Conversie &amp; urgentie</h3><p>Early bird, schaarste, beloptie</p></div></div>
+      <div class="item"><div class="nr">09</div><div><h3>Operatie = marketing</h3><p>Break-even, groepen, vertrouwen</p></div></div>
+      <div class="item"><div class="nr">10</div><div><h3>Ritme &amp; meten</h3><p>Weekplan + bron per kanaal</p></div></div>
+    </div>
+    <div class="brand-line"><div><strong>Volgorde is bewust</strong>: eerst fundament, dan bereik</div><div>Slide 3</div></div>
+  </section>
+
+  <!-- 4 -->
+  <section class="slide light">
+    <div class="eyebrow">Stap 01</div>
+    <div class="big-number">01</div>
+    <h2>Maak het aanbod verkoopklaar</h2>
+    <div class="two-col">
+      <div class="points">
+        <div class="point"><div class="dot"></div><div><strong>Eén sterke belofte</strong><span>Niet alleen de bestemming — vooral wat de gast overhoudt: ontspannen, geregeld, deur-tot-deur.</span></div></div>
+        <div class="point"><div class="dot"></div><div><strong>Prijs met inhoud</strong><span>Duidelijk pp-tarief én wat erin zit. Geen verrassingen achteraf.</span></div></div>
+        <div class="point"><div class="dot"></div><div><strong>Eerlijke schaarste</strong><span>Toon echte vrije plaatsen. Dat creëert vaart zonder vertrouwen te schaden.</span></div></div>
+      </div>
+      <div class="card">
+        <h3>Checklist vóór promo</h3>
+        <ul>
+          <li>Scherpe titel + sfeerfoto</li>
+          <li>Datum, tijden, opstaphaltes</li>
+          <li>Prijs en inbegrepen onderdelen</li>
+          <li>Plaatsen zichtbaar</li>
+          <li>Directe boekknop werkt op mobiel</li>
+        </ul>
+      </div>
+    </div>
+    <div class="brand-line"><div>Zonder dit is elke promo weggegooid bereik</div><div>Slide 4</div></div>
+  </section>
+
+  <!-- 5 -->
+  <section class="slide">
+    <div class="eyebrow">Stap 02</div>
+    <div class="big-number">02</div>
+    <h2>Eén belofte. Eén boeklink.</h2>
+    <p class="lead">Iedere uiting — WhatsApp, Facebook, flyer of mail — verwijst naar dezelfde reispagina. Geen omwegen via de homepage.</p>
+    <div class="points" style="margin-top:24px">
+      <div class="point"><div class="dot"></div><div><strong>30-seconden test</strong><span>Begrijpt iemand op de telefoon meteen: wat / wanneer / hoeveel / waar instappen / knop?</span></div></div>
+      <div class="point"><div class="dot"></div><div><strong>Meetbaar maken</strong><span>Gebruik per kanaal een bronmerk (bijv. src=whatsapp, src=fb) zodat we zien wat echt boekt.</span></div></div>
+      <div class="point"><div class="dot"></div><div><strong>Belknop ernaast</strong><span>Vooral 55+ wil soms liever bellen. Online én telefonisch naast elkaar.</span></div></div>
+    </div>
+    <div class="brand-line"><div><strong>Regel</strong>: minder links = meer boekingen</div><div>Slide 5</div></div>
+  </section>
+
+  <!-- 6 -->
+  <section class="slide light">
+    <div class="eyebrow">Stap 03</div>
+    <div class="big-number">03</div>
+    <h2>Warm publiek eerst</h2>
+    <p class="lead">De snelste stoelen komen uit ons eigen netwerk — niet uit koude advertenties.</p>
+    <div class="week" style="margin-top:24px; grid-template-columns: repeat(2, 1fr);">
+      <div class="day" style="background:#fff;border-color:rgba(0,40,85,.08);color:var(--ink)">
+        <b style="color:var(--blue)">Direct inzetten</b>
+        <h3>Eigen kanalen</h3>
+        <p>WhatsApp Business &amp; status · eerdere dagtochtklanten · Facebookpagina · mail/SMS aan bekend bestand</p>
+      </div>
+      <div class="day" style="background:#fff;border-color:rgba(0,40,85,.08);color:var(--ink)">
+        <b style="color:var(--blue)">Iedereen doet mee</b>
+        <h3>Team als versterker</h3>
+        <p>Kantoor en chauffeurs krijgen één kant-en-klare tekst + link. Delen in eigen kringen = gratis bereik met vertrouwen.</p>
+      </div>
+    </div>
+    <div class="brand-line"><div><strong>Verdeelsleutel</strong>: 70% warm · 30% nieuw bereik</div><div>Slide 6</div></div>
+  </section>
+
+  <!-- 7 -->
+  <section class="slide">
+    <div class="eyebrow">Stap 04</div>
+    <div class="big-number">04</div>
+    <h2>Win lokaal, niet heel Nederland</h2>
+    <p class="lead">Onze kracht zit rond de opstaphaltes. Daar is de boodschap relevant en de drempel laag.</p>
+    <div class="points" style="margin-top:24px">
+      <div class="point"><div class="dot"></div><div><strong>Kernen rond de halte</strong><span>Gerichte posts, prikborden, dorpshuis, kapper, bibliotheek — met QR naar de boeklink.</span></div></div>
+      <div class="point"><div class="dot"></div><div><strong>Zichtbaar op de opstapplek</strong><span>Poster of A-bord: bestemming, datum, prijsindicatie, QR. Simpel en effectief.</span></div></div>
+      <div class="point"><div class="dot"></div><div><strong>Lokale groepen &amp; media</strong><span>Streekpagina’s en lokale media inzetten als versterking — niet als enige plan.</span></div></div>
+    </div>
+    <div class="brand-line"><div>Relevante regio > groot bereik zonder boeking</div><div>Slide 7</div></div>
+  </section>
+
+  <!-- 8 -->
+  <section class="slide light">
+    <div class="eyebrow">Stap 05</div>
+    <div class="big-number">05</div>
+    <h2>Partners vullen sneller dan losse boekers</h2>
+    <div class="two-col" style="margin-top:8px">
+      <div class="card">
+        <h3>Wie bellen we</h3>
+        <ul>
+          <li>55+ / seniorenverenigingen</li>
+          <li>Wandel- en clubverenigingen</li>
+          <li>Kerken, dorpsraden, VVV</li>
+          <li>Zorg- en welzijnsgroepen</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Wat bieden we</h3>
+        <ul>
+          <li>Complete dag, wij regelen de bus</li>
+          <li>Blokreservering vanaf ca. 8+</li>
+          <li>Duidelijke prijs per persoon</li>
+          <li>Cross-promo met de bestemming</li>
+        </ul>
+      </div>
+    </div>
+    <div class="brand-line"><div><strong>1 vereniging van 20</strong> wint het van 20 losse twijelaars</div><div>Slide 8</div></div>
+  </section>
+
+  <!-- 9 -->
+  <section class="slide">
+    <div class="eyebrow">Stap 06</div>
+    <div class="big-number">06</div>
+    <h2>Content die laat voelen hoe de dag wordt</h2>
+    <p class="lead">Mensen boeken sfeer en zekerheid. Laat de dag zien — kort, echt, herhaaldelijk.</p>
+    <div class="points" style="margin-top:24px">
+      <div class="point"><div class="dot"></div><div><strong>Korte video’s</strong><span>Bus laden → onderweg → bestemming → blije gasten → “boek via de link”.</span></div></div>
+      <div class="point"><div class="dot"></div><div><strong>Programma in slides</strong><span>Carrousel van 4–5 beelden: vertrek, highlights, lunch/moment, terugkomst, CTA.</span></div></div>
+      <div class="point"><div class="dot"></div><div><strong>Gezicht geven</strong><span>Chauffeur of kantoor in beeld: “Ik neem jullie mee naar …” = vertrouwen.</span></div></div>
+    </div>
+    <div class="brand-line"><div>Liever 1 goede Reel per dag dan 1 lange post per week</div><div>Slide 9</div></div>
+  </section>
+
+  <!-- 10 -->
+  <section class="slide light">
+    <div class="eyebrow">Stap 07</div>
+    <div class="big-number">07</div>
+    <h2>Adverteren pas als het fundament staat</h2>
+    <p class="lead">Betaald bereik werkt alleen als landingspagina, belofte en regio kloppen.</p>
+    <div class="points" style="margin-top:24px">
+      <div class="point"><div class="dot"></div><div><strong>Smalle targeting</strong><span>Radius rond opstaphaltes, passende leeftijd voor déze tocht — geen breed heel Nederland.</span></div></div>
+      <div class="point"><div class="dot"></div><div><strong>Direct naar de reis</strong><span>Advertentie landt op de reispagina, nooit op de algemene homepage.</span></div></div>
+      <div class="point"><div class="dot"></div><div><strong>Klein starten, leren</strong><span>Bescheiden budget, wissel beeld/video, stuur bij op wat boekingen oplevert — niet alleen likes.</span></div></div>
+    </div>
+    <div class="brand-line"><div>Ads versterken een lopend plan — ze vervangen het niet</div><div>Slide 10</div></div>
+  </section>
+
+  <!-- 11 -->
+  <section class="slide">
+    <div class="eyebrow">Stap 08</div>
+    <div class="big-number">08</div>
+    <h2>Maak boeken makkelijk én urgent</h2>
+    <div class="two-col" style="margin-top:8px">
+      <div class="points">
+        <div class="point"><div class="dot"></div><div><strong>Early bird met einddatum</strong><span>Echte deadline, daarna normale prijs.</span></div></div>
+        <div class="point"><div class="dot"></div><div><strong>Laatste plaatsen</strong><span>Update eerlijk wanneer het bijna vol raakt.</span></div></div>
+        <div class="point"><div class="dot"></div><div><strong>Neem iemand mee</strong><span>Voordeel vanaf 2 personen — alleen als de marge het toelaat.</span></div></div>
+      </div>
+      <div class="card">
+        <h3>Na de boeking</h3>
+        <ul>
+          <li>Bedankmail met deeltekst</li>
+          <li>“Stuur door naar een vriend”</li>
+          <li>WhatsApp-share klaarzetten</li>
+          <li>Wachtlijst bij bijna vol</li>
+        </ul>
+      </div>
+    </div>
+    <div class="brand-line"><div>Urgentie werkt alleen als die waar is</div><div>Slide 11</div></div>
+  </section>
+
+  <!-- 12 -->
+  <section class="slide light">
+    <div class="eyebrow">Stap 09</div>
+    <div class="big-number">09</div>
+    <h2>Operatie is ook marketing</h2>
+    <p class="lead">Een goed geleide rit verkoopt de volgende. Een late paniekactie kost marge én rust.</p>
+    <div class="points" style="margin-top:24px">
+      <div class="point"><div class="dot"></div><div><strong>Break-even kennen</strong><span>Weet vanaf hoeveel personen de rit gezond doorgaat — en communiceer tijdig.</span></div></div>
+      <div class="point"><div class="dot"></div><div><strong>Vroeg bijsturen</strong><span>Te weinig boekingen? Eerder pushen, partner bellen of halte/aanbod aanscherpen — niet pas 3 dagen van tevoren.</span></div></div>
+      <div class="point"><div class="dot"></div><div><strong>Groepen prioriteren</strong><span>Blokboekingen eerst oppakken. Zij maken de bus snel gezond.</span></div></div>
+    </div>
+    <div class="brand-line"><div>Rust in de planning = sterker verhaal naar buiten</div><div>Slide 12</div></div>
+  </section>
+
+  <!-- 13 -->
+  <section class="slide">
+    <div class="eyebrow">Stap 10</div>
+    <div class="big-number">10</div>
+    <h2>Werk in een vast weekritme</h2>
+    <div class="week">
+      <div class="day">
+        <b>Dag 1</b>
+        <h3>Fundament</h3>
+        <p>Aanbod scherp · foto’s · plaatsen · vaste boeklink · deeltekst klaar · team geïnformeerd</p>
+      </div>
+      <div class="day">
+        <b>Dag 2–3</b>
+        <h3>Warm + lokaal</h3>
+        <p>Klanten mailen/appen · verenigingen bellen · eerste Reel · QR/flyer bij 3 plekken</p>
+      </div>
+      <div class="day">
+        <b>Dag 4–7</b>
+        <h3>Druk erop</h3>
+        <p>Dagelijks content · kleine regio-ads · follow-up twijelaars · early-bird herinneren</p>
+      </div>
+      <div class="day">
+        <b>Laatste 10 dgn</b>
+        <h3>Afronden</h3>
+        <p>Schaarste-updates · WhatsApp-status · laatste partnerpush · alleen dan last-minute bijsturen</p>
+      </div>
+    </div>
+    <div class="brand-line"><div><strong>Elke dag één zichtbare actie</strong></div><div>Slide 13</div></div>
+  </section>
+
+  <!-- 14 -->
+  <section class="slide light">
+    <div class="eyebrow">Scherp houden</div>
+    <h2>Dit doen we niet</h2>
+    <div class="points" style="margin-top:10px">
+      <div class="point"><div class="dot"></div><div><strong>Alleen “staat online” en afwachten</strong><span>De website is etalage, geen verkoper.</span></div></div>
+      <div class="point"><div class="dot"></div><div><strong>Breed adverteren zonder regio</strong><span>Bereik ver van de halte levert zelden stoelen.</span></div></div>
+      <div class="point"><div class="dot"></div><div><strong>Vijf verschillende links</strong><span>Verwarring voor de klant, onbruikbare cijfers voor ons.</span></div></div>
+      <div class="point"><div class="dot"></div><div><strong>Te vroeg dumpen in prijs</strong><span>Eerst activeren. Korting is een noodrem, geen openingszet.</span></div></div>
+    </div>
+    <div class="brand-line"><div>Discipline in het kanaal = rust in de bus</div><div>Slide 14</div></div>
+  </section>
+
+  <!-- 15 -->
+  <section class="slide">
+    <div class="eyebrow">Samenvatting</div>
+    <p class="quote">Maak het aanbod in 30 seconden duidelijk, duw het eerst door ons warme netwerk en lokale partners, en trek pas daarna gericht verkeer naar de reispagina.</p>
+    <div class="points">
+      <div class="point"><div class="dot"></div><div><strong>Voor Mariska — vaste werkwijze per nieuwe dagtocht</strong><span>Checklist aanbod → deeltekst + link → warm publiek → lokaal/partners → content → pas daarna ads → dagelijks bijhouden.</span></div></div>
+      <div class="point"><div class="dot"></div><div><strong>Succes meten we zo</strong><span>Niet op likes, maar op boekingen per kanaal, snelheid naar break-even en uiteindelijke bezetting.</span></div></div>
+    </div>
+    <div class="brand-line">
+      <div><strong>Berkhout Busreizen</strong> · Dagtochten met vaart verkopen</div>
+      <div>Klaar om te gebruiken</div>
+    </div>
+  </section>
+
+</div>
+
+<div class="nav-hint">
+  <span><kbd>←</kbd> <kbd>→</kbd> bladeren</span>
+  <span>·</span>
+  <span id="counter">1 / 15</span>
+</div>
+
+<script>
+  const slides = [...document.querySelectorAll('.slide')];
+  const progress = document.getElementById('progress');
+  const counter = document.getElementById('counter');
+  let i = 0;
+
+  function show(n) {
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach((s, idx) => s.classList.toggle('active', idx === i));
+    progress.style.width = ((i + 1) / slides.length * 100) + '%';
+    counter.textContent = (i + 1) + ' / ' + slides.length;
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+      e.preventDefault();
+      show(i + 1);
+    } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+      e.preventDefault();
+      show(i - 1);
+    } else if (e.key === 'Home') {
+      show(0);
+    } else if (e.key === 'End') {
+      show(slides.length - 1);
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('.nav-hint')) return;
+    if (e.clientX > window.innerWidth * 0.55) show(i + 1);
+    else show(i - 1);
+  });
+
+  show(0);
+</script>
+</body>
+</html>
