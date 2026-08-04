@@ -381,15 +381,38 @@
     h1, h2 { max-width: none; }
   }
 
+  @page {
+    size: 297mm 210mm;
+    margin: 0;
+  }
+
   @media print {
-    html, body { overflow: visible; height: auto; }
-    .slide {
-      position: relative;
-      display: flex !important;
-      page-break-after: always;
-      min-height: 100vh;
+    html, body {
+      overflow: visible !important;
+      height: auto !important;
+      background: #fff !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
     }
-    .nav-hint, .progress { display: none; }
+    .deck { height: auto !important; }
+    .slide {
+      position: relative !important;
+      display: flex !important;
+      width: 297mm;
+      height: 210mm;
+      min-height: 210mm;
+      max-height: 210mm;
+      overflow: hidden;
+      page-break-after: always;
+      break-after: page;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    .slide:last-child {
+      page-break-after: auto;
+      break-after: auto;
+    }
+    .nav-hint, .progress { display: none !important; }
   }
 </style>
 </head>
