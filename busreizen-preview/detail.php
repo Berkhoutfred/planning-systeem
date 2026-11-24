@@ -3,6 +3,7 @@ declare(strict_types=1);
 require __DIR__ . '/_auth.php';
 require_once __DIR__ . '/../reizen/_prijs.php';
 require_once __DIR__ . '/../reizen/_scope.php';
+require_once __DIR__ . '/../beheer/includes/reis_producttekst.php';
 
 $slug = trim($_GET['slug'] ?? '');
 if (!$slug) { header('Location: ' . preview_url('index.php')); exit; }
@@ -17,6 +18,12 @@ $id     = (int)$r['id'];
 $haltes = $pdo->prepare("SELECT * FROM busreis_haltes WHERE busreis_id=? ORDER BY sort_order, vertrek_tijd"); $haltes->execute([$id]); $haltes = $haltes->fetchAll();
 $dagprog= $pdo->prepare("SELECT * FROM busreis_dagprogramma WHERE busreis_id=? ORDER BY dag_nummer");       $dagprog->execute([$id]); $dagprog = $dagprog->fetchAll();
 $opties = $pdo->prepare("SELECT * FROM busreis_opties WHERE busreis_id=? ORDER BY sort_order");             $opties->execute([$id]);  $opties  = $opties->fetchAll();
+
+$productregels = reis_productregels_laden($pdo, $id);
+$inbegrepenItems = reis_inbegrepen_voor_weergave($r, $productregels['inbegrepen']);
+$nietInbegrepenItems = reis_niet_inbegrepen_voor_weergave($productregels['niet_inbegrepen']);
+$hotelInbegrepenItems = reis_hotel_inbegrepen_voor_weergave($productregels['hotel_inbegrepen']);
+$hotelOmschrijving = trim((string) ($r['hotel_omschrijving'] ?? ''));
 
 $nDagen  = $r['datum_tot'] ? (int)((strtotime($r['datum_tot'])-strtotime($r['datum_van']))/86400)+1 : 1;
 $nlM     = ['January'=>'Januari','February'=>'Februari','March'=>'Maart','April'=>'April','May'=>'Mei','June'=>'Juni','July'=>'Juli','August'=>'Augustus','September'=>'September','October'=>'Oktober','November'=>'November','December'=>'December'];
@@ -240,9 +247,10 @@ footer a{color:rgba(255,255,255,.6)}
         </div>
         <?php endif; ?>
 
-        <?php if ($r['type']==='meerdaags' && $r['hotel_naam']): ?>
+        <?php if ($r['type']==='meerdaags' && ($r['hotel_naam'] || $hotelOmschrijving !== '' || $hotelInbegrepenItems !== [])): ?>
         <div class="sectie">
             <h2><i class="fa-solid fa-hotel"></i> Accommodatie</h2>
+            <?php if ($r['hotel_naam']): ?>
             <div style="display:flex;align-items:center;gap:12px">
                 <div style="width:44px;height:44px;background:#eff6ff;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="fa-solid fa-hotel" style="color:var(--blue);font-size:20px"></i></div>
                 <div>
@@ -250,6 +258,23 @@ footer a{color:rgba(255,255,255,.6)}
                     <?php if ($r['hotel_sterren']): ?><div style="font-size:13px;color:#f59e0b"><?= str_repeat('★',(int)$r['hotel_sterren']) ?></div><?php endif; ?>
                 </div>
             </div>
+            <?php endif; ?>
+            <?php if ($hotelOmschrijving !== ''): ?>
+            <div style="margin-top:14px;font-size:14px;line-height:1.65;color:#374151"><?= nl2br(htmlspecialchars($hotelOmschrijving, ENT_QUOTES)) ?></div>
+            <?php endif; ?>
+            <?php if ($hotelInbegrepenItems !== []): ?>
+            <div style="margin-top:14px">
+                <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:8px">Inbegrepen in het hotelverblijf</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px">
+                    <?php foreach ($hotelInbegrepenItems as $item): ?>
+                    <div style="display:flex;align-items:center;gap:7px;font-size:13.5px;color:#374151">
+                        <i class="fa-solid fa-check" style="color:var(--green);font-size:12px;width:14px"></i>
+                        <?= htmlspecialchars($item, ENT_QUOTES) ?>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endif; ?>
         </div>
         <?php endif; ?>
 
@@ -273,7 +298,7 @@ footer a{color:rgba(255,255,255,.6)}
 
         <?php if (!empty($opties)): ?>
         <div class="sectie">
-            <h2><i class="fa-solid fa-ticket"></i> Bijboekingen mogelijk</h2>
+            <h2><i class="fa-solid fa-ticket"></i> Bij te boeken</h2>
             <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
             <?php foreach ($opties as $o): ?>
             <div style="border:1px solid #e8eef7;border-radius:8px;padding:14px">
@@ -282,6 +307,42 @@ footer a{color:rgba(255,255,255,.6)}
                 <div style="font-size:15px;font-weight:800;color:var(--green);margin-top:6px">€ <?= number_format((float)$o['prijs'],2,',','.') ?> p.p.</div>
             </div>
             <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <div class="sectie">
+            <h2><i class="fa-solid fa-circle-check"></i> Inbegrepen in de prijs</h2>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px">
+                <?php foreach ($inbegrepenItems as $item): ?>
+                <div style="display:flex;align-items:center;gap:7px;font-size:13.5px;color:#374151">
+                    <i class="fa-solid fa-check" style="color:var(--green);font-size:12px;width:14px"></i>
+                    <?= htmlspecialchars($item, ENT_QUOTES) ?>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+
+        <?php if ($nietInbegrepenItems !== []): ?>
+        <div class="sectie">
+            <h2><i class="fa-solid fa-circle-xmark"></i> Niet inbegrepen</h2>
+            <div style="display:flex;flex-direction:column;gap:10px">
+                <?php foreach ($nietInbegrepenItems as $ni): ?>
+                <div style="display:flex;align-items:flex-start;gap:10px;font-size:13.5px;color:#374151">
+                    <i class="fa-solid fa-xmark" style="color:#dc2626;font-size:12px;width:14px;margin-top:3px"></i>
+                    <div style="flex:1">
+                        <div style="font-weight:600">
+                            <?= htmlspecialchars($ni['tekst'], ENT_QUOTES) ?>
+                            <?php if ($ni['bedrag'] !== null): ?>
+                            <span style="font-weight:800;color:var(--navy);margin-left:6px">€ <?= number_format((float)$ni['bedrag'], 2, ',', '.') ?></span>
+                            <?php endif; ?>
+                        </div>
+                        <?php if ($ni['toelichting']): ?>
+                        <div style="font-size:12.5px;color:#64748b;margin-top:2px"><?= htmlspecialchars($ni['toelichting'], ENT_QUOTES) ?></div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <?php endforeach; ?>
             </div>
         </div>
         <?php endif; ?>

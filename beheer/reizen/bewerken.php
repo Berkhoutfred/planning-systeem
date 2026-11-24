@@ -7,6 +7,7 @@ require_role(['tenant_admin', 'planner_user', 'platform_owner']);
 require '../includes/db.php';
 require_once __DIR__ . '/_tenant_context.php';
 require_once __DIR__ . '/../includes/reis_media.php';
+require_once __DIR__ . '/../includes/reis_producttekst.php';
 
 $id       = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $isNieuw  = $id === 0;
@@ -22,6 +23,11 @@ $haltes = [];
 $staffels = [];
 $dagprogramma = [];
 $opties = [];
+$productregels = [
+    'inbegrepen' => [],
+    'niet_inbegrepen' => [],
+    'hotel_inbegrepen' => [],
+];
 
 if (!$isNieuw) {
     $reis = reis_ophaal_met_toegang($pdo, $reisCtx, $id);
@@ -49,6 +55,8 @@ if (!$isNieuw) {
     $opties = $pdo->prepare("SELECT * FROM busreis_opties WHERE busreis_id=? ORDER BY sort_order ASC");
     $opties->execute([$id]);
     $opties = $opties->fetchAll();
+
+    $productregels = reis_productregels_laden($pdo, $id);
 }
 
 // ── Opslaan ────────────────────────────────────────────────
@@ -70,6 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $terug_tijd    = trim($_POST['terug_tijd'] ?? '') ?: null;
         $hotel_naam    = trim($_POST['hotel_naam'] ?? '') ?: null;
         $hotel_sterren = isset($_POST['hotel_sterren']) && $_POST['hotel_sterren'] !== '' ? (int)$_POST['hotel_sterren'] : null;
+        $hotel_oms     = trim($_POST['hotel_omschrijving'] ?? '') ?: null;
         $prijs_pp      = (float)str_replace(',', '.', $_POST['prijs_pp'] ?? '0');
         $toeslag_ep    = (float)str_replace(',', '.', $_POST['toeslag_enkelpersoon'] ?? '0');
         $reservk       = (float)str_replace(',', '.', $_POST['reserveringskosten'] ?? '15');
@@ -131,13 +140,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     $ins = $pdo->prepare("INSERT INTO busreizen
                         (tenant_id,type,vervoerder,titel,slug,beschrijving,bestemming,categorie,
-                         datum_van,datum_tot,vertrek_tijd,terug_tijd,hotel_naam,hotel_sterren,
+                         datum_van,datum_tot,vertrek_tijd,terug_tijd,hotel_naam,hotel_sterren,hotel_omschrijving,
                          prijs_pp,toeslag_enkelpersoon,reserveringskosten,vroegboekkorting,vroegboek_deadline,
                          max_deelnemers,vertrekgarantie,anvr_sgr,foto_pad,brochure_pdf,status)
-                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
                     $ins->execute([
                         $dataTenantId,$type,$vervoerder,$titel,$slug,$beschrijving,$bestemming,$categorie,
-                        $datum_van,$datum_tot,$vertrek_tijd,$terug_tijd,$hotel_naam,$hotel_sterren,
+                        $datum_van,$datum_tot,$vertrek_tijd,$terug_tijd,$hotel_naam,$hotel_sterren,$hotel_oms,
                         $prijs_pp,$toeslag_ep,$reservk,$vroegboek,$vroegdeadline,
                         $max,$vertrekgar,$anvr,$fotoPad,$brochurePdf,$status
                     ]);
@@ -145,14 +154,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } else {
                     $upd = $pdo->prepare("UPDATE busreizen SET
                         type=?,vervoerder=?,titel=?,beschrijving=?,bestemming=?,categorie=?,
-                        datum_van=?,datum_tot=?,vertrek_tijd=?,terug_tijd=?,hotel_naam=?,hotel_sterren=?,
+                        datum_van=?,datum_tot=?,vertrek_tijd=?,terug_tijd=?,hotel_naam=?,hotel_sterren=?,hotel_omschrijving=?,
                         prijs_pp=?,toeslag_enkelpersoon=?,reserveringskosten=?,vroegboekkorting=?,vroegboek_deadline=?,
                         max_deelnemers=?,vertrekgarantie=?,anvr_sgr=?,
                         foto_pad=COALESCE(?,foto_pad),brochure_pdf=COALESCE(?,brochure_pdf),status=?
                         WHERE id=? AND tenant_id=?");
                     $upd->execute([
                         $type,$vervoerder,$titel,$beschrijving,$bestemming,$categorie,
-                        $datum_van,$datum_tot,$vertrek_tijd,$terug_tijd,$hotel_naam,$hotel_sterren,
+                        $datum_van,$datum_tot,$vertrek_tijd,$terug_tijd,$hotel_naam,$hotel_sterren,$hotel_oms,
                         $prijs_pp,$toeslag_ep,$reservk,$vroegboek,$vroegdeadline,
                         $max,$vertrekgar,$anvr,$fotoPad,$brochurePdf,$status,
                         $id,$dataTenantId
@@ -209,12 +218,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $i2]);
                 }
 
+                // Producttekst: inbegrepen / niet-inbegrepen / hotel-inbegrepen
+                reis_productregels_opslaan($pdo, $id, $_POST);
+
                 coop_invalidate_partner_site_caches($pdo, $dataTenantId);
 
                 header("Location: index.php?msg=opgeslagen");
                 exit;
 
-            } catch (PDOException $e) {
+            } catch (PDOException | RuntimeException $e) {
                 $fout = 'Fout bij opslaan: ' . $e->getMessage();
             }
         }
@@ -530,6 +542,34 @@ include '../includes/header.php';
                         </select>
                     </div>
                 </div>
+                <div class="veld" style="margin-top:12px;">
+                    <label>Hotelomschrijving (brochuretekst)</label>
+                    <textarea name="hotel_omschrijving" rows="5"
+                              placeholder="Korte brochuretekst over het hotel, ligging, sfeer…"><?= htmlspecialchars($reis['hotel_omschrijving'] ?? '', ENT_QUOTES) ?></textarea>
+                    <small>Plain tekst; regeleinden blijven behouden op de publieke pagina.</small>
+                </div>
+                <div style="margin-top:14px;">
+                    <label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:8px;">
+                        Inbegrepen in hotelverblijf
+                        <span style="font-weight:400;color:#94a3b8;">(bijv. ontbijt, wifi, zwembad)</span>
+                    </label>
+                    <div id="hotel-inbegrepen-container">
+                        <?php if (empty($productregels['hotel_inbegrepen'])): ?>
+                        <div class="dyn-rij">
+                            <div class="veld"><label>Regel</label><input type="text" name="hotel_inbegrepen_tekst[]" maxlength="500" placeholder="bijv. Uitgebreid ontbijtbuffet"></div>
+                            <button type="button" class="btn-del" onclick="verwijderRij(this)"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                        <?php else: foreach ($productregels['hotel_inbegrepen'] as $hi): ?>
+                        <div class="dyn-rij">
+                            <div class="veld"><label>Regel</label><input type="text" name="hotel_inbegrepen_tekst[]" maxlength="500" value="<?= htmlspecialchars((string)$hi['tekst'], ENT_QUOTES) ?>"></div>
+                            <button type="button" class="btn-del" onclick="verwijderRij(this)"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                        <?php endforeach; endif; ?>
+                    </div>
+                    <button type="button" class="btn-toevoegen" onclick="voegHotelInbegrepenToe()">
+                        <i class="fa-solid fa-plus"></i> Hotelregel toevoegen
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -626,11 +666,67 @@ include '../includes/header.php';
             </div>
         </div>
 
+        <!-- ── INBEGREPEN ── -->
+        <div class="bw-sectie">
+            <div class="bw-sectie-kop">
+                <i class="fa-solid fa-circle-check icon"></i> Inbegrepen in de prijs
+                <span style="font-size:11px; color:#94a3b8; font-weight:400; margin-left:6px;">(leeg = standaardlijst op de website)</span>
+            </div>
+            <div class="bw-sectie-body">
+                <div id="inbegrepen-container">
+                    <?php if (empty($productregels['inbegrepen'])): ?>
+                    <div class="dyn-rij">
+                        <div class="veld"><label>Regel</label><input type="text" name="inbegrepen_tekst[]" maxlength="500" placeholder="bijv. Vervoer per luxe touringcar"></div>
+                        <button type="button" class="btn-del" onclick="verwijderRij(this)"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                    <?php else: foreach ($productregels['inbegrepen'] as $ib): ?>
+                    <div class="dyn-rij">
+                        <div class="veld"><label>Regel</label><input type="text" name="inbegrepen_tekst[]" maxlength="500" value="<?= htmlspecialchars((string)$ib['tekst'], ENT_QUOTES) ?>"></div>
+                        <button type="button" class="btn-del" onclick="verwijderRij(this)"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                    <?php endforeach; endif; ?>
+                </div>
+                <button type="button" class="btn-toevoegen" onclick="voegInbegrepenToe()">
+                    <i class="fa-solid fa-plus"></i> Regel toevoegen
+                </button>
+            </div>
+        </div>
+
+        <!-- ── NIET INBEGREPEN ── -->
+        <div class="bw-sectie">
+            <div class="bw-sectie-kop">
+                <i class="fa-solid fa-circle-xmark icon"></i> Niet inbegrepen
+                <span style="font-size:11px; color:#94a3b8; font-weight:400; margin-left:6px;">(optioneel bedrag / toelichting)</span>
+            </div>
+            <div class="bw-sectie-body">
+                <div id="niet-inbegrepen-container">
+                    <?php if (empty($productregels['niet_inbegrepen'])): ?>
+                    <div class="dyn-rij">
+                        <div class="veld"><label>Onderdeel</label><input type="text" name="niet_inbegrepen_tekst[]" maxlength="500" placeholder="bijv. Lunch onderweg"></div>
+                        <div class="veld" style="max-width:120px;"><label>Bedrag (€)</label><input type="text" name="niet_inbegrepen_bedrag[]" placeholder="optioneel"></div>
+                        <div class="veld"><label>Toelichting</label><input type="text" name="niet_inbegrepen_toelichting[]" maxlength="500" placeholder="optioneel"></div>
+                        <button type="button" class="btn-del" onclick="verwijderRij(this)"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                    <?php else: foreach ($productregels['niet_inbegrepen'] as $ni): ?>
+                    <div class="dyn-rij">
+                        <div class="veld"><label>Onderdeel</label><input type="text" name="niet_inbegrepen_tekst[]" maxlength="500" value="<?= htmlspecialchars((string)$ni['tekst'], ENT_QUOTES) ?>"></div>
+                        <div class="veld" style="max-width:120px;"><label>Bedrag (€)</label><input type="text" name="niet_inbegrepen_bedrag[]" value="<?= $ni['bedrag'] !== null && $ni['bedrag'] !== '' ? number_format((float)$ni['bedrag'],2,',','') : '' ?>" placeholder="optioneel"></div>
+                        <div class="veld"><label>Toelichting</label><input type="text" name="niet_inbegrepen_toelichting[]" maxlength="500" value="<?= htmlspecialchars((string)($ni['toelichting'] ?? ''), ENT_QUOTES) ?>" placeholder="optioneel"></div>
+                        <button type="button" class="btn-del" onclick="verwijderRij(this)"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                    <?php endforeach; endif; ?>
+                </div>
+                <button type="button" class="btn-toevoegen" onclick="voegNietInbegrepenToe()">
+                    <i class="fa-solid fa-plus"></i> Regel toevoegen
+                </button>
+            </div>
+        </div>
+
         <!-- ── BIJBOEKINGEN / OPTIES ── -->
         <div class="bw-sectie">
             <div class="bw-sectie-kop">
-                <i class="fa-solid fa-ticket icon"></i> Bijboekingen &amp; opties
-                <span style="font-size:11px; color:#94a3b8; font-weight:400; margin-left:6px;">(klant kan dit bijboeken)</span>
+                <i class="fa-solid fa-ticket icon"></i> Bij te boeken
+                <span style="font-size:11px; color:#94a3b8; font-weight:400; margin-left:6px;">(klant kan dit bijboeken tijdens reserveren)</span>
             </div>
             <div class="bw-sectie-body">
                 <div id="opties-container">
@@ -802,6 +898,38 @@ function voegOptieToe() {
         <div class="veld"><label>Naam</label><input type="text" name="optie_naam[]" placeholder="bijv. Truffeljacht"></div>
         <div class="veld"><label>Toelichting</label><input type="text" name="optie_beschrijving[]" placeholder="optioneel"></div>
         <div class="veld" style="max-width:120px;"><label>Prijs (€)</label><input type="text" name="optie_prijs[]" placeholder="0,00"></div>
+        <button type="button" class="btn-del" onclick="verwijderRij(this)"><i class="fa-solid fa-trash"></i></button>`;
+    c.appendChild(div);
+}
+
+function voegInbegrepenToe() {
+    const c = document.getElementById('inbegrepen-container');
+    const div = document.createElement('div');
+    div.className = 'dyn-rij';
+    div.innerHTML = `
+        <div class="veld"><label>Regel</label><input type="text" name="inbegrepen_tekst[]" maxlength="500" placeholder="bijv. Vervoer per luxe touringcar"></div>
+        <button type="button" class="btn-del" onclick="verwijderRij(this)"><i class="fa-solid fa-trash"></i></button>`;
+    c.appendChild(div);
+}
+
+function voegNietInbegrepenToe() {
+    const c = document.getElementById('niet-inbegrepen-container');
+    const div = document.createElement('div');
+    div.className = 'dyn-rij';
+    div.innerHTML = `
+        <div class="veld"><label>Onderdeel</label><input type="text" name="niet_inbegrepen_tekst[]" maxlength="500" placeholder="bijv. Lunch onderweg"></div>
+        <div class="veld" style="max-width:120px;"><label>Bedrag (€)</label><input type="text" name="niet_inbegrepen_bedrag[]" placeholder="optioneel"></div>
+        <div class="veld"><label>Toelichting</label><input type="text" name="niet_inbegrepen_toelichting[]" maxlength="500" placeholder="optioneel"></div>
+        <button type="button" class="btn-del" onclick="verwijderRij(this)"><i class="fa-solid fa-trash"></i></button>`;
+    c.appendChild(div);
+}
+
+function voegHotelInbegrepenToe() {
+    const c = document.getElementById('hotel-inbegrepen-container');
+    const div = document.createElement('div');
+    div.className = 'dyn-rij';
+    div.innerHTML = `
+        <div class="veld"><label>Regel</label><input type="text" name="hotel_inbegrepen_tekst[]" maxlength="500" placeholder="bijv. Uitgebreid ontbijtbuffet"></div>
         <button type="button" class="btn-del" onclick="verwijderRij(this)"><i class="fa-solid fa-trash"></i></button>`;
     c.appendChild(div);
 }

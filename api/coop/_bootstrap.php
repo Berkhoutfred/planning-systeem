@@ -15,6 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 require_once __DIR__ . '/../../beheer/includes/db.php';
 require_once __DIR__ . '/../../beheer/includes/reis_netwerk.php';
 require_once __DIR__ . '/../../beheer/includes/reis_media.php';
+require_once __DIR__ . '/../../beheer/includes/reis_producttekst.php';
 require_once __DIR__ . '/../../reizen/_prijs.php';
 
 function coop_json(int $code, array $payload): never
@@ -150,10 +151,29 @@ function coop_format_reis(array $r, bool $detail = false): array
     if ($detail) {
         $out['hotel_naam'] = $r['hotel_naam'] ?? null;
         $out['hotel_sterren'] = isset($r['hotel_sterren']) ? (int) $r['hotel_sterren'] : null;
+        $hotelOms = trim((string) ($r['hotel_omschrijving'] ?? ''));
+        $out['hotel_omschrijving'] = $hotelOms !== '' ? $hotelOms : null;
         $out['brochure_url'] = coop_media_url($r['brochure_pdf'] ?? null);
     }
 
     return $out;
+}
+
+/**
+ * Voegt producttekst (inbegrepen / niet-inbegrepen / hotel-inbegrepen) toe aan een detail-reis.
+ *
+ * @param array<string,mixed> $data
+ * @param array<string,mixed> $reisRow
+ * @return array<string,mixed>
+ */
+function coop_attach_producttekst(PDO $pdo, array $data, array $reisRow): array
+{
+    $regels = reis_productregels_laden($pdo, (int) ($reisRow['id'] ?? 0));
+    $data['inbegrepen'] = reis_inbegrepen_voor_weergave($reisRow, $regels['inbegrepen']);
+    $data['niet_inbegrepen'] = reis_niet_inbegrepen_voor_weergave($regels['niet_inbegrepen']);
+    $data['hotel_inbegrepen'] = reis_hotel_inbegrepen_voor_weergave($regels['hotel_inbegrepen']);
+
+    return $data;
 }
 
 /** @return list<int> Tenant-IDs waarvan gepubliceerde reizen in de API mogen verschijnen. */

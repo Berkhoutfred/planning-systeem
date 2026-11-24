@@ -40,6 +40,7 @@ if ($slug !== '') {
     }
 
     $data = coop_format_reis($reis, true);
+    $data = coop_attach_producttekst($pdo, $data, $reis);
     $data['boek_url'] .= '&src=' . rawurlencode($partnerSlug);
     $data['bron'] = (int) $reis['tenant_id'] === (int) $partner['leiding_tenant_id'] ? 'coop' : 'eigen';
 
@@ -54,12 +55,13 @@ if ($slug !== '') {
         ];
     }, $haltes->fetchAll(PDO::FETCH_ASSOC));
 
-    $opties = $pdo->prepare('SELECT id, naam, prijs, sort_order FROM busreis_opties WHERE busreis_id=? ORDER BY sort_order');
+    $opties = $pdo->prepare('SELECT id, naam, beschrijving, prijs, sort_order FROM busreis_opties WHERE busreis_id=? ORDER BY sort_order');
     $opties->execute([$id]);
     $data['opties'] = array_map(static function (array $o): array {
         return [
             'id' => (int) $o['id'],
             'naam' => (string) $o['naam'],
+            'beschrijving' => (string) ($o['beschrijving'] ?? ''),
             'prijs' => (float) $o['prijs'],
         ];
     }, $opties->fetchAll(PDO::FETCH_ASSOC));
