@@ -3,6 +3,7 @@ declare(strict_types=1);
 // Bestand: reizen/detail.php
 
 require_once __DIR__ . '/../beheer/includes/db.php';
+require_once __DIR__ . '/../beheer/includes/reis_producttekst.php';
 require_once __DIR__ . '/_prijs.php';
 require_once __DIR__ . '/_media.php';
 require_once __DIR__ . '/_scope.php';
@@ -26,6 +27,12 @@ $dagprog->execute([$id]); $dagprog = $dagprog->fetchAll();
 
 $opties      = $pdo->prepare("SELECT * FROM busreis_opties WHERE busreis_id=? ORDER BY sort_order ASC");
 $opties->execute([$id]); $opties = $opties->fetchAll();
+
+$productregels = reis_productregels_laden($pdo, $id);
+$inbegrepenItems = reis_inbegrepen_voor_weergave($r, $productregels['inbegrepen']);
+$nietInbegrepenItems = reis_niet_inbegrepen_voor_weergave($productregels['niet_inbegrepen']);
+$hotelInbegrepenItems = reis_hotel_inbegrepen_voor_weergave($productregels['hotel_inbegrepen']);
+$hotelOmschrijving = trim((string) ($r['hotel_omschrijving'] ?? ''));
 
 $boekingen   = (int)$pdo->prepare("SELECT COUNT(*) FROM busreis_boekingen WHERE busreis_id=? AND status!='geannuleerd'")->execute([$id]) ? $pdo->query("SELECT COUNT(*) FROM busreis_boekingen WHERE busreis_id=$id AND status!='geannuleerd'")->fetchColumn() : 0;
 
@@ -325,9 +332,10 @@ body.booking-direct .nav-back span { display: none; }
         <?php endif; ?>
 
         <!-- Hotel (meerdaags) -->
-        <?php if ($r['type']==='meerdaags' && $r['hotel_naam']): ?>
+        <?php if ($r['type']==='meerdaags' && ($r['hotel_naam'] || $hotelOmschrijving !== '' || $hotelInbegrepenItems !== [])): ?>
         <div class="sectie">
             <h2><i class="fa-solid fa-hotel"></i> Accommodatie</h2>
+            <?php if ($r['hotel_naam']): ?>
             <div style="display:flex; align-items:center; gap:12px;">
                 <div style="width:44px; height:44px; background:#eff6ff; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
                     <i class="fa-solid fa-hotel" style="color:var(--blue); font-size:20px;"></i>
@@ -339,6 +347,25 @@ body.booking-direct .nav-back span { display: none; }
                     <?php endif; ?>
                 </div>
             </div>
+            <?php endif; ?>
+            <?php if ($hotelOmschrijving !== ''): ?>
+            <div style="margin-top:14px; font-size:14px; line-height:1.65; color:#374151;">
+                <?= nl2br(htmlspecialchars($hotelOmschrijving, ENT_QUOTES)) ?>
+            </div>
+            <?php endif; ?>
+            <?php if ($hotelInbegrepenItems !== []): ?>
+            <div style="margin-top:14px;">
+                <div style="font-size:13px; font-weight:700; color:var(--navy); margin-bottom:8px;">Inbegrepen in het hotelverblijf</div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px 16px;">
+                    <?php foreach ($hotelInbegrepenItems as $item): ?>
+                    <div style="display:flex; align-items:center; gap:7px; font-size:13.5px; color:#374151;">
+                        <i class="fa-solid fa-check" style="color:var(--green); font-size:12px; width:14px;"></i>
+                        <?= htmlspecialchars($item, ENT_QUOTES) ?>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endif; ?>
         </div>
         <?php endif; ?>
 
@@ -368,7 +395,7 @@ body.booking-direct .nav-back span { display: none; }
         <!-- Bijboekingen -->
         <?php if (!empty($opties)): ?>
         <div class="sectie">
-            <h2><i class="fa-solid fa-ticket"></i> Bijboekingen</h2>
+            <h2><i class="fa-solid fa-ticket"></i> Bij te boeken</h2>
             <div class="opties-grid">
             <?php foreach ($opties as $o): ?>
                 <div class="optie-card">
@@ -385,11 +412,7 @@ body.booking-direct .nav-back span { display: none; }
         <div class="sectie">
             <h2><i class="fa-solid fa-circle-check"></i> Inbegrepen in de prijs</h2>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px 16px;">
-                <?php
-                $items = ['Vervoer per luxe touringcar', 'Begeleiding door reisleider', 'Opstap dicht bij u in de regio'];
-                if ($r['type']==='meerdaags') { $items[] = 'Verblijf in hotel'; $items[] = 'Dagprogramma'; }
-                if ($r['anvr_sgr']) { $items[] = 'SGR reisgeld bescherming'; }
-                foreach ($items as $item): ?>
+                <?php foreach ($inbegrepenItems as $item): ?>
                 <div style="display:flex; align-items:center; gap:7px; font-size:13.5px; color:#374151;">
                     <i class="fa-solid fa-check" style="color:var(--green); font-size:12px; width:14px;"></i>
                     <?= htmlspecialchars($item, ENT_QUOTES) ?>
@@ -397,6 +420,31 @@ body.booking-direct .nav-back span { display: none; }
                 <?php endforeach; ?>
             </div>
         </div>
+
+        <!-- Niet inbegrepen -->
+        <?php if ($nietInbegrepenItems !== []): ?>
+        <div class="sectie">
+            <h2><i class="fa-solid fa-circle-xmark"></i> Niet inbegrepen</h2>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+                <?php foreach ($nietInbegrepenItems as $ni): ?>
+                <div style="display:flex; align-items:flex-start; gap:10px; font-size:13.5px; color:#374151;">
+                    <i class="fa-solid fa-xmark" style="color:#dc2626; font-size:12px; width:14px; margin-top:3px;"></i>
+                    <div style="flex:1;">
+                        <div style="font-weight:600;">
+                            <?= htmlspecialchars($ni['tekst'], ENT_QUOTES) ?>
+                            <?php if ($ni['bedrag'] !== null): ?>
+                            <span style="font-weight:800; color:var(--navy); margin-left:6px;">€ <?= number_format((float)$ni['bedrag'], 2, ',', '.') ?></span>
+                            <?php endif; ?>
+                        </div>
+                        <?php if ($ni['toelichting']): ?>
+                        <div style="font-size:12.5px; color:#64748b; margin-top:2px;"><?= htmlspecialchars($ni['toelichting'], ENT_QUOTES) ?></div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
 
         <!-- Trust -->
         <?php if ($r['anvr_sgr']): ?>
